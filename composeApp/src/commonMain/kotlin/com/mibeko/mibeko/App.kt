@@ -1,49 +1,30 @@
 package com.mibeko.mibeko
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import org.jetbrains.compose.resources.painterResource
+import androidx.compose.runtime.Composable
+import com.mibeko.mibeko.ui.home.HomeScreen
+import com.mibeko.mibeko.ui.search.SearchResultsScreen
+import com.mibeko.mibeko.ui.reader.ReaderScreen
+import com.mibeko.mibeko.ui.explorer.ExplorerScreen
+import com.mibeko.mibeko.ui.favorites.FavoritesScreen
+import com.mibeko.mibeko.ui.settings.SettingsScreen
+import com.mibeko.mibeko.ui.navigation.NavDestination
+import com.mibeko.mibeko.ui.navigation.rememberMibekoNavigator
+import com.mibeko.mibeko.ui.theme.MibekoTheme
 import org.jetbrains.compose.ui.tooling.preview.Preview
-
-import mibeko.composeapp.generated.resources.Res
-import mibeko.composeapp.generated.resources.compose_multiplatform
 
 @Composable
 @Preview
 fun App() {
-    MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
-            }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose benaja: $greeting")
-                }
-            }
+    val navigator = rememberMibekoNavigator()
+
+    MibekoTheme {
+        when (val dest = navigator.currentDestination) {
+            is NavDestination.Home -> HomeScreen(navigator)
+            is NavDestination.SearchResults -> SearchResultsScreen(dest.query, navigator)
+            is NavDestination.Reader -> ReaderScreen(dest.articleId, navigator)
+            is NavDestination.Explorer -> ExplorerScreen(navigator)
+            is NavDestination.Favorites -> FavoritesScreen(navigator)
+            is NavDestination.Settings -> SettingsScreen(navigator)
         }
     }
 }
