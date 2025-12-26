@@ -7,7 +7,8 @@ import io.ktor.client.request.*
 class LegalApiService(private val client: HttpClient) {
     
     // Placeholder URL - change to real endpoint when available
-    private val BASE_URL = "https://api.mibeko.com"
+    private val BASE_URL = "http://192.168.1.149:8000/api"
+
 
     suspend fun fetchAllData(): SyncResponse {
         return client.get("$BASE_URL/sync").body()

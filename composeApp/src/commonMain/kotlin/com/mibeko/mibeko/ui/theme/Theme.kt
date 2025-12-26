@@ -51,13 +51,13 @@ val AppTypography = Typography(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = MibekoGreenPrimary,
+    primary = MibekoBluePrimary,
     onPrimary = MibekoTextOnPrimary,
-    primaryContainer = MibekoGreenLight,
+    primaryContainer = MibekoBlueLight,
     onPrimaryContainer = MibekoTextOnPrimary,
     
-    secondary = MibekoStatusGreen,
-    onSecondary = MibekoTextOnPrimary,
+    secondary = MibekoGold,
+    onSecondary = MibekoTextPrimary,
     
     background = MibekoBackground,
     onBackground = MibekoTextPrimary,
@@ -65,17 +65,20 @@ private val LightColorScheme = lightColorScheme(
     surface = MibekoSurface,
     onSurface = MibekoTextPrimary,
     
-    error = Color(0xFFB00020)
+    error = ErrorRed
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = MibekoGreenLight,
+    primary = MibekoBlueLight,
     onPrimary = MibekoTextOnPrimary,
+    secondary = MibekoGoldLight,
+    onSecondary = MibekoTextPrimary,
     background = Color(0xFF121212),
     onBackground = MibekoBackground,
     surface = Color(0xFF1E1E1E),
     onSurface = MibekoBackground
 )
+
 
 @Composable
 fun MibekoTheme(

@@ -81,55 +81,44 @@ fun HomeScreen(
                 }
             }
 
-            // Status Bar (Green)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .background(
-                        if (lawCodes.isNotEmpty()) MaterialTheme.colorScheme.secondary else Color.LightGray, 
-                        RoundedCornerShape(4.dp)
-                    )
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = if (lawCodes.isNotEmpty()) Icons.Default.CheckCircle else Icons.Default.Info,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (lawCodes.isNotEmpty()) "Base de données à jour & hors ligne" else "Aucune donnée locale. Synchronisez.",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+            // Sync Status
+            if (lawCodes.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(8.dp))
+                        .padding(16.dp)
+                ) {
+                    Column {
+                        Text("Aucune donnée disponible", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Text("Veuillez synchroniser pour accéder aux textes hors-ligne.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Button(onClick = { viewModel.syncData() }, modifier = Modifier.padding(top = 8.dp)) {
+                            Text("Synchroniser maintenant")
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Large Search Box
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Rechercher un article, une loi...") },
+                placeholder = { Text("Rechercher un article (ex: Art 45)...") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedContainerColor = Color(0xFFF5F5F5),
-                    unfocusedContainerColor = Color(0xFFF5F5F5)
+                    unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
                 ),
                 leadingIcon = { 
-                    Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray)
+                    Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary)
                 },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -141,45 +130,90 @@ fun HomeScreen(
                 })
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Grid of Codes
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            androidx.compose.foundation.lazy.LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                items(lawCodes) { code ->
-                    val icon = when (code.icon) {
-                        "shield" -> Icons.Default.Shield
-                        "gavel" -> Icons.Default.Gavel
-                        "law" -> Icons.Default.Balance
-                        else -> Icons.Default.MenuBook
+                // Expert Section: Codes
+                item {
+                    Text(
+                        text = "Codes Principaux",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        HomeGridItem("Code Civil", "1", Icons.Default.Balance, Modifier.weight(1f)) {
+                            navigator.navigateTo(NavDestination.Explorer)
+                        }
+                        HomeGridItem("Code Pénal", "2", Icons.Default.Gavel, Modifier.weight(1f)) {
+                            navigator.navigateTo(NavDestination.Explorer)
+                        }
                     }
-                    HomeGridItem(code.title, code.id, icon) {
-                        navigator.navigateTo(NavDestination.Explorer)
+                }
+                
+                item { Spacer(modifier = Modifier.height(24.dp)) }
+
+                // Novice Section: Themes
+                item {
+                    Text(
+                        text = "Thématiques Populaires",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                item {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ThemeItem("Contrat de Travail & Licenciement", Icons.Default.Work) {
+                            navigator.navigateTo(NavDestination.SearchResults("Travail"))
+                        }
+                        ThemeItem("Mariage, Divorce & Famille", Icons.Default.FamilyRestroom) {
+                            navigator.navigateTo(NavDestination.SearchResults("Famille"))
+                        }
+                        ThemeItem("Location & Logement", Icons.Default.HomeWork) {
+                            navigator.navigateTo(NavDestination.SearchResults("Location"))
+                        }
+                        ThemeItem("Créations d'entreprises", Icons.Default.BusinessCenter) {
+                            navigator.navigateTo(NavDestination.SearchResults("Commerce"))
+                        }
                     }
                 }
             }
+
         }
     }
 }
 
 @Composable
-fun HomeGridItem(title: String, id: String, icon: ImageVector, onClick: () -> Unit) {
+fun HomeGridItem(title: String, id: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val isPrimary = id == "1" || id == "2"
     
     Card(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(140.dp),
+        modifier = modifier
+            .height(120.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isPrimary) MaterialTheme.colorScheme.primary else Color.White
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier
@@ -192,17 +226,65 @@ fun HomeGridItem(title: String, id: String, icon: ImageVector, onClick: () -> Un
                 imageVector = icon,
                 contentDescription = null,
                 tint = if (isPrimary) Color.White else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(32.dp)
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
             Text(
                 text = title,
                 color = if (isPrimary) Color.White else MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                fontSize = 14.sp
+                style = MaterialTheme.typography.labelLarge
+            )
+        }
+    }
+}
+
+@Composable
+fun ThemeItem(title: String, icon: ImageVector, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color.LightGray,
+                modifier = Modifier.size(20.dp)
             )
         }
     }
