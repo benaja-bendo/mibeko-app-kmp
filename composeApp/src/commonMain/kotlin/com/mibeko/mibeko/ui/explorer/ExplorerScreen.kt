@@ -10,19 +10,28 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mibeko.mibeko.data.MOCK_EXPLORER_NODES
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mibeko.mibeko.di.AppModule
+import com.mibeko.mibeko.ui.home.HomeViewModel
 import com.mibeko.mibeko.ui.home.MibekoBottomBar
 import com.mibeko.mibeko.ui.navigation.MibekoNavigator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExplorerScreen(navigator: MibekoNavigator) {
+fun ExplorerScreen(
+    navigator: MibekoNavigator,
+    viewModel: HomeViewModel = viewModel { HomeViewModel(AppModule.repository) }
+) {
+    val lawCodes by viewModel.lawCodes.collectAsState()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -45,11 +54,19 @@ fun ExplorerScreen(navigator: MibekoNavigator) {
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                items(MOCK_EXPLORER_NODES) { node ->
-                    ExplorerItem(node.title) {
-                        // Navigate deeper logic
+                if (lawCodes.isEmpty()) {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text("Aucun code local. Synchronisez depuis l'accueil.", color = Color.Gray, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        }
                     }
-                    HorizontalDivider(color = Color(0xFFF0F0F0), modifier = Modifier.padding(start = 56.dp))
+                } else {
+                    items(lawCodes) { node ->
+                        ExplorerItem(node.title) {
+                            // Navigate deeper logic
+                        }
+                        HorizontalDivider(color = Color(0xFFF0F0F0), modifier = Modifier.padding(start = 56.dp))
+                    }
                 }
             }
         }

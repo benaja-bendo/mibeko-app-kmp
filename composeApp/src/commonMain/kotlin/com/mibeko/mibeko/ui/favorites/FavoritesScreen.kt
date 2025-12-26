@@ -10,20 +10,26 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mibeko.mibeko.data.MOCK_ARTICLES
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mibeko.mibeko.di.AppModule
 import com.mibeko.mibeko.ui.home.MibekoBottomBar
 import com.mibeko.mibeko.ui.navigation.MibekoNavigator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavoritesScreen(navigator: MibekoNavigator) {
-    val favorites = MOCK_ARTICLES.filter { it.isFavorite }
+fun FavoritesScreen(
+    navigator: MibekoNavigator,
+    viewModel: FavoritesViewModel = viewModel { FavoritesViewModel(AppModule.repository) }
+) {
+    val favorites by viewModel.favoriteArticles.collectAsState()
 
     Scaffold(
         topBar = {

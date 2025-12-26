@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,15 +23,21 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mibeko.mibeko.data.MOCK_LAW_CODES
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mibeko.mibeko.di.AppModule
 import com.mibeko.mibeko.ui.navigation.MibekoNavigator
 import com.mibeko.mibeko.ui.navigation.NavDestination
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navigator: MibekoNavigator) {
+fun HomeScreen(
+    navigator: MibekoNavigator,
+    viewModel: HomeViewModel = viewModel { HomeViewModel(AppModule.repository) }
+) {
     var searchQuery by remember { mutableStateOf("") }
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val lawCodes by viewModel.lawCodes.collectAsState()
+    val isSyncing by viewModel.isSyncing.collectAsState()
 
     Scaffold(
         bottomBar = { MibekoBottomBar(navigator) }
@@ -45,22 +53,32 @@ fun HomeScreen(navigator: MibekoNavigator) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Gavel,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Mibeko",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Gavel,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Mibeko",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                IconButton(onClick = { viewModel.syncData() }, enabled = !isSyncing) {
+                    if (isSyncing) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Default.Refresh, contentDescription = "Sync", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
             }
 
             // Status Bar (Green)
@@ -68,20 +86,23 @@ fun HomeScreen(navigator: MibekoNavigator) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(4.dp))
+                    .background(
+                        if (lawCodes.isNotEmpty()) MaterialTheme.colorScheme.secondary else Color.LightGray, 
+                        RoundedCornerShape(4.dp)
+                    )
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.CheckCircle,
+                        imageVector = if (lawCodes.isNotEmpty()) Icons.Default.CheckCircle else Icons.Default.Info,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Base de données à jour & hors ligne",
+                        text = if (lawCodes.isNotEmpty()) "Base de données à jour & hors ligne" else "Aucune donnée locale. Synchronisez.",
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
@@ -129,7 +150,7 @@ fun HomeScreen(navigator: MibekoNavigator) {
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(MOCK_LAW_CODES) { code ->
+                items(lawCodes) { code ->
                     val icon = when (code.icon) {
                         "shield" -> Icons.Default.Shield
                         "gavel" -> Icons.Default.Gavel

@@ -18,6 +18,29 @@ interface MibekoDao {
     @Upsert
     suspend fun upsertArticles(articles: List<ArticleEntity>)
 
+    @Query("SELECT * FROM documents")
+    fun getAllDocuments(): Flow<List<DocumentEntity>>
+
+    @Transaction
+    @Query("""
+        SELECT articles.*, nodes.document_id, nodes.title as node_title 
+        FROM articles 
+        JOIN nodes ON articles.node_id = nodes.id
+        WHERE articles.is_favorite = 1
+    """)
+    fun getFavoriteArticles(): Flow<List<ArticleSearchResult>>
+
+    @Transaction
+    suspend fun syncAll(
+        documents: List<DocumentEntity>,
+        nodes: List<NodeEntity>,
+        articles: List<ArticleEntity>
+    ) {
+        upsertDocuments(documents)
+        upsertNodes(nodes)
+        upsertArticles(articles)
+    }
+
     @Transaction
     @Query("""
         SELECT * FROM nodes 
@@ -25,6 +48,15 @@ interface MibekoDao {
         WHERE nodes.document_id = :documentId
     """)
     fun getStructure(documentId: String): Flow<Map<NodeEntity, List<ArticleEntity>>>
+
+    @Transaction
+    @Query("""
+        SELECT articles.*, nodes.document_id, nodes.title as node_title 
+        FROM articles 
+        JOIN nodes ON articles.node_id = nodes.id
+        WHERE articles.id = :id
+    """)
+    fun getArticleById(id: String): Flow<ArticleSearchResult?>
 
     @Transaction
     @Query("""

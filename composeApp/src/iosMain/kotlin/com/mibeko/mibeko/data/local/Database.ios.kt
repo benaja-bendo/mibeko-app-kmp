@@ -2,10 +2,21 @@ package com.mibeko.mibeko.data.local
 
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import platform.Foundation.NSHomeDirectory
+import kotlinx.cinterop.ExperimentalForeignApi
+import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSFileManager
+import platform.Foundation.NSUserDomainMask
 
+@OptIn(ExperimentalForeignApi::class)
 actual fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase> {
-    val dbFilePath = NSHomeDirectory() + "/mibeko.db"
+    val documentDirectory = NSFileManager.defaultManager.URLForDirectory(
+        directory = NSDocumentDirectory,
+        inDomain = NSUserDomainMask,
+        appropriateForURL = null,
+        create = false,
+        error = null
+    )
+    val dbFilePath = documentDirectory!!.path!! + "/mibeko.db"
     return Room.databaseBuilder<AppDatabase>(
         name = dbFilePath,
         factory = { AppDatabaseConstructor.initialize() }
