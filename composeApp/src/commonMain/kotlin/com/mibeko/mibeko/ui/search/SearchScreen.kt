@@ -57,6 +57,8 @@ fun SearchResultsScreen(
                 .padding(padding)
                 .background(Color(0xFFF5F5F5))
         ) {
+            val currentFilter by viewModel.filter.collectAsState()
+
             // Filter Chips
             Row(
                 modifier = Modifier
@@ -64,9 +66,9 @@ fun SearchResultsScreen(
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChip(selected = true, label = "Tout", onClick = {})
-                FilterChip(selected = false, label = "Codes", onClick = {})
-                FilterChip(selected = false, label = "Lois", onClick = {})
+                FilterChip(selected = currentFilter == "Tout", label = "Tout", onClick = { viewModel.updateFilter("Tout") })
+                FilterChip(selected = currentFilter == "Codes", label = "Codes", onClick = { viewModel.updateFilter("Codes") })
+                FilterChip(selected = currentFilter == "Lois", label = "Lois", onClick = { viewModel.updateFilter("Lois") })
             }
 
             LazyColumn(

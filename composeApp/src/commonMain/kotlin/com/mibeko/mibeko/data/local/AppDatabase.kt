@@ -9,7 +9,9 @@ import com.mibeko.mibeko.data.local.entities.*
         DocumentEntity::class,
         NodeEntity::class,
         ArticleEntity::class,
-        ArticleFtsEntity::class
+        ArticleFtsEntity::class,
+        TagEntity::class,
+        ArticleTagEntity::class
     ],
     version = 1
 )

@@ -5,8 +5,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -23,6 +26,7 @@ import com.mibeko.mibeko.di.AppModule
 import com.mibeko.mibeko.ui.home.HomeViewModel
 import com.mibeko.mibeko.ui.home.MibekoBottomBar
 import com.mibeko.mibeko.ui.navigation.MibekoNavigator
+import com.mibeko.mibeko.ui.navigation.NavDestination
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,9 +65,9 @@ fun ExplorerScreen(
                         }
                     }
                 } else {
-                    items(lawCodes) { node ->
-                        ExplorerItem(node.title) {
-                            // Navigate deeper logic
+                    items(lawCodes) { code ->
+                        ExplorerItem(code) {
+                            navigator.navigateTo(NavDestination.DocumentDetail(code.id))
                         }
                         HorizontalDivider(color = Color(0xFFF0F0F0), modifier = Modifier.padding(start = 56.dp))
                     }
@@ -74,7 +78,7 @@ fun ExplorerScreen(
 }
 
 @Composable
-fun ExplorerItem(title: String, onClick: () -> Unit) {
+fun ExplorerItem(code: com.mibeko.mibeko.data.LawCodeSpec, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -83,15 +87,39 @@ fun ExplorerItem(title: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.Folder,
-                contentDescription = null,
-                tint = Color(0xFF757575),
-                modifier = Modifier.size(24.dp)
-            )
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            // Icon based on type or just generic folder/book
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = if (code.title.contains("Pénal", ignoreCase = true)) Icons.Default.Gavel else Icons.Default.Balance,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+            
             Spacer(modifier = Modifier.width(16.dp))
-            Text(text = title, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+            
+            Column {
+                Text(
+                    text = code.title, 
+                    fontWeight = FontWeight.SemiBold, 
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (code.lastUpdated.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Mis à jour: ${code.lastUpdated.take(10)}", // Show date part only (YYYY-MM-DD)
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            }
         }
         Icon(
             imageVector = Icons.Default.KeyboardArrowRight,

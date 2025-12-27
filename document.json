@@ -1,0 +1,1009 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Mibeko",
+    "version": "0.0.1"
+  },
+  "servers": [
+    {
+      "url": "http://192.168.1.149:8000/api"
+    }
+  ],
+  "paths": {
+    "/v1/login": {
+      "post": {
+        "operationId": "auth.login",
+        "description": "Returns a Sanctum plain-text token.",
+        "summary": "Login",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "device_name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password",
+                  "device_name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "token"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "operationId": "auth.me",
+        "summary": "Get authenticated user",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "`User`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/v1/logout": {
+      "post": {
+        "operationId": "auth.logout",
+        "summary": "Logout",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Déconnecté avec succès."
+                      ]
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/v1/document-types": {
+      "get": {
+        "operationId": "document-types.index",
+        "summary": "List document types",
+        "tags": [
+          "DocumentType"
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `DocumentTypeResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DocumentTypeResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/institutions": {
+      "get": {
+        "operationId": "institutions.index",
+        "summary": "List institutions",
+        "tags": [
+          "Institution"
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `InstitutionResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/InstitutionResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/legal-documents": {
+      "get": {
+        "operationId": "legal-documents.index",
+        "description": "Returns a paginated list of legal documents with their institutions and types.",
+        "summary": "List legal documents",
+        "tags": [
+          "LegalDocument"
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated set of `LegalDocumentResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LegalDocumentResource"
+                      }
+                    },
+                    "links": {
+                      "type": "object",
+                      "properties": {
+                        "first": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "last": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "prev": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "next": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "first",
+                        "last",
+                        "prev",
+                        "next"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "current_page": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "from": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "minimum": 1
+                        },
+                        "last_page": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "links": {
+                          "type": "array",
+                          "description": "Generated paginator links.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "active": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "label",
+                              "active"
+                            ]
+                          }
+                        },
+                        "path": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Base path for paginator generated URLs."
+                        },
+                        "per_page": {
+                          "type": "integer",
+                          "description": "Number of items shown per page.",
+                          "minimum": 0
+                        },
+                        "to": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "Number of the last item in the slice.",
+                          "minimum": 1
+                        },
+                        "total": {
+                          "type": "integer",
+                          "description": "Total number of items being paginated.",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "current_page",
+                        "from",
+                        "last_page",
+                        "links",
+                        "path",
+                        "per_page",
+                        "to",
+                        "total"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "links",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/legal-documents/{id}": {
+      "get": {
+        "operationId": "legal-documents.show",
+        "description": "Returns a single legal document with its articles, relations, and their latest versions.",
+        "summary": "Get a legal document",
+        "tags": [
+          "LegalDocument"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`LegalDocumentResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LegalDocumentResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/legal-documents/{id}/full-export": {
+      "get": {
+        "operationId": "legalDocumentExport.export",
+        "summary": "Export a full legal document with its structure and articles",
+        "tags": [
+          "LegalDocumentExport"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`LegalDocumentResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LegalDocumentResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/legal-documents/{documentId}/tree": {
+      "get": {
+        "operationId": "structureNode.tree",
+        "description": "Returns the structure tree for a specific document.",
+        "summary": "Get document hierarchy",
+        "tags": [
+          "StructureNode"
+        ],
+        "parameters": [
+          {
+            "name": "documentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `StructureNodeResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StructureNodeResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sync/updates": {
+      "get": {
+        "operationId": "sync.updates",
+        "summary": "Get articles updated since a given timestamp",
+        "tags": [
+          "Sync"
+        ],
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated set of `ArticleSyncResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ArticleSyncResource"
+                      }
+                    },
+                    "links": {
+                      "type": "object",
+                      "properties": {
+                        "first": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "last": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "prev": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "next": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "first",
+                        "last",
+                        "prev",
+                        "next"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "current_page": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "from": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "minimum": 1
+                        },
+                        "last_page": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "links": {
+                          "type": "array",
+                          "description": "Generated paginator links.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "active": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "label",
+                              "active"
+                            ]
+                          }
+                        },
+                        "path": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Base path for paginator generated URLs."
+                        },
+                        "per_page": {
+                          "type": "integer",
+                          "description": "Number of items shown per page.",
+                          "minimum": 0
+                        },
+                        "to": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "Number of the last item in the slice.",
+                          "minimum": 1
+                        },
+                        "total": {
+                          "type": "integer",
+                          "description": "Total number of items being paginated.",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "current_page",
+                        "from",
+                        "last_page",
+                        "links",
+                        "path",
+                        "per_page",
+                        "to",
+                        "total"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "links",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ArticleResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "order": {
+            "type": "integer"
+          },
+          "content": {
+            "type": "string"
+          },
+          "validation_status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "order",
+          "validation_status"
+        ],
+        "title": "ArticleResource"
+      },
+      "ArticleSyncResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "document_id": {
+            "type": "string"
+          },
+          "parent_node_id": {
+            "type": "string"
+          },
+          "number": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "parent_node_id",
+          "number",
+          "order",
+          "updated_at"
+        ],
+        "title": "ArticleSyncResource"
+      },
+      "DocumentRelationResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "source_document_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_document_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "relation_type": {
+            "type": "string"
+          },
+          "comment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_document": {
+            "$ref": "#/components/schemas/LegalDocumentResource"
+          }
+        },
+        "required": [
+          "id",
+          "source_document_id",
+          "target_document_id",
+          "relation_type",
+          "comment"
+        ],
+        "title": "DocumentRelationResource"
+      },
+      "DocumentTypeResource": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "hierarchy_level": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "hierarchy_level"
+        ],
+        "title": "DocumentTypeResource"
+      },
+      "InstitutionResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "acronym": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "acronym"
+        ],
+        "title": "InstitutionResource"
+      },
+      "LegalDocumentResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "reference": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "dates": {
+            "type": "object",
+            "properties": {
+              "signature": {
+                "type": "string"
+              },
+              "publication": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "signature",
+              "publication"
+            ]
+          },
+          "institution": {
+            "$ref": "#/components/schemas/InstitutionResource"
+          },
+          "type": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "name"
+            ]
+          },
+          "structure": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StructureNodeResource"
+            }
+          },
+          "articles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArticleSyncResource"
+            }
+          },
+          "relations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentRelationResource"
+            }
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "reference",
+          "status",
+          "dates",
+          "updated_at"
+        ],
+        "title": "LegalDocumentResource"
+      },
+      "StructureNodeResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "order": {
+            "type": "integer"
+          },
+          "articles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArticleResource"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "number",
+          "title",
+          "order"
+        ],
+        "title": "StructureNodeResource"
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "email_verified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "two_factor_confirmed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "email_verified_at",
+          "created_at",
+          "updated_at",
+          "two_factor_confirmed_at"
+        ],
+        "title": "User"
+      }
+    },
+    "responses": {
+      "ValidationException": {
+        "description": "Validation error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Errors overview."
+                },
+                "errors": {
+                  "type": "object",
+                  "description": "A detailed description of each field that failed validation.",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "message",
+                "errors"
+              ]
+            }
+          }
+        }
+      },
+      "AuthenticationException": {
+        "description": "Unauthenticated",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Error overview."
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

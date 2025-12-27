@@ -2,8 +2,10 @@ package com.mibeko.mibeko.data.local.dao
 
 import androidx.room.*
 import com.mibeko.mibeko.data.local.entities.ArticleEntity
+import com.mibeko.mibeko.data.local.entities.ArticleTagEntity
 import com.mibeko.mibeko.data.local.entities.DocumentEntity
 import com.mibeko.mibeko.data.local.entities.NodeEntity
+import com.mibeko.mibeko.data.local.entities.TagEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -17,6 +19,15 @@ interface MibekoDao {
 
     @Upsert
     suspend fun upsertArticles(articles: List<ArticleEntity>)
+
+    @Upsert
+    suspend fun upsertTags(tags: List<TagEntity>)
+
+    @Upsert
+    suspend fun upsertArticleTags(articleTags: List<ArticleTagEntity>)
+
+    @Query("DELETE FROM articles WHERE id IN (:ids)")
+    suspend fun deleteArticlesByIds(ids: List<String>)
 
     @Query("SELECT * FROM documents")
     fun getAllDocuments(): Flow<List<DocumentEntity>>
@@ -34,11 +45,19 @@ interface MibekoDao {
     suspend fun syncAll(
         documents: List<DocumentEntity>,
         nodes: List<NodeEntity>,
-        articles: List<ArticleEntity>
+        articles: List<ArticleEntity>,
+        tags: List<TagEntity> = emptyList(),
+        articleTags: List<ArticleTagEntity> = emptyList(),
+        deletedArticleIds: List<String> = emptyList()
     ) {
+        if (deletedArticleIds.isNotEmpty()) {
+            deleteArticlesByIds(deletedArticleIds)
+        }
         upsertDocuments(documents)
         upsertNodes(nodes)
         upsertArticles(articles)
+        upsertTags(tags)
+        upsertArticleTags(articleTags)
     }
 
     @Transaction

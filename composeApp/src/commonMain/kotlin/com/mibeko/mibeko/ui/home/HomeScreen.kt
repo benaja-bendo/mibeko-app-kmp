@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -139,26 +140,64 @@ fun HomeScreen(
                 // Expert Section: Codes
                 item {
                     Text(
-                        text = "Codes Principaux",
+                        text = "Codes Officiels",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                 }
-                
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        HomeGridItem("Code Civil", "1", Icons.Default.Balance, Modifier.weight(1f)) {
-                            navigator.navigateTo(NavDestination.Explorer)
+
+                if (lawCodes.isNotEmpty()) {
+                    // Use a Chunked flow or simple grid calculation since LazyColumn item can't easily contain a dynamic Grid without fixed height.
+                    // Or keep it simple: Horizontal scrolling row OR just vertical list for now inside the column?
+                    // PRD says "Hierarchical navigation".
+                    // Let's use a dynamic grid logic by chunking the list into pairs, OR use a FlowRow if available (Compose Multiplatform usually has it).
+                    // For safety in standard Compose, let's render items in pairs.
+                    
+                    val chunkedCodes = lawCodes.chunked(2)
+                    items(chunkedCodes) { rowCodes ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            rowCodes.forEach { code ->
+                                HomeGridItem(
+                                    title = code.title,
+                                    id = code.id,
+                                    icon = if (code.title.contains("Pénal", ignoreCase = true)) Icons.Default.Gavel else Icons.Default.Balance,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    // Navigate to Explorer filtering by this code effectively, 
+                                    // or just go to Explorer root as requested (Navigator currently simple).
+                                    // Ideally: navigate to code detail directly?
+                                    // Current Navigator: NavDestination.Explorer (no args).
+                                    navigator.navigateTo(NavDestination.Explorer)
+                                }
+                            }
+                            // Fill empty space if odd number
+                            if (rowCodes.size < 2) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
-                        HomeGridItem("Code Pénal", "2", Icons.Default.Gavel, Modifier.weight(1f)) {
-                            navigator.navigateTo(NavDestination.Explorer)
+                    }
+                } else {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                                .background(Color(0xFFF5F5F5), RoundedCornerShape(8.dp))
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSyncing) {
+                                Text("Chargement des codes...", fontSize = 14.sp, color = Color.Gray)
+                            } else {
+                                Text("Aucun code. Synchronisez pour commencer.", fontSize = 14.sp, color = Color.Gray)
+                            }
                         }
                     }
                 }

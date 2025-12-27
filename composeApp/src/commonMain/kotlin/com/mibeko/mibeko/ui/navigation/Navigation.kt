@@ -10,6 +10,7 @@ sealed class NavDestination {
     object Home : NavDestination()
     data class SearchResults(val query: String) : NavDestination()
     data class Reader(val articleId: String) : NavDestination()
+    data class DocumentDetail(val documentId: String) : NavDestination()
     object Explorer : NavDestination()
     object Favorites : NavDestination()
     object Settings : NavDestination()

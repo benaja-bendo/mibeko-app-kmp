@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import com.mibeko.mibeko.ui.home.HomeScreen
 import com.mibeko.mibeko.ui.search.SearchResultsScreen
 import com.mibeko.mibeko.ui.reader.ReaderScreen
+import com.mibeko.mibeko.ui.details.DocumentDetailScreen
 import com.mibeko.mibeko.ui.explorer.ExplorerScreen
 import com.mibeko.mibeko.ui.favorites.FavoritesScreen
 import com.mibeko.mibeko.ui.settings.SettingsScreen
@@ -22,6 +23,7 @@ fun App() {
             is NavDestination.Home -> HomeScreen(navigator)
             is NavDestination.SearchResults -> SearchResultsScreen(dest.query, navigator)
             is NavDestination.Reader -> ReaderScreen(dest.articleId, navigator)
+            is NavDestination.DocumentDetail -> DocumentDetailScreen(dest.documentId, navigator)
             is NavDestination.Explorer -> ExplorerScreen(navigator)
             is NavDestination.Favorites -> FavoritesScreen(navigator)
             is NavDestination.Settings -> SettingsScreen(navigator)
