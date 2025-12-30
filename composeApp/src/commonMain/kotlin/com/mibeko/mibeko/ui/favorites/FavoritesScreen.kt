@@ -18,70 +18,75 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.mibeko.mibeko.di.AppModule
-import com.mibeko.mibeko.ui.home.MibekoBottomBar
-import com.mibeko.mibeko.ui.navigation.MibekoNavigator
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun FavoritesScreen(
-    navigator: MibekoNavigator,
-    viewModel: FavoritesViewModel = viewModel { FavoritesViewModel(AppModule.repository) }
-) {
-    val favorites by viewModel.favoriteArticles.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Mes Favoris") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
-            )
-        },
-        bottomBar = { MibekoBottomBar(navigator) }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(Color(0xFFF5F5F5))
-        ) {
-            // Status Header
-            Box(
+import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import org.koin.compose.viewmodel.koinViewModel
+import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
+
+class FavoritesScreen : Screen {
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
+        val viewModel = koinViewModel<FavoritesViewModel>()
+        val favorites by viewModel.favoriteArticles.collectAsState()
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Mes Favoris") },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                )
+            },
+            bottomBar = { MibekoBottomBar(navigator) }
+        ) { padding ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF1B5E20))
-                    .padding(12.dp)
+                    .fillMaxSize()
+                    .padding(padding)
+                    .background(MaterialTheme.colorScheme.background)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Vos favoris sont disponibles hors ligne",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            if (favorites.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Aucun favori pour le moment", color = Color.Gray)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                // Status Header
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF1B5E20))
+                        .padding(12.dp)
                 ) {
-                    items(favorites) { article ->
-                        FavoriteItemCard(article.number, article.breadcrumb)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Vos favoris sont disponibles hors ligne",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                if (favorites.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Aucun favori pour le moment", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(favorites) { article ->
+                            FavoriteItemCard(article.number, article.breadcrumb)
+                        }
                     }
                 }
             }
@@ -93,7 +98,7 @@ fun FavoritesScreen(
 fun FavoriteItemCard(number: String, breadcrumb: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -106,7 +111,7 @@ fun FavoriteItemCard(number: String, breadcrumb: String) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = number, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
-                Text(text = breadcrumb, color = Color.Gray, fontSize = 12.sp)
+                Text(text = breadcrumb, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
             
             IconButton(onClick = { }) {

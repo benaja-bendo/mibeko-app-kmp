@@ -3,6 +3,9 @@ package com.mibeko.mibeko.ui.details
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import com.mibeko.mibeko.data.local.entities.ArticleEntity
+import com.mibeko.mibeko.ui.components.SyncStatusIndicator
+import com.mibeko.mibeko.ui.components.SyncState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -18,110 +21,112 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.mibeko.mibeko.data.local.entities.ArticleEntity
-import com.mibeko.mibeko.di.AppModule
-import com.mibeko.mibeko.ui.components.SyncStatusIndicator
-import com.mibeko.mibeko.ui.components.SyncState
-import com.mibeko.mibeko.ui.navigation.MibekoNavigator
-import com.mibeko.mibeko.ui.navigation.NavDestination
+
 import com.mibeko.mibeko.ui.theme.MibekoGold
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DocumentDetailScreen(
-    documentId: String,
-    navigator: MibekoNavigator,
-    viewModel: DocumentDetailViewModel = viewModel { DocumentDetailViewModel(AppModule.repository) }
-) {
-    val structure by viewModel.structure.collectAsState()
+import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import org.koin.compose.viewmodel.koinViewModel
+import com.mibeko.mibeko.ui.reader.ReaderScreen
+import com.mibeko.mibeko.ui.explorer.ExplorerScreen
 
-    LaunchedEffect(documentId) {
-        viewModel.loadStructure(documentId)
-    }
+data class DocumentDetailScreen(val documentId: String) : Screen {
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { 
-                    Column {
-                        Text(
-                            text = "Détails du Document", 
-                            style = MaterialTheme.typography.titleMedium
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
+        val viewModel = koinViewModel<DocumentDetailViewModel>()
+        val structure by viewModel.structure.collectAsState()
+
+        LaunchedEffect(documentId) {
+            viewModel.loadStructure(documentId)
+        }
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { 
+                        Column {
+                            Text(
+                                text = "Détails du Document", 
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navigator.pop() }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack, 
+                                contentDescription = "Retour",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    },
+                    actions = {
+                        SyncStatusIndicator(
+                            state = SyncState.UP_TO_DATE,
+                            modifier = Modifier.padding(end = 16.dp)
                         )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navigator.navigateTo(NavDestination.Explorer) }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack, 
-                            contentDescription = "Retour",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
-                actions = {
-                    SyncStatusIndicator(
-                        state = SyncState.UP_TO_DATE,
-                        modifier = Modifier.padding(end = 16.dp)
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
-                ),
-                scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        if (structure.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Header Space (could contain Document Title if available)
-                item {
-                    Text(
-                        text = "Table des matières",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+                )
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { padding ->
+            if (structure.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
-
-                // Determine sort order
-                val sortedNodes = structure.keys.sortedBy { it.sort_order }
-
-                sortedNodes.forEach { node ->
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Header Space (could contain Document Title if available)
                     item {
                         Text(
-                            text = node.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                            text = "Table des matières",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
-                    
-                    val articles = structure[node]?.sortedBy { it.number.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 } ?: emptyList()
-                    
-                    items(articles) { article ->
-                        ArticleItem(article) {
-                            navigator.navigateTo(NavDestination.Reader(article.id))
+
+                    // Determine sort order
+                    val sortedNodes = structure.keys.sortedBy { it.sort_order }
+
+                    sortedNodes.forEach { node ->
+                        item {
+                            Text(
+                                text = node.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                            )
+                        }
+                        
+                        val articles = structure[node]?.sortedBy { it.number.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 } ?: emptyList()
+                        
+                        items(articles) { article ->
+                            ArticleItem(article) {
+                                navigator.push(ReaderScreen(article.id))
+                            }
                         }
                     }
                 }
