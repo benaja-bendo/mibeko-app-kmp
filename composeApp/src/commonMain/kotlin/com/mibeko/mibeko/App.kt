@@ -19,14 +19,17 @@ fun App() {
     val navigator = rememberMibekoNavigator()
 
     MibekoTheme {
-        when (val dest = navigator.currentDestination) {
-            is NavDestination.Home -> HomeScreen(navigator)
-            is NavDestination.SearchResults -> SearchResultsScreen(dest.query, navigator)
-            is NavDestination.Reader -> ReaderScreen(dest.articleId, navigator)
-            is NavDestination.DocumentDetail -> DocumentDetailScreen(dest.documentId, navigator)
-            is NavDestination.Explorer -> ExplorerScreen(navigator)
-            is NavDestination.Favorites -> FavoritesScreen(navigator)
-            is NavDestination.Settings -> SettingsScreen(navigator)
+        androidx.compose.animation.Crossfade(targetState = navigator.currentDestination) { destination ->
+            when (destination) {
+                is NavDestination.Home -> HomeScreen(navigator)
+                is NavDestination.SearchResults -> SearchResultsScreen(destination.query, navigator)
+                is NavDestination.Reader -> ReaderScreen(destination.articleId, navigator)
+                is NavDestination.DocumentDetail -> DocumentDetailScreen(destination.documentId, navigator)
+                is NavDestination.Explorer -> ExplorerScreen(navigator)
+                is NavDestination.Favorites -> FavoritesScreen(navigator)
+                is NavDestination.Settings -> SettingsScreen(navigator)
+                is NavDestination.Notifications -> com.mibeko.mibeko.ui.notifications.NotificationScreen()
+            }
         }
     }
 }

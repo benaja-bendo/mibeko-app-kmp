@@ -14,7 +14,9 @@ sealed class NavDestination {
     object Explorer : NavDestination()
     object Favorites : NavDestination()
     object Settings : NavDestination()
+    object Notifications : NavDestination()
 }
+
 
 class MibekoNavigator {
     var currentDestination by mutableStateOf<NavDestination>(NavDestination.Home)

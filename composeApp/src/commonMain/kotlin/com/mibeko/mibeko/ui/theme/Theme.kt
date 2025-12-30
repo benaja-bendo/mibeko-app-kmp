@@ -12,8 +12,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Define a simple typography
+// Refined Typography - Serif for Headings (Prestige), Sans for Body (Readability)
 val AppTypography = Typography(
+    displayLarge = TextStyle(
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 57.sp,
+        lineHeight = 64.sp,
+        letterSpacing = (-0.25).sp
+    ),
     headlineLarge = TextStyle(
         fontFamily = FontFamily.Serif,
         fontWeight = FontWeight.Bold,
@@ -27,8 +34,15 @@ val AppTypography = Typography(
         fontSize = 28.sp,
         lineHeight = 36.sp
     ),
+    titleLarge = TextStyle(
+        fontFamily = FontFamily.Serif, // Changed to Serif for section headers
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = 0.sp
+    ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.Serif,
+        fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
         lineHeight = 24.sp,
@@ -37,46 +51,72 @@ val AppTypography = Typography(
     bodyLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
-        fontSize = 18.sp,
-        lineHeight = 28.sp,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
         letterSpacing = 0.5.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
         letterSpacing = 0.25.sp
+    ),
+    labelMedium = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.5.sp
     )
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = MibekoBluePrimary,
-    onPrimary = MibekoTextOnPrimary,
+    onPrimary = OnPrimary,
     primaryContainer = MibekoBlueLight,
-    onPrimaryContainer = MibekoTextOnPrimary,
+    onPrimaryContainer = OnPrimary,
     
     secondary = MibekoGold,
-    onSecondary = MibekoTextPrimary,
+    onSecondary = OnSecondary,
+    secondaryContainer = MibekoGoldLight,
+    onSecondaryContainer = Color.Black,
     
-    background = MibekoBackground,
-    onBackground = MibekoTextPrimary,
+    background = MibekoBackgroundLight,
+    onBackground = TextPrimaryLight,
     
-    surface = MibekoSurface,
-    onSurface = MibekoTextPrimary,
+    surface = MibekoSurfaceLight,
+    onSurface = TextPrimaryLight,
     
-    error = ErrorRed
+    surfaceVariant = MibekoBlueBackground,
+    onSurfaceVariant = MibekoBlueDark,
+    
+    error = LegalRepealed,
+    onError = Color.White
 )
 
 private val DarkColorScheme = darkColorScheme(
     primary = MibekoBlueLight,
-    onPrimary = MibekoTextOnPrimary,
-    secondary = MibekoGoldLight,
-    onSecondary = MibekoTextPrimary,
-    background = Color(0xFF121212),
-    onBackground = MibekoBackground,
-    surface = Color(0xFF1E1E1E),
-    onSurface = MibekoBackground
+    onPrimary = OnPrimary,
+    primaryContainer = MibekoBlueDark,
+    onPrimaryContainer = MibekoBlueLight,
+    
+    secondary = MibekoGold,
+    onSecondary = Color.Black,
+    secondaryContainer = MibekoGoldDark,
+    onSecondaryContainer = MibekoGoldLight,
+    
+    background = MibekoBackgroundDark,
+    onBackground = TextPrimaryDark,
+    
+    surface = MibekoSurfaceDark,
+    onSurface = TextPrimaryDark,
+    
+    surfaceVariant = Color(0xFF2C2C2C),
+    onSurfaceVariant = TextSecondaryDark,
+    
+    error = Color(0xFFCF6679),
+    onError = Color.Black
 )
 
 

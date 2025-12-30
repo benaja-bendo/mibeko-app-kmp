@@ -7,6 +7,7 @@ import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
 
+
 @OptIn(ExperimentalForeignApi::class)
 actual fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase> {
     val documentDirectory = NSFileManager.defaultManager.URLForDirectory(
@@ -21,4 +22,8 @@ actual fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase> {
         name = dbFilePath,
         factory = { AppDatabaseConstructor.initialize() }
     ).setDriver(androidx.sqlite.driver.bundled.BundledSQLiteDriver())
+     .fallbackToDestructiveMigration(true)
 }
+
+
+

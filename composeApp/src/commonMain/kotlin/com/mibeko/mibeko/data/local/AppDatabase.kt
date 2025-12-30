@@ -13,8 +13,9 @@ import com.mibeko.mibeko.data.local.entities.*
         TagEntity::class,
         ArticleTagEntity::class
     ],
-    version = 1
+    version = 2
 )
+
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun mibekoDao(): MibekoDao
