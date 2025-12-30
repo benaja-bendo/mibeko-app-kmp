@@ -1,6 +1,7 @@
 package com.mibeko.mibeko.di
 
 import com.mibeko.mibeko.data.local.getDatabaseBuilder
+import com.mibeko.mibeko.data.preferences.SearchHistoryManager
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.LegalApiService
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
@@ -19,6 +20,7 @@ import org.koin.dsl.module
 val commonModule = module {
     // User Preferences
     single { UserPreferencesRepository() }
+    single { SearchHistoryManager() }
     single {
         Json {
             ignoreUnknownKeys = true
@@ -45,8 +47,9 @@ val commonModule = module {
     single { LocalLegalRepository(get(), get()) }
 
     viewModel { HomeViewModel(get()) }
-    viewModel { SearchViewModel(get()) }
+    viewModel { SearchViewModel(get(), get()) }
     viewModel { ReaderViewModel(get()) }
     viewModel { DocumentDetailViewModel(get()) }
     viewModel { FavoritesViewModel(get()) }
 }
+

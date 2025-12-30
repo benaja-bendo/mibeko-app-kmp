@@ -83,3 +83,27 @@ data class RemoteTreeResponse(
     val data: List<RemoteNode>
 )
 
+/**
+ * Response from the article search endpoint.
+ */
+@Serializable
+data class RemoteSearchResponse(
+    val data: List<RemoteSearchResult>,
+    val meta: RemoteMeta
+)
+
+/**
+ * Individual search result from the API.
+ */
+@Serializable
+data class RemoteSearchResult(
+    val id: String,
+    val number: String,
+    val content: String,
+    val document_id: String,
+    val document_title: String?,
+    val document_type: String?,
+    val node_title: String?,
+    val breadcrumb: String
+)
+

@@ -183,4 +183,16 @@ class LocalLegalRepository(
     fun getStructure(documentId: String): Flow<Map<NodeEntity, List<ArticleEntity>>> {
         return mibekoDao.getStructure(documentId)
     }
+
+    /**
+     * Get autocomplete suggestions for a query.
+     * Returns formatted strings like "Article 45 - Code du Travail".
+     */
+    fun getAutocompleteSuggestions(query: String): Flow<List<String>> {
+        return mibekoDao.searchArticles(query).map { results ->
+            results.take(10).map { result ->
+                "${result.article.number} - ${result.node_title}"
+            }
+        }
+    }
 }

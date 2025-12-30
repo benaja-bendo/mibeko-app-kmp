@@ -1,38 +1,37 @@
 package com.mibeko.mibeko.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.search.SearchResultsScreen
+import com.mibeko.mibeko.ui.search.ActiveSearchScreen
 import com.mibeko.mibeko.ui.explorer.ExplorerScreen
-import com.mibeko.mibeko.ui.favorites.FavoritesScreen
-import com.mibeko.mibeko.ui.settings.SettingsScreen
 import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
+import com.mibeko.mibeko.ui.components.MibekoSearchBar
+import com.mibeko.mibeko.ui.components.QuickAccessCard
+import com.mibeko.mibeko.ui.components.ThemeCard
 
 class HomeScreen : Screen {
 
@@ -42,12 +41,18 @@ class HomeScreen : Screen {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinViewModel<HomeViewModel>()
         
-        var searchQuery by remember { mutableStateOf("") }
-        val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
         val lawCodes by viewModel.lawCodes.collectAsState()
         val isSyncing by viewModel.isSyncing.collectAsState()
         val error by viewModel.error.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
+        
+        // Animation states
+        var showContent by remember { mutableStateOf(false) }
+        
+        LaunchedEffect(Unit) {
+            delay(100)
+            showContent = true
+        }
 
         LaunchedEffect(error) {
             error?.let {
@@ -60,281 +65,319 @@ class HomeScreen : Screen {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = { MibekoBottomBar(navigator) }
         ) { padding ->
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .background(MaterialTheme.colorScheme.background)
+                    .background(MaterialTheme.colorScheme.background),
+                contentPadding = PaddingValues(bottom = 24.dp)
             ) {
-                // Header with Logo
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Gavel,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(32.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Mibeko",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    
-                    IconButton(onClick = { viewModel.syncData() }, enabled = !isSyncing) {
-                        if (isSyncing) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Sync", tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                }
-
-                // Sync Status
-                if (lawCodes.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(8.dp))
-                            .padding(16.dp)
+                // Header with Logo and Status
+                item {
+                    AnimatedVisibility(
+                        visible = showContent,
+                        enter = fadeIn() + slideInVertically { -40 }
                     ) {
-                        Column {
-                            Text("Aucune donnée disponible", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
-                            Text("Veuillez synchroniser pour accéder aux textes hors-ligne.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onErrorContainer)
-                            Button(onClick = { viewModel.syncData() }, modifier = Modifier.padding(top = 8.dp)) {
-                                Text("Synchroniser maintenant")
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Large Search Box
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Rechercher un article (ex: Art 45)...") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    leadingIcon = { 
-                        Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary)
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = {
-                        if (searchQuery.isNotEmpty()) {
-                            focusManager.clearFocus()
-                            navigator.push(SearchResultsScreen(searchQuery))
-                        }
-                    })
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                androidx.compose.foundation.lazy.LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    // Expert Section: Codes
-                    item {
-                        Text(
-                            text = "Codes Officiels",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
+                        HomeHeader(
+                            isSyncing = isSyncing,
+                            isOfflineReady = lawCodes.isNotEmpty(),
+                            onSyncClick = { viewModel.syncData() }
                         )
                     }
-
-                    if (lawCodes.isNotEmpty()) {
-                        val chunkedCodes = lawCodes.chunked(2)
-                        items(chunkedCodes) { rowCodes ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                }
+                
+                // Search Bar
+                item {
+                    AnimatedVisibility(
+                        visible = showContent,
+                        enter = fadeIn() + slideInVertically { -20 }
+                    ) {
+                        MibekoSearchBar(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            onClick = { navigator.push(ActiveSearchScreen()) }
+                        )
+                    }
+                }
+                
+                // No data warning
+                if (lawCodes.isEmpty() && !isSyncing) {
+                    item {
+                        NoDataCard(onSyncClick = { viewModel.syncData() })
+                    }
+                }
+                
+                // Quick Access Section (for Experts)
+                item {
+                    AnimatedVisibility(
+                        visible = showContent && lawCodes.isNotEmpty(),
+                        enter = fadeIn() + slideInVertically { 20 }
+                    ) {
+                        Column(modifier = Modifier.padding(top = 24.dp)) {
+                            SectionHeader(
+                                title = "Accès Rapide",
+                                subtitle = "Codes les plus consultés"
+                            )
+                            
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                rowCodes.forEach { code ->
-                                    HomeGridItem(
+                                items(lawCodes.take(4)) { code ->
+                                    QuickAccessCard(
                                         title = code.title,
-                                        id = code.id,
-                                        icon = if (code.title.contains("Pénal", ignoreCase = true)) Icons.Default.Gavel else Icons.Default.Balance,
-                                        modifier = Modifier.weight(1f)
+                                        icon = getCodeIcon(code.title),
+                                        isPrimary = lawCodes.indexOf(code) < 2
                                     ) {
                                         navigator.push(ExplorerScreen())
                                     }
                                 }
-                                // Fill empty space if odd number
-                                if (rowCodes.size < 2) {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                            }
-                        }
-                    } else {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isSyncing) {
-                                    Text("Chargement des codes...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                } else {
-                                    Text("Aucun code. Synchronisez pour commencer.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                    }
-                    
-                    item { Spacer(modifier = Modifier.height(24.dp)) }
-
-                    // Novice Section: Themes
-                    item {
-                        Text(
-                            text = "Thématiques Populaires",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    
-                    item {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            ThemeItem("Contrat de Travail & Licenciement", Icons.Default.Work) {
-                                navigator.push(SearchResultsScreen("Travail"))
-                            }
-                            ThemeItem("Mariage, Divorce & Famille", Icons.Default.FamilyRestroom) {
-                                navigator.push(SearchResultsScreen("Famille"))
-                            }
-                            ThemeItem("Location & Logement", Icons.Default.HomeWork) {
-                                navigator.push(SearchResultsScreen("Location"))
-                            }
-                            ThemeItem("Créations d'entreprises", Icons.Default.BusinessCenter) {
-                                navigator.push(SearchResultsScreen("Commerce"))
                             }
                         }
                     }
                 }
-
+                
+                // Loading state for codes
+                if (isSyncing && lawCodes.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(40.dp),
+                                    strokeWidth = 3.dp
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    "Chargement des codes...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                // Life Themes Section (for Citizens)
+                item {
+                    AnimatedVisibility(
+                        visible = showContent,
+                        enter = fadeIn() + slideInVertically { 40 }
+                    ) {
+                        Column(modifier = Modifier.padding(top = 32.dp)) {
+                            SectionHeader(
+                                title = "Thématiques de Vie",
+                                subtitle = "Trouvez par situation"
+                            )
+                            
+                            Column(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                ThemeCard(
+                                    title = "Contrat de Travail & Licenciement",
+                                    icon = Icons.Default.Work
+                                ) {
+                                    navigator.push(SearchResultsScreen("Travail licenciement"))
+                                }
+                                
+                                ThemeCard(
+                                    title = "Mariage, Divorce & Famille",
+                                    icon = Icons.Default.FamilyRestroom
+                                ) {
+                                    navigator.push(SearchResultsScreen("Famille mariage"))
+                                }
+                                
+                                ThemeCard(
+                                    title = "Location & Logement",
+                                    icon = Icons.Default.HomeWork
+                                ) {
+                                    navigator.push(SearchResultsScreen("Location bail"))
+                                }
+                                
+                                ThemeCard(
+                                    title = "Création d'entreprises",
+                                    icon = Icons.Default.BusinessCenter
+                                ) {
+                                    navigator.push(SearchResultsScreen("Commerce entreprise"))
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun HomeGridItem(title: String, id: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val isPrimary = id == "1" || id == "2"
-    
-    Card(
-        onClick = onClick,
-        modifier = modifier
-            .height(120.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
+private fun HomeHeader(
+    isSyncing: Boolean,
+    isOfflineReady: Boolean,
+    onSyncClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        // Logo and title
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = icon,
+                imageVector = Icons.Default.Gavel,
                 contentDescription = null,
-                tint = if (isPrimary) Color.White else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
             )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = title,
-                color = if (isPrimary) Color.White else MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                style = MaterialTheme.typography.labelLarge
+                text = "Mibeko",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
             )
+        }
+        
+        // Status and sync
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Offline status indicator
+            if (isOfflineReady) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = CircleShape
+                                )
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "Hors-ligne",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+            
+            // Sync button
+            IconButton(
+                onClick = onSyncClick,
+                enabled = !isSyncing
+            ) {
+                if (isSyncing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Sync,
+                        contentDescription = "Synchroniser",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun ThemeItem(title: String, icon: ImageVector, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+private fun SectionHeader(title: String, subtitle: String) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun NoDataCard(onSyncClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
-                modifier = Modifier.size(40.dp)
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = icon,
+                    Icons.Default.CloudOff,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(8.dp)
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    "Aucune donnée disponible",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onErrorContainer
                 )
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
+                "Synchronisez pour accéder aux textes juridiques même hors-ligne.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
             )
             
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.size(20.dp)
-            )
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Button(
+                onClick = onSyncClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Synchroniser maintenant")
+            }
         }
     }
 }
 
-
+private fun getCodeIcon(title: String): ImageVector {
+    return when {
+        title.contains("Pénal", ignoreCase = true) -> Icons.Default.Gavel
+        title.contains("Civil", ignoreCase = true) -> Icons.Default.Balance
+        title.contains("Travail", ignoreCase = true) -> Icons.Default.Work
+        title.contains("Famille", ignoreCase = true) -> Icons.Default.FamilyRestroom
+        title.contains("Commercial", ignoreCase = true) -> Icons.Default.Business
+        else -> Icons.Default.MenuBook
+    }
+}
