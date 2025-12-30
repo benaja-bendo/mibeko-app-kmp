@@ -70,9 +70,13 @@ kotlin {
             implementation(libs.voyager.screenmodel)
             implementation(libs.voyager.koin)
             implementation(libs.voyager.transitions)
+
+            // Preferences
+            implementation(libs.multiplatform.settings)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.multiplatform.settings.test)
         }
     }
 }

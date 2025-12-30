@@ -1,6 +1,7 @@
 package com.mibeko.mibeko.di
 
 import com.mibeko.mibeko.data.local.getDatabaseBuilder
+import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.LegalApiService
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.ui.home.HomeViewModel
@@ -16,6 +17,8 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val commonModule = module {
+    // User Preferences
+    single { UserPreferencesRepository() }
     single {
         Json {
             ignoreUnknownKeys = true
