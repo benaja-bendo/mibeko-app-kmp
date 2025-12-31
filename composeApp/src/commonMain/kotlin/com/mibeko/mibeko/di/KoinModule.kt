@@ -10,6 +10,9 @@ import com.mibeko.mibeko.ui.search.SearchViewModel
 import com.mibeko.mibeko.ui.reader.ReaderViewModel
 import com.mibeko.mibeko.ui.details.DocumentDetailViewModel
 import com.mibeko.mibeko.ui.favorites.FavoritesViewModel
+import com.mibeko.mibeko.ui.settings.SettingsViewModel
+import com.mibeko.mibeko.util.NetworkConnectivityChecker
+import com.mibeko.mibeko.util.getNetworkConnectivityChecker
 import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
@@ -44,12 +47,17 @@ val commonModule = module {
 
     single { LegalApiService(get(), get<AppConfig>().baseUrl) }
 
-    single { LocalLegalRepository(get(), get()) }
+    // Network connectivity checker (platform-specific implementation)
+    single<NetworkConnectivityChecker> { getNetworkConnectivityChecker() }
+
+    // Repository with all dependencies for hybrid search
+    single { LocalLegalRepository(get(), get(), get(), get()) }
 
     viewModel { HomeViewModel(get()) }
     viewModel { SearchViewModel(get(), get()) }
     viewModel { ReaderViewModel(get()) }
     viewModel { DocumentDetailViewModel(get()) }
     viewModel { FavoritesViewModel(get()) }
+    viewModel { SettingsViewModel(get(), get()) }
 }
 

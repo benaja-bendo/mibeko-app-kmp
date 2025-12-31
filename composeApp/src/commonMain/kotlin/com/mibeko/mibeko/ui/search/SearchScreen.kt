@@ -1,5 +1,8 @@
 package com.mibeko.mibeko.ui.search
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,7 +11,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,8 +37,7 @@ data class SearchResultsScreen(val query: String) : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = koinViewModel<SearchViewModel>()
-        val results by viewModel.searchResults.collectAsState()
-        val currentFilter by viewModel.filter.collectAsState()
+        val uiState by viewModel.uiState.collectAsState()
 
         LaunchedEffect(query) {
             viewModel.updateQuery(query)
@@ -76,6 +81,13 @@ data class SearchResultsScreen(val query: String) : Screen {
                     .padding(padding)
                     .background(MaterialTheme.colorScheme.background)
             ) {
+                // Network status indicator
+                NetworkStatusBanner(
+                    isFromNetwork = uiState.isFromNetwork,
+                    errorMessage = uiState.errorMessage,
+                    onRetry = { viewModel.retrySearch() }
+                )
+
                 // Filter Chips
                 Row(
                     modifier = Modifier
@@ -84,27 +96,40 @@ data class SearchResultsScreen(val query: String) : Screen {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     FilterChipItem(
-                        selected = currentFilter == "Tout",
+                        selected = uiState.currentFilter == "Tout",
                         label = "Tout",
-                        count = results.size,
+                        count = if (uiState.currentFilter == "Tout") uiState.results.size else null,
                         onClick = { viewModel.updateFilter("Tout") }
                     )
                     FilterChipItem(
-                        selected = currentFilter == "Codes",
+                        selected = uiState.currentFilter == "Codes",
                         label = "Codes",
                         onClick = { viewModel.updateFilter("Codes") }
                     )
                     FilterChipItem(
-                        selected = currentFilter == "Lois",
+                        selected = uiState.currentFilter == "Lois",
                         label = "Lois",
                         onClick = { viewModel.updateFilter("Lois") }
                     )
                 }
 
+                // Loading indicator
+                AnimatedVisibility(
+                    visible = uiState.isLoading,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    )
+                }
+
                 // Results count
-                if (results.isNotEmpty()) {
+                if (!uiState.isLoading && uiState.results.isNotEmpty()) {
                     Text(
-                        text = "${results.size} résultat${if (results.size > 1) "s" else ""} trouvé${if (results.size > 1) "s" else ""}",
+                        text = "${uiState.results.size} résultat${if (uiState.results.size > 1) "s" else ""} trouvé${if (uiState.results.size > 1) "s" else ""}",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -116,12 +141,12 @@ data class SearchResultsScreen(val query: String) : Screen {
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (results.isEmpty()) {
+                    if (!uiState.isLoading && uiState.results.isEmpty()) {
                         item {
                             EmptyResultsState(query = query)
                         }
                     } else {
-                        items(results) { article ->
+                        items(uiState.results) { article ->
                             SearchResultCard(
                                 articleNumber = article.number,
                                 source = article.breadcrumb,
@@ -132,6 +157,84 @@ data class SearchResultsScreen(val query: String) : Screen {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Banner showing network status and any error messages.
+ */
+@Composable
+private fun NetworkStatusBanner(
+    isFromNetwork: Boolean,
+    errorMessage: String?,
+    onRetry: () -> Unit
+) {
+    // Show error banner if there's an error
+    if (errorMessage != null) {
+        Surface(
+            color = MaterialTheme.colorScheme.errorContainer,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        Icons.Default.CloudOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Mode hors-ligne: $errorMessage",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        maxLines = 2
+                    )
+                }
+                IconButton(onClick = onRetry) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Réessayer",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+    } else if (isFromNetwork) {
+        // Subtle indicator that results are from network
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Wifi,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Résultats en ligne",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
