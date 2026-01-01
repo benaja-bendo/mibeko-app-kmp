@@ -4,7 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -34,7 +34,7 @@ fun MibekoBottomBar(navController: NavController) {
             }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.MenuBook, contentDescription = "Explorer") },
+            icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Explorer") },
             label = { Text("Explorer") },
             selected = currentRoute == Screen.Explorer::class.qualifiedName,
             onClick = { 

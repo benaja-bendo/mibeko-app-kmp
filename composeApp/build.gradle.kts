@@ -79,6 +79,10 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.multiplatform.settings.test)
         }
+        
+        // Add KSP generated sources to the source set
+        getByName("iosArm64Main").kotlin.srcDir("build/generated/ksp/iosArm64/iosArm64Main/kotlin")
+        getByName("iosSimulatorArm64Main").kotlin.srcDir("build/generated/ksp/iosSimulatorArm64/iosSimulatorArm64Main/kotlin")
     }
 }
 
