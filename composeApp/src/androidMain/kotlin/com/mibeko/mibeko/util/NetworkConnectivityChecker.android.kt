@@ -3,15 +3,18 @@ package com.mibeko.mibeko.util
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import com.mibeko.mibeko.MibekoApp
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 /**
  * Android implementation of NetworkConnectivityChecker using ConnectivityManager.
+ * Uses Koin for Context injection instead of static singleton.
  */
-class AndroidNetworkConnectivityChecker : NetworkConnectivityChecker {
+class AndroidNetworkConnectivityChecker : NetworkConnectivityChecker, KoinComponent {
+    
+    private val context: Context by inject()
     
     override fun isNetworkAvailable(): Boolean {
-        val context = MibekoApp.INSTANCE
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         
         val network = connectivityManager.activeNetwork ?: return false
