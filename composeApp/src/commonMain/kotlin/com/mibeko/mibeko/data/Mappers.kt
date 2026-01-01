@@ -28,3 +28,18 @@ fun ArticleEntity.toArticleSpec(
         isFavorite = is_favorite
     )
 }
+
+/**
+ * Maps remote API search result to ArticleSpec.
+ */
+fun com.mibeko.mibeko.data.remote.RemoteSearchResult.toArticleSpec(): ArticleSpec {
+    return ArticleSpec(
+        id = id,
+        codeId = document_id,
+        number = number,
+        title = node_title ?: "",
+        content = content,
+        breadcrumb = breadcrumb,
+        isFavorite = false // Remote results don't have favorite status
+    )
+}

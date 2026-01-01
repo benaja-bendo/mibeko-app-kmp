@@ -10,7 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,55 +21,57 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.mibeko.mibeko.di.AppModule
+
+
+import cafe.adriel.voyager.core.screen.Screen
+import org.koin.compose.viewmodel.koinViewModel
+import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
+import com.mibeko.mibeko.ui.details.DocumentDetailScreen
 import com.mibeko.mibeko.ui.home.HomeViewModel
-import com.mibeko.mibeko.ui.home.MibekoBottomBar
-import com.mibeko.mibeko.ui.navigation.MibekoNavigator
-import com.mibeko.mibeko.ui.navigation.NavDestination
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ExplorerScreen(
-    navigator: MibekoNavigator,
-    viewModel: HomeViewModel = viewModel { HomeViewModel(AppModule.repository) }
-) {
-    val lawCodes by viewModel.lawCodes.collectAsState()
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Explorer les Codes") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+class ExplorerScreen : Screen {
+    
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    override fun Content() {
+        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
+        val viewModel = koinViewModel<HomeViewModel>()
+        val lawCodes by viewModel.lawCodes.collectAsState()
+        
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Explorer les Codes") },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
-            )
-        },
-        bottomBar = { MibekoBottomBar(navigator) }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(Color.White)
-        ) {
-            HorizontalDivider(color = Color(0xFFF0F0F0))
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .background(MaterialTheme.colorScheme.background)
             ) {
-                if (lawCodes.isEmpty()) {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("Aucun code local. Synchronisez depuis l'accueil.", color = Color.Gray, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    if (lawCodes.isEmpty()) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text("Aucun code local. Synchronisez depuis l'accueil.", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            }
                         }
-                    }
-                } else {
-                    items(lawCodes) { code ->
-                        ExplorerItem(code) {
-                            navigator.navigateTo(NavDestination.DocumentDetail(code.id))
+                    } else {
+                        items(lawCodes) { code ->
+                            ExplorerItem(code) {
+                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentDetail(code.id))
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 56.dp))
                         }
-                        HorizontalDivider(color = Color(0xFFF0F0F0), modifier = Modifier.padding(start = 56.dp))
                     }
                 }
             }
@@ -116,15 +118,15 @@ fun ExplorerItem(code: com.mibeko.mibeko.data.LawCodeSpec, onClick: () -> Unit) 
                     Text(
                         text = "Mis à jour: ${code.lastUpdated.take(10)}", // Show date part only (YYYY-MM-DD)
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
         Icon(
-            imageVector = Icons.Default.KeyboardArrowRight,
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = Color.LightGray,
+            tint = MaterialTheme.colorScheme.outline,
             modifier = Modifier.size(20.dp)
         )
     }

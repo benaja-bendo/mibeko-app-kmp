@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,101 +19,102 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.mibeko.mibeko.di.AppModule
-import com.mibeko.mibeko.ui.navigation.MibekoNavigator
-import com.mibeko.mibeko.ui.navigation.NavDestination
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ReaderScreen(
-    articleId: String, 
-    navigator: MibekoNavigator,
-    viewModel: ReaderViewModel = viewModel { ReaderViewModel(AppModule.repository) }
-) {
-    val article by viewModel.article.collectAsState()
 
-    LaunchedEffect(articleId) {
-        viewModel.loadArticle(articleId)
-    }
+import cafe.adriel.voyager.core.screen.Screen
+import org.koin.compose.viewmodel.koinViewModel
 
-    if (article == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+data class ReaderScreen(val articleId: String) : Screen {
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    override fun Content() {
+        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
+        val viewModel = koinViewModel<ReaderViewModel>()
+        val article by viewModel.article.collectAsState()
+
+        LaunchedEffect(articleId) {
+            viewModel.loadArticle(articleId)
         }
-        return
-    }
 
-    val currentArticle = article!!
+        if (article == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return
+        }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                        Text(currentArticle.number, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(currentArticle.breadcrumb, color = Color.Gray, fontSize = 10.sp)
+        val currentArticle = article!!
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                            Text(currentArticle.number, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(currentArticle.breadcrumb, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { }) { 
+                            Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                        }
+                        Spacer(modifier = Modifier.width(16.dp)) 
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navigator.navigateTo(NavDestination.Home) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                )
+            },
+            bottomBar = {
+                BottomAppBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 4.dp
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        ReaderNavAction("Précédent", Icons.AutoMirrored.Filled.KeyboardArrowLeft) { }
+                        ReaderNavAction("Suivant", Icons.AutoMirrored.Filled.KeyboardArrowRight) { }
+                        ReaderNavAction("Favori", if (currentArticle.isFavorite) Icons.Default.Star else Icons.Default.StarBorder) { }
+                        ReaderNavAction("Partager", Icons.Default.Share) { }
                     }
-                },
-                actions = {
-                    IconButton(onClick = { }) { 
-                        Icon(Icons.Default.MoreVert, contentDescription = "Options")
-                    }
-                    Spacer(modifier = Modifier.width(16.dp)) 
-                }
-            )
-        },
-        bottomBar = {
-            BottomAppBar(
-                containerColor = Color.White,
-                tonalElevation = 4.dp
-            ) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    ReaderNavAction("Préc.", Icons.Default.KeyboardArrowLeft) { }
-                    ReaderNavAction("Suiv.", Icons.Default.KeyboardArrowRight) { }
-                    ReaderNavAction("Favori", if (currentArticle.isFavorite) Icons.Default.Star else Icons.Default.StarBorder) { }
-                    ReaderNavAction("Partager", Icons.Default.Share) { }
                 }
             }
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp)
-        ) {
-            Text(
-                text = currentArticle.number,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = currentArticle.breadcrumb,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium
-            )
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp)
+            ) {
+                Text(
+                    text = currentArticle.number,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = currentArticle.breadcrumb,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = currentArticle.content,
-                style = MaterialTheme.typography.bodyLarge,
-                lineHeight = 28.sp,
-                color = Color(0xFF212121)
-            )
-            
-            Spacer(modifier = Modifier.height(48.dp))
+                Text(
+                    text = currentArticle.content,
+                    style = MaterialTheme.typography.bodyLarge,
+                    lineHeight = 28.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                
+                Spacer(modifier = Modifier.height(48.dp))
+            }
         }
     }
 }
@@ -126,7 +127,7 @@ fun ReaderNavAction(label: String, icon: ImageVector, onClick: () -> Unit) {
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(24.dp))
-        Text(text = label, fontSize = 10.sp, color = Color.Black)
+        Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurface)
+        Text(text = label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurface)
     }
 }

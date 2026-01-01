@@ -17,14 +17,24 @@ class HomeViewModel(private val repository: LocalLegalRepository) : ViewModel() 
 
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing
+    
+    // User requested error handling
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
+
+    fun clearError() {
+        _error.value = null
+    }
 
     fun syncData() {
         viewModelScope.launch {
             _isSyncing.value = true
+            _error.value = null
             try {
                 repository.sync()
             } catch (e: Exception) {
-                // Log or show error in real app
+                e.printStackTrace()
+                _error.value = "Erreur de synchronisation: ${e.message ?: "Inconnue"}"
             } finally {
                 _isSyncing.value = false
             }
