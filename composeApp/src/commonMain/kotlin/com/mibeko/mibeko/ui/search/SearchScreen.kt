@@ -23,8 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 import com.mibeko.mibeko.ui.reader.ReaderScreen
@@ -35,7 +33,7 @@ data class SearchResultsScreen(val query: String) : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<SearchViewModel>()
         val uiState by viewModel.uiState.collectAsState()
 
@@ -61,7 +59,7 @@ data class SearchResultsScreen(val query: String) : Screen {
                         }
                     },
                     navigationIcon = {
-                        IconButton(onClick = { navigator.pop() }) {
+                        IconButton(onClick = { navController.popBackStack() }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Retour"
@@ -72,8 +70,7 @@ data class SearchResultsScreen(val query: String) : Screen {
                         containerColor = MaterialTheme.colorScheme.surface
                     )
                 )
-            },
-            bottomBar = { MibekoBottomBar(navigator) }
+            }
         ) { padding ->
             Column(
                 modifier = Modifier
@@ -152,7 +149,7 @@ data class SearchResultsScreen(val query: String) : Screen {
                                 source = article.breadcrumb,
                                 snippet = article.content,
                                 query = query,
-                                onClick = { navigator.push(ReaderScreen(article.id)) }
+                                onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id)) }
                             )
                         }
                     }

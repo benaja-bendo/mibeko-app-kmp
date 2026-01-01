@@ -4,11 +4,14 @@ import com.mibeko.mibeko.data.local.getDatabaseBuilder
 import com.mibeko.mibeko.data.preferences.SearchHistoryManager
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.LegalApiService
+import com.mibeko.mibeko.data.repository.DossierRepository
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.ui.home.HomeViewModel
 import com.mibeko.mibeko.ui.search.SearchViewModel
 import com.mibeko.mibeko.ui.reader.ReaderViewModel
 import com.mibeko.mibeko.ui.details.DocumentDetailViewModel
+import com.mibeko.mibeko.ui.dossier.DossierDetailViewModel
+import com.mibeko.mibeko.ui.dossier.DossierViewModel
 import com.mibeko.mibeko.ui.favorites.FavoritesViewModel
 import com.mibeko.mibeko.ui.settings.SettingsViewModel
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
@@ -50,8 +53,9 @@ val commonModule = module {
     // Network connectivity checker (platform-specific implementation)
     single<NetworkConnectivityChecker> { getNetworkConnectivityChecker() }
 
-    // Repository with all dependencies for hybrid search
+    // Repositories
     single { LocalLegalRepository(get(), get(), get(), get()) }
+    single { DossierRepository(get()) }
 
     viewModel { HomeViewModel(get()) }
     viewModel { SearchViewModel(get(), get()) }
@@ -59,5 +63,7 @@ val commonModule = module {
     viewModel { DocumentDetailViewModel(get()) }
     viewModel { FavoritesViewModel(get()) }
     viewModel { SettingsViewModel(get(), get()) }
+    viewModel { DossierViewModel(get()) }
+    viewModel { params -> DossierDetailViewModel(params.get(), get()) }
 }
 

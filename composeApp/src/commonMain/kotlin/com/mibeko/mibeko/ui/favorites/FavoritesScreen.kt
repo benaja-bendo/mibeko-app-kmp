@@ -21,8 +21,6 @@ import androidx.compose.ui.unit.sp
 
 
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 
@@ -31,7 +29,7 @@ class FavoritesScreen : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<FavoritesViewModel>()
         val favorites by viewModel.favoriteArticles.collectAsState()
 
@@ -41,8 +39,7 @@ class FavoritesScreen : Screen {
                     title = { Text("Mes Favoris") },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
                 )
-            },
-            bottomBar = { MibekoBottomBar(navigator) }
+            }
         ) { padding ->
             Column(
                 modifier = Modifier

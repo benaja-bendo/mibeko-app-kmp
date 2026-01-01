@@ -25,8 +25,6 @@ import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.ui.theme.MibekoGold
 
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.explorer.ExplorerScreen
@@ -36,7 +34,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<DocumentDetailViewModel>()
         val structure by viewModel.structure.collectAsState()
 
@@ -56,7 +54,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                         }
                     },
                     navigationIcon = {
-                        IconButton(onClick = { navigator.pop() }) {
+                        IconButton(onClick = { navController.popBackStack() }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack, 
                                 contentDescription = "Retour",
@@ -125,7 +123,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                         
                         items(articles) { article ->
                             ArticleItem(article) {
-                                navigator.push(ReaderScreen(article.id))
+                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id))
                             }
                         }
                     }

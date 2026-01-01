@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,8 +26,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -39,7 +38,7 @@ class ActiveSearchScreen : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<SearchViewModel>()
         val focusManager = LocalFocusManager.current
         val focusRequester = remember { FocusRequester() }
@@ -69,7 +68,7 @@ class ActiveSearchScreen : Screen {
                             .statusBarsPadding(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { navigator.pop() }) {
+                        IconButton(onClick = { navController.popBackStack() }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Retour",
@@ -106,7 +105,9 @@ class ActiveSearchScreen : Screen {
                                     if (searchText.isNotBlank()) {
                                         focusManager.clearFocus()
                                         viewModel.saveSearch(searchText)
-                                        navigator.replace(SearchResultsScreen(searchText))
+                                        navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.SearchResults(searchText)) {
+                                            popUpTo(com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch) { inclusive = true }
+                                        }
                                     }
                                 }
                             )
@@ -153,10 +154,12 @@ class ActiveSearchScreen : Screen {
                     items(suggestions.take(5)) { suggestion ->
                         SuggestionItem(
                             text = suggestion,
-                            icon = Icons.Default.Article,
+                            icon = Icons.AutoMirrored.Filled.Article,
                             onClick = {
                                 viewModel.saveSearch(suggestion)
-                                navigator.replace(SearchResultsScreen(suggestion))
+                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.SearchResults(suggestion)) {
+                                    popUpTo(com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch) { inclusive = true }
+                                }
                             }
                         )
                     }
@@ -190,7 +193,9 @@ class ActiveSearchScreen : Screen {
                             text = query,
                             icon = Icons.Default.History,
                             onClick = {
-                                navigator.replace(SearchResultsScreen(query))
+                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.SearchResults(query)) {
+                                    popUpTo(com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch) { inclusive = true }
+                                }
                             },
                             onDelete = { viewModel.removeFromHistory(query) }
                         )

@@ -2,21 +2,21 @@ package com.mibeko.mibeko.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import cafe.adriel.voyager.navigator.Navigator
-import com.mibeko.mibeko.ui.home.HomeScreen
-import com.mibeko.mibeko.ui.explorer.ExplorerScreen
-import com.mibeko.mibeko.ui.favorites.FavoritesScreen
-import com.mibeko.mibeko.ui.settings.SettingsScreen
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 
 @Composable
-fun MibekoBottomBar(navigator: Navigator) {
+fun MibekoBottomBar(navController: NavController) {
+    val navBackStackEntry = navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry.value?.destination?.route
+
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.primary,
@@ -25,40 +25,41 @@ fun MibekoBottomBar(navigator: Navigator) {
         NavigationBarItem(
             icon = { Icon(Icons.Default.Home, contentDescription = "Accueil") },
             label = { Text("Accueil") },
-            selected = navigator.lastItem is HomeScreen,
+            selected = currentRoute == Screen.Home::class.qualifiedName,
             onClick = { 
-                if (navigator.lastItem !is HomeScreen) {
-                    navigator.replaceAll(HomeScreen())
+                navController.navigate(Screen.Home) {
+                    popUpTo(Screen.Home) { inclusive = true }
+                    launchSingleTop = true
                 }
             }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Folder, contentDescription = "Explorer") },
+            icon = { Icon(Icons.Default.MenuBook, contentDescription = "Explorer") },
             label = { Text("Explorer") },
-            selected = navigator.lastItem is ExplorerScreen,
+            selected = currentRoute == Screen.Explorer::class.qualifiedName,
             onClick = { 
-                if (navigator.lastItem !is ExplorerScreen) {
-                    navigator.replaceAll(ExplorerScreen())
+                navController.navigate(Screen.Explorer) {
+                    launchSingleTop = true
                 }
             }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Star, contentDescription = "Favoris") },
-            label = { Text("Favoris") },
-            selected = navigator.lastItem is FavoritesScreen,
+            icon = { Icon(Icons.Default.Folder, contentDescription = "Dossiers") },
+            label = { Text("Dossiers") },
+            selected = currentRoute == Screen.Dossiers::class.qualifiedName,
             onClick = { 
-                if (navigator.lastItem !is FavoritesScreen) {
-                    navigator.replaceAll(FavoritesScreen())
+                navController.navigate(Screen.Dossiers) {
+                    launchSingleTop = true
                 }
             }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.Settings, contentDescription = "Réglages") },
             label = { Text("Réglages") },
-            selected = navigator.lastItem is SettingsScreen,
+            selected = currentRoute == Screen.Settings::class.qualifiedName,
             onClick = { 
-                if (navigator.lastItem !is SettingsScreen) {
-                    navigator.replaceAll(SettingsScreen())
+                navController.navigate(Screen.Settings) {
+                    launchSingleTop = true
                 }
             }
         )

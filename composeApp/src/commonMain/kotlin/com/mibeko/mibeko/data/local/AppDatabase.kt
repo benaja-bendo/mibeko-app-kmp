@@ -11,9 +11,11 @@ import com.mibeko.mibeko.data.local.entities.*
         ArticleEntity::class,
         ArticleFtsEntity::class,
         TagEntity::class,
-        ArticleTagEntity::class
+        ArticleTagEntity::class,
+        DossierEntity::class,
+        DossierArticleEntity::class
     ],
-    version = 2
+    version = 3
 )
 
 @ConstructedBy(AppDatabaseConstructor::class)

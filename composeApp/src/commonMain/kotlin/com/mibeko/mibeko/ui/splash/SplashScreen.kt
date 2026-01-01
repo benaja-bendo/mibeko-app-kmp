@@ -19,8 +19,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.home.HomeScreen
 import com.mibeko.mibeko.ui.onboarding.OnboardingScreen
@@ -36,7 +34,7 @@ class SplashScreen : Screen {
 
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val userPreferences: UserPreferencesRepository = koinInject()
 
         // Animation states
@@ -58,13 +56,15 @@ class SplashScreen : Screen {
             delay(1200)
 
             // Navigate based on onboarding status
-            val nextScreen = if (userPreferences.hasCompletedOnboarding()) {
-                HomeScreen()
+            if (userPreferences.hasCompletedOnboarding()) {
+                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Home) {
+                    popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Splash) { inclusive = true }
+                }
             } else {
-                OnboardingScreen()
+                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Onboarding) {
+                    popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Splash) { inclusive = true }
+                }
             }
-
-            navigator.replace(nextScreen)
         }
 
         Box(

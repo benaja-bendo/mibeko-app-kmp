@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -17,20 +18,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.*
-import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
+import com.mibeko.mibeko.ui.navigation.Screen as AppScreen
 import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 import androidx.compose.foundation.clickable
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import org.koin.compose.viewmodel.koinViewModel
 
-class SettingsScreen : Screen {
+class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<SettingsViewModel>()
         val uiState by viewModel.uiState.collectAsState()
         var showDisclaimer by remember { mutableStateOf(false) }
@@ -152,8 +151,7 @@ class SettingsScreen : Screen {
                     title = { Text("Réglages") },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
                 )
-            },
-            bottomBar = { MibekoBottomBar(navigator) }
+            }
         ) { padding ->
             Column(
                 modifier = Modifier
@@ -402,10 +400,10 @@ fun DownloadableDocumentItem(
             // Document icon based on type
             Icon(
                 when (typeCode.uppercase()) {
-                    "CODE" -> Icons.Default.MenuBook
+                    "CODE" -> Icons.AutoMirrored.Filled.MenuBook
                     "LOI" -> Icons.Default.Gavel
                     "DECRET" -> Icons.Default.Description
-                    else -> Icons.Default.Article
+                    else -> Icons.AutoMirrored.Filled.Article
                 },
                 contentDescription = null,
                 tint = if (isDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,

@@ -4,6 +4,9 @@ import androidx.room.*
 import com.mibeko.mibeko.data.local.entities.ArticleEntity
 import com.mibeko.mibeko.data.local.entities.ArticleTagEntity
 import com.mibeko.mibeko.data.local.entities.DocumentEntity
+import com.mibeko.mibeko.data.local.entities.DossierArticleEntity
+import com.mibeko.mibeko.data.local.entities.DossierEntity
+import com.mibeko.mibeko.data.local.entities.DossierTag
 import com.mibeko.mibeko.data.local.entities.NodeEntity
 import com.mibeko.mibeko.data.local.entities.TagEntity
 import kotlinx.coroutines.flow.Flow
@@ -86,6 +89,64 @@ interface MibekoDao {
         WHERE articles_fts MATCH :query
     """)
     fun searchArticles(query: String): Flow<List<ArticleSearchResult>>
+
+    // ========== DOSSIERS ==========
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDossier(dossier: DossierEntity)
+
+    @Update
+    suspend fun updateDossier(dossier: DossierEntity)
+
+    @Delete
+    suspend fun deleteDossier(dossier: DossierEntity)
+
+    @Query("DELETE FROM dossiers WHERE id = :dossierId")
+    suspend fun deleteDossierById(dossierId: String)
+
+    @Query("SELECT * FROM dossiers ORDER BY updated_at DESC")
+    fun getAllDossiers(): Flow<List<DossierEntity>>
+
+    @Query("SELECT * FROM dossiers WHERE tag = :tag ORDER BY updated_at DESC")
+    fun getDossiersByTag(tag: DossierTag): Flow<List<DossierEntity>>
+
+    @Query("SELECT * FROM dossiers WHERE id = :dossierId")
+    fun getDossierById(dossierId: String): Flow<DossierEntity?>
+
+    @Query("SELECT * FROM dossiers WHERE name LIKE '%' || :query || '%' ORDER BY updated_at DESC")
+    fun searchDossiers(query: String): Flow<List<DossierEntity>>
+
+    @Query("SELECT COUNT(*) FROM dossier_articles WHERE dossier_id = :dossierId")
+    fun getDossierArticleCount(dossierId: String): Flow<Int>
+
+    // ========== DOSSIER ARTICLES ==========
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addArticleToDossier(dossierArticle: DossierArticleEntity)
+
+    @Query("DELETE FROM dossier_articles WHERE dossier_id = :dossierId AND article_id = :articleId")
+    suspend fun removeArticleFromDossier(dossierId: String, articleId: String)
+
+    @Query("UPDATE dossier_articles SET personal_note = :note WHERE dossier_id = :dossierId AND article_id = :articleId")
+    suspend fun updatePersonalNote(dossierId: String, articleId: String, note: String?)
+
+    @Query("SELECT * FROM dossier_articles WHERE dossier_id = :dossierId AND article_id = :articleId")
+    fun getDossierArticle(dossierId: String, articleId: String): Flow<DossierArticleEntity?>
+
+    @Transaction
+    @Query("""
+        SELECT articles.*, nodes.document_id, nodes.title as node_title,
+               dossier_articles.personal_note, dossier_articles.added_at
+        FROM dossier_articles
+        JOIN articles ON dossier_articles.article_id = articles.id
+        JOIN nodes ON articles.node_id = nodes.id
+        WHERE dossier_articles.dossier_id = :dossierId
+        ORDER BY dossier_articles.added_at DESC
+    """)
+    fun getDossierArticles(dossierId: String): Flow<List<DossierArticleWithDetails>>
+
+    @Query("SELECT dossier_id FROM dossier_articles WHERE article_id = :articleId")
+    fun getDossiersContainingArticle(articleId: String): Flow<List<String>>
 }
 
 data class ArticleSearchResult(
@@ -93,3 +154,12 @@ data class ArticleSearchResult(
     val document_id: String,
     val node_title: String
 )
+
+data class DossierArticleWithDetails(
+    @Embedded val article: ArticleEntity,
+    val document_id: String,
+    val node_title: String,
+    val personal_note: String?,
+    val added_at: Long
+)
+

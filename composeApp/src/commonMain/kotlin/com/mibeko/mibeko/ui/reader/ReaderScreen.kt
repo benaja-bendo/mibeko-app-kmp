@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,8 +22,6 @@ import androidx.compose.ui.unit.sp
 
 
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import org.koin.compose.viewmodel.koinViewModel
 
 data class ReaderScreen(val articleId: String) : Screen {
@@ -31,7 +29,7 @@ data class ReaderScreen(val articleId: String) : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<ReaderViewModel>()
         val article by viewModel.article.collectAsState()
 
@@ -58,7 +56,7 @@ data class ReaderScreen(val articleId: String) : Screen {
                         }
                     },
                     navigationIcon = {
-                        IconButton(onClick = { navigator.pop() }) {
+                        IconButton(onClick = { navController.popBackStack() }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                         }
                     },
@@ -76,8 +74,8 @@ data class ReaderScreen(val articleId: String) : Screen {
                     tonalElevation = 4.dp
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        ReaderNavAction("Préc.", Icons.Default.KeyboardArrowLeft) { }
-                        ReaderNavAction("Suiv.", Icons.Default.KeyboardArrowRight) { }
+                        ReaderNavAction("Précédent", Icons.AutoMirrored.Filled.KeyboardArrowLeft) { }
+                        ReaderNavAction("Suivant", Icons.AutoMirrored.Filled.KeyboardArrowRight) { }
                         ReaderNavAction("Favori", if (currentArticle.isFavorite) Icons.Default.Star else Icons.Default.StarBorder) { }
                         ReaderNavAction("Partager", Icons.Default.Share) { }
                     }

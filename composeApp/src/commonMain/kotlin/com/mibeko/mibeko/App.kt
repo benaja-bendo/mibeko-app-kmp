@@ -2,10 +2,25 @@ package com.mibeko.mibeko
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
-import cafe.adriel.voyager.navigator.Navigator
-import cafe.adriel.voyager.transitions.FadeTransition
-import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.ui.Modifier
+import androidx.navigation.compose.*
+import androidx.navigation.toRoute
+import com.mibeko.mibeko.ui.navigation.Screen
+import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
+import com.mibeko.mibeko.ui.home.HomeScreen
+import com.mibeko.mibeko.ui.explorer.ExplorerScreen
+import com.mibeko.mibeko.ui.favorites.FavoritesScreen
+import com.mibeko.mibeko.ui.settings.SettingsScreen
+import com.mibeko.mibeko.ui.search.ActiveSearchScreen
+import com.mibeko.mibeko.ui.search.SearchResultsScreen
+import com.mibeko.mibeko.ui.details.DocumentDetailScreen
+import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.splash.SplashScreen
+import com.mibeko.mibeko.ui.dossier.DossierScreen
+import com.mibeko.mibeko.ui.dossier.DossierDetailScreen
+import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.theme.MibekoTheme
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
@@ -25,8 +40,63 @@ fun App() {
     }
 
     MibekoTheme(darkTheme = isDarkTheme) {
-        Navigator(SplashScreen()) { navigator ->
-            FadeTransition(navigator)
+        val navController = rememberNavController()
+        
+        CompositionLocalProvider(com.mibeko.mibeko.ui.navigation.LocalNavController provides navController) {
+            // Screens that should show the bottom bar
+        val bottomBarScreens = listOf(
+            Screen.Home::class.qualifiedName,
+            Screen.Explorer::class.qualifiedName,
+            Screen.Dossiers::class.qualifiedName,
+            Screen.Settings::class.qualifiedName
+        )
+        
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
+        val showBottomBar = currentRoute in bottomBarScreens
+
+        Scaffold(
+            bottomBar = {
+                if (showBottomBar) {
+                    MibekoBottomBar(navController)
+                }
+            }
+        ) { padding ->
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Splash,
+                modifier = Modifier.padding(padding)
+            ) {
+                composable<Screen.Splash> { SplashScreen().Content() }
+                composable<Screen.Onboarding> { com.mibeko.mibeko.ui.onboarding.OnboardingScreen().Content() }
+                composable<Screen.Home> { HomeScreen().Content() }
+                composable<Screen.Explorer> { ExplorerScreen().Content() }
+                composable<Screen.Favorites> { FavoritesScreen().Content() }
+                composable<Screen.Settings> { SettingsScreen().Content() }
+                composable<Screen.ActiveSearch> { ActiveSearchScreen().Content() }
+                composable<Screen.Dossiers> { DossierScreen().Content() }
+                
+                composable<Screen.SearchResults> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.SearchResults>()
+                    SearchResultsScreen(route.query).Content() 
+                }
+                
+                composable<Screen.DocumentDetail> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.DocumentDetail>()
+                    DocumentDetailScreen(route.documentId).Content()
+                }
+                
+                composable<Screen.Reader> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.Reader>()
+                    ReaderScreen(route.articleId).Content()
+                }
+                
+                composable<Screen.DossierDetail> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.DossierDetail>()
+                    DossierDetailScreen(route.dossierId).Content()
+                }
+            }
         }
+    }
     }
 }

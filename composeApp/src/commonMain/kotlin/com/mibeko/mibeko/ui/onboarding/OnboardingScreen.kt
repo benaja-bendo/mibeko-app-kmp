@@ -27,8 +27,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.home.HomeScreen
 import kotlinx.coroutines.launch
@@ -69,7 +67,7 @@ class OnboardingScreen : Screen {
 
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val userPreferences: UserPreferencesRepository = koinInject()
         val scope = rememberCoroutineScope()
 
@@ -78,7 +76,9 @@ class OnboardingScreen : Screen {
 
         fun completeOnboarding() {
             userPreferences.setOnboardingCompleted()
-            navigator.replace(HomeScreen())
+            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Home) {
+                popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Onboarding) { inclusive = true }
+            }
         }
 
         Box(

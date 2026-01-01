@@ -21,24 +21,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
-import com.mibeko.mibeko.ui.search.SearchResultsScreen
-import com.mibeko.mibeko.ui.search.ActiveSearchScreen
-import com.mibeko.mibeko.ui.explorer.ExplorerScreen
-import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
+import com.mibeko.mibeko.ui.navigation.LocalNavController
+import com.mibeko.mibeko.ui.navigation.Screen as MibekoScreen
 import com.mibeko.mibeko.ui.components.MibekoSearchBar
 import com.mibeko.mibeko.ui.components.QuickAccessCard
 import com.mibeko.mibeko.ui.components.ThemeCard
 
 class HomeScreen : Screen {
 
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
+        val navController = LocalNavController.current
         val viewModel = koinViewModel<HomeViewModel>()
         
         val lawCodes by viewModel.lawCodes.collectAsState()
@@ -62,8 +57,7 @@ class HomeScreen : Screen {
         }
 
         Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            bottomBar = { MibekoBottomBar(navigator) }
+            snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { padding ->
             LazyColumn(
                 modifier = Modifier
@@ -94,7 +88,7 @@ class HomeScreen : Screen {
                     ) {
                         MibekoSearchBar(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            onClick = { navigator.push(ActiveSearchScreen()) }
+                            onClick = { navController.navigate(MibekoScreen.ActiveSearch) }
                         )
                     }
                 }
@@ -125,10 +119,9 @@ class HomeScreen : Screen {
                                 items(lawCodes.take(4)) { code ->
                                     QuickAccessCard(
                                         title = code.title,
-                                        icon = getCodeIcon(code.title),
-                                        isPrimary = lawCodes.indexOf(code) < 2
+                                        icon = getCodeIcon(code.title)
                                     ) {
-                                        navigator.push(ExplorerScreen())
+                                        navController.navigate(MibekoScreen.Explorer)
                                     }
                                 }
                             }
@@ -179,30 +172,34 @@ class HomeScreen : Screen {
                             ) {
                                 ThemeCard(
                                     title = "Contrat de Travail & Licenciement",
+                                    subtitle = "Droits des travailleurs et employeurs",
                                     icon = Icons.Default.Work
                                 ) {
-                                    navigator.push(SearchResultsScreen("Travail licenciement"))
+                                    navController.navigate(MibekoScreen.SearchResults("Travail licenciement"))
                                 }
                                 
                                 ThemeCard(
                                     title = "Mariage, Divorce & Famille",
+                                    subtitle = "Vie privée et protection familiale",
                                     icon = Icons.Default.FamilyRestroom
                                 ) {
-                                    navigator.push(SearchResultsScreen("Famille mariage"))
+                                    navController.navigate(MibekoScreen.SearchResults("Famille mariage"))
                                 }
                                 
                                 ThemeCard(
                                     title = "Location & Logement",
+                                    subtitle = "Baux d'habitation et droits locatifs",
                                     icon = Icons.Default.HomeWork
                                 ) {
-                                    navigator.push(SearchResultsScreen("Location bail"))
+                                    navController.navigate(MibekoScreen.SearchResults("Location bail"))
                                 }
                                 
                                 ThemeCard(
                                     title = "Création d'entreprises",
+                                    subtitle = "Droit des affaires et entrepreneuriat",
                                     icon = Icons.Default.BusinessCenter
                                 ) {
-                                    navigator.push(SearchResultsScreen("Commerce entreprise"))
+                                    navController.navigate(MibekoScreen.SearchResults("Commerce entreprise"))
                                 }
                             }
                         }

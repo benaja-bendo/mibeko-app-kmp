@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,56 +25,58 @@ import androidx.compose.ui.unit.dp
 fun QuickAccessCard(
     title: String,
     icon: ImageVector,
-    isPrimary: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val containerColor = if (isPrimary) 
-        MaterialTheme.colorScheme.primary 
-    else 
-        MaterialTheme.colorScheme.surface
-    
-    val contentColor = if (isPrimary) 
-        MaterialTheme.colorScheme.onPrimary 
-    else 
-        MaterialTheme.colorScheme.primary
 
     Card(
         onClick = onClick,
         modifier = modifier
-            .width(140.dp)
-            .height(100.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+            .width(220.dp)
+            .height(64.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isPrimary) 4.dp else 2.dp,
+            defaultElevation = 2.dp,
             pressedElevation = 1.dp
         ),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, 
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = title,
-                tint = contentColor,
-                modifier = Modifier.size(28.dp)
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
             )
-            
-            Spacer(modifier = Modifier.height(8.dp))
             
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = contentColor,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
+            )
+            
+            Icon(
+                imageVector = androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
             )
         }
     }

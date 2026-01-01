@@ -77,7 +77,7 @@ fun MibekoSearchBar(
             Spacer(modifier = Modifier.width(12.dp))
             
             Text(
-                text = "Rechercher un article, une loi, un problème...",
+                text = "Quelle est votre question juridique ?",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

@@ -10,7 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,8 +24,6 @@ import androidx.compose.ui.unit.sp
 
 
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 import com.mibeko.mibeko.ui.details.DocumentDetailScreen
@@ -36,14 +34,10 @@ class ExplorerScreen : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
-        // Reusing HomeViewModel for now as per original code, or use ExplorerViewModel if defined in KoinModule (I defined it).
-        // Let's use HomeViewModel for simplicity if it shares the lawCodes data logic, OR ExplorerViewModel.
-        // Original code used HomeViewModel. I defined ExplorerViewModel in KoinModule but it might be empty.
-        // I will use HomeViewModel to be safe unless I migrate logic.
+        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<HomeViewModel>()
         val lawCodes by viewModel.lawCodes.collectAsState()
-
+        
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -52,8 +46,7 @@ class ExplorerScreen : Screen {
                         containerColor = MaterialTheme.colorScheme.surface
                     )
                 )
-            },
-            bottomBar = { MibekoBottomBar(navigator) }
+            }
         ) { padding ->
             Column(
                 modifier = Modifier
@@ -75,7 +68,7 @@ class ExplorerScreen : Screen {
                     } else {
                         items(lawCodes) { code ->
                             ExplorerItem(code) {
-                                navigator.push(DocumentDetailScreen(code.id))
+                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentDetail(code.id))
                             }
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 56.dp))
                         }
@@ -131,7 +124,7 @@ fun ExplorerItem(code: com.mibeko.mibeko.data.LawCodeSpec, onClick: () -> Unit) 
             }
         }
         Icon(
-            imageVector = Icons.Default.KeyboardArrowRight,
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.outline,
             modifier = Modifier.size(20.dp)
