@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -375,6 +376,6 @@ private fun getCodeIcon(title: String): ImageVector {
         title.contains("Travail", ignoreCase = true) -> Icons.Default.Work
         title.contains("Famille", ignoreCase = true) -> Icons.Default.FamilyRestroom
         title.contains("Commercial", ignoreCase = true) -> Icons.Default.Business
-        else -> Icons.Default.MenuBook
+        else -> Icons.AutoMirrored.Filled.MenuBook
     }
 }

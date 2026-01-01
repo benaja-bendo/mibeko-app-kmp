@@ -28,6 +28,8 @@ kotlin {
             baseName = "ComposeApp"
             isStatic = true
         }
+        // Force include KSP generated sources for iOS targets
+        iosTarget.compilations.getByName("main").defaultSourceSet.kotlin.srcDir("build/generated/ksp/${iosTarget.name}/${iosTarget.name}Main/kotlin")
     }
 
     sourceSets {
@@ -125,7 +127,6 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
-    add("kspCommonMainMetadata", libs.room.compiler)
     add("kspAndroid", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)

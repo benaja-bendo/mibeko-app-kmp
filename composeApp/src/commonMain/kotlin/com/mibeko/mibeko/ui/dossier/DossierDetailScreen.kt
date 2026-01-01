@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.filled.StickyNote2
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -178,7 +180,7 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Icon(
-                                        Icons.Default.Article,
+                                        Icons.AutoMirrored.Filled.Article,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(48.dp)
@@ -303,7 +305,7 @@ fun DossierArticleCard(
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Default.StickyNote2,
+                            Icons.AutoMirrored.Filled.StickyNote2,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.size(14.dp)

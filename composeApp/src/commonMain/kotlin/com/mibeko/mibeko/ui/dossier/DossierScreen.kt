@@ -372,7 +372,7 @@ fun CreateDossierDialog(
                         label = { Text("Domaine juridique") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDomain) },
                         modifier = Modifier
-                            .menuAnchor()
+                            .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
                             .fillMaxWidth()
                     )
                     ExposedDropdownMenu(
