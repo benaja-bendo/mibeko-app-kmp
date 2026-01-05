@@ -151,13 +151,13 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                     title = { Text("Réglages") },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
                 )
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .background(MaterialTheme.colorScheme.background)
+                    .padding(top = padding.calculateTopPadding())
                     .verticalScroll(rememberScrollState())
             ) {
                 Spacer(modifier = Modifier.height(16.dp))

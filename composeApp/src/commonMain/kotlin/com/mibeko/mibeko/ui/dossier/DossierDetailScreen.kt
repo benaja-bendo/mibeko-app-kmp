@@ -79,12 +79,13 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                     onEdit = { viewModel.showEditDialog() },
                     onExportPdf = { /* TODO: Export PDF via API */ }
                 )
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding())
             ) {
                 // Header with dossier info
                 Box(

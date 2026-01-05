@@ -1,8 +1,10 @@
 package com.mibeko.mibeko
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.*
@@ -60,12 +62,15 @@ fun App() {
                 if (showBottomBar) {
                     MibekoBottomBar(navController)
                 }
-            }
-        ) { padding ->
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { innerPadding ->
             NavHost(
                 navController = navController,
                 startDestination = Screen.Splash,
-                modifier = Modifier.padding(padding)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = innerPadding.calculateBottomPadding())
             ) {
                 composable<Screen.Splash> { SplashScreen().Content() }
                 composable<Screen.Onboarding> { com.mibeko.mibeko.ui.onboarding.OnboardingScreen().Content() }

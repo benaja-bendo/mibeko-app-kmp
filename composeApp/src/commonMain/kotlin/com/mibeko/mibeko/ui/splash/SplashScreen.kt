@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -23,6 +24,9 @@ import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.home.HomeScreen
 import com.mibeko.mibeko.ui.onboarding.OnboardingScreen
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.painterResource
+import mibeko.composeapp.generated.resources.Res
+import mibeko.composeapp.generated.resources.logo
 import org.koin.compose.koinInject
 
 /**
@@ -83,18 +87,14 @@ class SplashScreen : Screen {
                 // Logo Icon
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
-                        ),
+                        .size(120.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Gavel,
+                        painter = painterResource(Res.drawable.logo),
                         contentDescription = "Mibeko Logo",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(56.dp)
+                        tint = Color.Unspecified,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
 

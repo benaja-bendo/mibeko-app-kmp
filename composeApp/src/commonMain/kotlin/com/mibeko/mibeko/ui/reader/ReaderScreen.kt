@@ -80,7 +80,8 @@ data class ReaderScreen(val articleId: String) : Screen {
                         ReaderNavAction("Partager", Icons.Default.Share) { }
                     }
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             Column(
                 modifier = Modifier

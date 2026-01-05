@@ -82,7 +82,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding),
+                        .padding(top = padding.calculateTopPadding()),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -91,7 +91,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding),
+                        .padding(top = padding.calculateTopPadding()),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {

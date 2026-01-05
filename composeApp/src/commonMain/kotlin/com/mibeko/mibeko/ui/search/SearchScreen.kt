@@ -70,13 +70,13 @@ data class SearchResultsScreen(val query: String) : Screen {
                         containerColor = MaterialTheme.colorScheme.surface
                     )
                 )
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .background(MaterialTheme.colorScheme.background)
+                    .padding(top = padding.calculateTopPadding())
             ) {
                 // Network status indicator
                 NetworkStatusBanner(

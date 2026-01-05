@@ -17,18 +17,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import kotlinx.coroutines.delay
+import mibeko.composeapp.generated.resources.Res
+import mibeko.composeapp.generated.resources.logo
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen as MibekoScreen
 import com.mibeko.mibeko.ui.components.MibekoSearchBar
 import com.mibeko.mibeko.ui.components.QuickAccessCard
 import com.mibeko.mibeko.ui.components.ThemeCard
+import org.koin.compose.koinInject
 
 class HomeScreen : Screen {
 
@@ -58,42 +63,33 @@ class HomeScreen : Screen {
         }
 
         Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) }
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.background)
+                        .statusBarsPadding()
+                ) {
+                    HomeHeader(
+                        isSyncing = isSyncing,
+                        isOfflineReady = lawCodes.isNotEmpty(),
+                        onSyncClick = { viewModel.syncData() }
+                    )
+                    MibekoSearchBar(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        onClick = { navController.navigate(MibekoScreen.ActiveSearch) }
+                    )
+                }
+            }
         ) { padding ->
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .background(MaterialTheme.colorScheme.background),
-                contentPadding = PaddingValues(bottom = 24.dp)
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = padding.calculateTopPadding(),
+                    bottom = 24.dp
+                )
             ) {
-                // Header with Logo and Status
-                item {
-                    AnimatedVisibility(
-                        visible = showContent,
-                        enter = fadeIn() + slideInVertically { -40 }
-                    ) {
-                        HomeHeader(
-                            isSyncing = isSyncing,
-                            isOfflineReady = lawCodes.isNotEmpty(),
-                            onSyncClick = { viewModel.syncData() }
-                        )
-                    }
-                }
-                
-                // Search Bar
-                item {
-                    AnimatedVisibility(
-                        visible = showContent,
-                        enter = fadeIn() + slideInVertically { -20 }
-                    ) {
-                        MibekoSearchBar(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            onClick = { navController.navigate(MibekoScreen.ActiveSearch) }
-                        )
-                    }
-                }
-                
                 // No data warning
                 if (lawCodes.isEmpty() && !isSyncing) {
                     item {
@@ -227,10 +223,10 @@ private fun HomeHeader(
         // Logo and title
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = Icons.Default.Gavel,
+                painter = painterResource(Res.drawable.logo),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
+                tint = Color.Unspecified,
+                modifier = Modifier.size(32.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(

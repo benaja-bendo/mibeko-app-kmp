@@ -74,13 +74,13 @@ class DossierScreen : Screen {
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .background(MaterialTheme.colorScheme.background)
+                    .padding(top = padding.calculateTopPadding())
             ) {
                 when {
                     uiState.isLoading -> {
