@@ -20,6 +20,6 @@ data class ArticleEntity(
     @PrimaryKey val id: String,
     val node_id: String,
     val number: String,
-    val content: String,
+    val content: String?,
     val is_favorite: Boolean
 )

@@ -54,7 +54,7 @@ fun com.mibeko.mibeko.data.remote.RemoteSearchResult.toArticleSpec(): ArticleSpe
         codeId = document_id,
         number = number,
         title = node_title ?: "",
-        content = content,
+        content = content ?: "",
         breadcrumb = breadcrumb,
         isFavorite = false // Remote results don't have favorite status
     )

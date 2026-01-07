@@ -13,7 +13,7 @@ data class ArticleSpec(
     val codeId: String,
     val number: String,
     val title: String,
-    val content: String,
+    val content: String?,
     val breadcrumb: String,
     val isFavorite: Boolean = false,
     val isDownloaded: Boolean = false

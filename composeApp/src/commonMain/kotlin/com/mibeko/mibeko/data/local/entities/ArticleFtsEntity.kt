@@ -7,5 +7,5 @@ import androidx.room.Fts4
 @Fts4(contentEntity = ArticleEntity::class)
 data class ArticleFtsEntity(
     val number: String,
-    val content: String
+    val content: String?
 )

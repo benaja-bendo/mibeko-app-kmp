@@ -174,7 +174,7 @@ fun ArticleItem(article: ArticleEntity, onClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = article.content.take(80) + "...",
+                    text = (article.content ?: "").take(80) + "...",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2

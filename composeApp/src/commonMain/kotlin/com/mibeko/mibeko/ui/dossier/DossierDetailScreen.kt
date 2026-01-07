@@ -294,7 +294,7 @@ fun DossierArticleCard(
                 )
                 
                 Text(
-                    text = article.article.content.take(80) + "...",
+                    text = (article.article.content ?: "").take(80) + "...",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,

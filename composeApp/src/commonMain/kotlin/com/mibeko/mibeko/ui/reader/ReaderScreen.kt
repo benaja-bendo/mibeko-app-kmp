@@ -1,25 +1,28 @@
 package com.mibeko.mibeko.ui.reader
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
 
 import cafe.adriel.voyager.core.screen.Screen
 import org.koin.compose.viewmodel.koinViewModel
@@ -39,7 +42,15 @@ data class ReaderScreen(val articleId: String) : Screen {
 
         if (article == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(strokeWidth = 3.dp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Chargement de l'article...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             return
         }
@@ -50,9 +61,17 @@ data class ReaderScreen(val articleId: String) : Screen {
             topBar = {
                 TopAppBar(
                     title = {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                            Text(currentArticle.number, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text(currentArticle.breadcrumb, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
+                        Column {
+                            Text(
+                                currentArticle.number, 
+                                fontWeight = FontWeight.Bold, 
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                currentArticle.breadcrumb.take(40) + if (currentArticle.breadcrumb.length > 40) "..." else "",
+                                color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
                     },
                     navigationIcon = {
@@ -61,23 +80,55 @@ data class ReaderScreen(val articleId: String) : Screen {
                         }
                     },
                     actions = {
-                        IconButton(onClick = { }) { 
+                        IconButton(onClick = { /* Open options menu */ }) { 
                             Icon(Icons.Filled.MoreVert, contentDescription = "Options")
                         }
-                        Spacer(modifier = Modifier.width(16.dp)) 
-                    }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
             },
             bottomBar = {
-                BottomAppBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 4.dp
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 8.dp
                 ) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        ReaderNavAction("Précédent", Icons.AutoMirrored.Filled.KeyboardArrowLeft) { }
-                        ReaderNavAction("Suivant", Icons.AutoMirrored.Filled.KeyboardArrowRight) { }
-                        ReaderNavAction("Favori", if (currentArticle.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder) { }
-                        ReaderNavAction("Partager", Icons.Filled.Share) { }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Previous article
+                        ReaderActionButton(
+                            icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            label = "Préc.",
+                            onClick = { /* Navigate to previous */ }
+                        )
+                        
+                        // Favorite toggle
+                        ReaderActionButton(
+                            icon = if (currentArticle.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            label = "Favori",
+                            isHighlighted = currentArticle.isFavorite,
+                            onClick = { /* Toggle favorite */ }
+                        )
+                        
+                        // Share
+                        ReaderActionButton(
+                            icon = Icons.Filled.Share,
+                            label = "Partager",
+                            onClick = { /* Open share sheet */ }
+                        )
+                        
+                        // Next article
+                        ReaderActionButton(
+                            icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            label = "Suiv.",
+                            onClick = { /* Navigate to next */ }
+                        )
                     }
                 }
             },
@@ -88,47 +139,121 @@ data class ReaderScreen(val articleId: String) : Screen {
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(24.dp)
             ) {
-                Text(
-                    text = currentArticle.number,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
+                // Article header with gradient
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                                    MaterialTheme.colorScheme.background
+                                )
+                            )
+                        )
+                        .padding(24.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = currentArticle.number,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Breadcrumb with styled badge
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = currentArticle.breadcrumb,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                // Article content with optimized typography
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                ) {
+                    Text(
+                        text = currentArticle.content ?: "",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            lineHeight = 30.sp,
+                            letterSpacing = 0.3.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
                 
-                Text(
-                    text = currentArticle.breadcrumb,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = currentArticle.content,
-                    style = MaterialTheme.typography.bodyLarge,
-                    lineHeight = 28.sp,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
 }
 
 @Composable
-fun ReaderNavAction(label: String, icon: ImageVector, onClick: () -> Unit) {
+private fun ReaderActionButton(
+    icon: ImageVector,
+    label: String,
+    isHighlighted: Boolean = false,
+    onClick: () -> Unit
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isHighlighted) 
+            MaterialTheme.colorScheme.secondaryContainer
+        else 
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        animationSpec = tween(200)
+    )
+    
+    val iconColor by animateColorAsState(
+        targetValue = if (isHighlighted) 
+            MaterialTheme.colorScheme.secondary
+        else 
+            MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(200)
+    )
+    
     Column(
         modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurface)
-        Text(text = label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurface)
+        Surface(
+            color = backgroundColor,
+            shape = CircleShape,
+            modifier = Modifier.size(44.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon, 
+                    contentDescription = label, 
+                    modifier = Modifier.size(22.dp), 
+                    tint = iconColor
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        Text(
+            text = label, 
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
+

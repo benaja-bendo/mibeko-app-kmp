@@ -39,7 +39,7 @@ class LocalLegalRepository(
 
         while (currentPage <= totalPages) {
             val response = apiService.fetchDocuments(currentPage)
-            totalPages = response.meta.last_page
+            totalPages = response.meta?.last_page ?: 1
 
             val documents = mutableListOf<DocumentEntity>()
             val allNodes = mutableListOf<NodeEntity>()
@@ -53,7 +53,7 @@ class LocalLegalRepository(
                 documents.add(DocumentEntity(
                     id = remoteDoc.id,
                     title = remoteDoc.title,
-                    type_code = remoteDoc.type.code,
+                    type_code = remoteDoc.type?.code ?: "unknown",
                     last_updated = parseIsoDate(remoteDoc.updated_at),
                     is_downloaded = downloadedIds.contains(remoteDoc.id)
                 ))
@@ -78,7 +78,7 @@ class LocalLegalRepository(
         response.data.updated.forEach { remoteArticle ->
             updatedArticles.add(ArticleEntity(
                 id = remoteArticle.id,
-                node_id = remoteArticle.parent_node_id,
+                node_id = remoteArticle.parent_node_id ?: "",
                 number = remoteArticle.number,
                 content = remoteArticle.content ?: "",
                 is_favorite = false
@@ -165,7 +165,7 @@ class LocalLegalRepository(
         data.articles.forEach { article ->
             articles.add(ArticleEntity(
                 id = article.id,
-                node_id = article.parent_node_id,
+                node_id = article.parent_node_id ?: "",
                 number = article.number,
                 content = article.content ?: "",
                 is_favorite = false // Will be ignored by Upsert if row exists? No, Upsert replaces.
@@ -303,7 +303,7 @@ class LocalLegalRepository(
         
         return if (shouldUseNetwork) {
             try {
-                val response = apiService.searchArticles(query, page = 1)
+                val response = apiService.searchArticles(query)
                 response.data.take(10).map { "${it.number} - ${it.breadcrumb}" }
             } catch (e: Exception) {
                 getAutocompleteSuggestionsLocally(query)

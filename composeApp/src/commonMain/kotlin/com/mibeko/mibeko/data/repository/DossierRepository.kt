@@ -153,7 +153,7 @@ class DossierRepository(private val dao: MibekoDao) {
             builder.appendLine()
             builder.appendLine("${index + 1}. Article ${article.article.number}")
             builder.appendLine("   ${article.node_title}")
-            builder.appendLine("   ${article.article.content.take(200)}...")
+            builder.appendLine("   ${(article.article.content ?: "").take(200)}...")
             article.personal_note?.let { note ->
                 builder.appendLine("   [Note personnelle]: $note")
             }
