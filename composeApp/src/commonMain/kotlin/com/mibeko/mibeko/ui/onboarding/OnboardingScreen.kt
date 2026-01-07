@@ -49,17 +49,17 @@ class OnboardingScreen : Screen {
 
     private val pages = listOf(
         OnboardingPage(
-            icon = Icons.Default.CloudOff,
+            icon = Icons.Filled.CloudOff,
             title = "Tout le droit congolais",
             description = "Accessible hors-ligne, même sans connexion internet. Téléchargez une fois, consultez partout."
         ),
         OnboardingPage(
-            icon = Icons.Default.Search,
+            icon = Icons.Filled.Search,
             title = "Recherche intelligente",
             description = "Trouvez rapidement par numéro d'article ou par thématique. La loi n'a jamais été aussi accessible."
         ),
         OnboardingPage(
-            icon = Icons.Default.Folder,
+            icon = Icons.Filled.Folder,
             title = "Organisez vos dossiers",
             description = "Sauvegardez vos articles favoris et organisez vos recherches juridiques efficacement."
         )

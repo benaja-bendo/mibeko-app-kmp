@@ -8,6 +8,9 @@ import androidx.navigation.NavController
 sealed class Screen {
     @Serializable
     data object Splash : Screen()
+
+    @Serializable
+    data object Disclaimer : Screen()
     
     @Serializable
     data object Home : Screen()

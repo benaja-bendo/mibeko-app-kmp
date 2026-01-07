@@ -60,7 +60,12 @@ class SplashScreen : Screen {
             delay(1200)
 
             // Navigate based on onboarding status
-            if (userPreferences.hasCompletedOnboarding()) {
+            // Navigate based on status
+            if (!userPreferences.hasAcceptedDisclaimer()) {
+                 navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Disclaimer) {
+                    popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Splash) { inclusive = true }
+                }
+            } else if (userPreferences.hasCompletedOnboarding()) {
                 navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Home) {
                     popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Splash) { inclusive = true }
                 }

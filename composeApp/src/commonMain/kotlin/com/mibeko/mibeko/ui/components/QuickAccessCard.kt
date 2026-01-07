@@ -73,7 +73,7 @@ fun QuickAccessCard(
             )
             
             Icon(
-                imageVector = androidx.compose.material.icons.Icons.Default.KeyboardArrowDown,
+                imageVector = androidx.compose.material.icons.Icons.Filled.KeyboardArrowDown,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)

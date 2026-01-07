@@ -73,6 +73,7 @@ fun App() {
                     .padding(bottom = innerPadding.calculateBottomPadding())
             ) {
                 composable<Screen.Splash> { SplashScreen().Content() }
+                composable<Screen.Disclaimer> { com.mibeko.mibeko.ui.onboarding.DisclaimerScreen().Content() }
                 composable<Screen.Onboarding> { com.mibeko.mibeko.ui.onboarding.OnboardingScreen().Content() }
                 composable<Screen.Home> { HomeScreen().Content() }
                 composable<Screen.Explorer> { ExplorerScreen().Content() }

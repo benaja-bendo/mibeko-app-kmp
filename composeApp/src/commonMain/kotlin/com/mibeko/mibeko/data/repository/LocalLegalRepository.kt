@@ -45,13 +45,17 @@ class LocalLegalRepository(
             val allNodes = mutableListOf<NodeEntity>()
             val allArticles = mutableListOf<ArticleEntity>()
 
+            // Get currently downloaded IDs to preserve state
+            val downloadedIds = mibekoDao.getDownloadedDocumentIds().toSet()
+
             for (remoteDoc in response.data) {
                 // Map document
                 documents.add(DocumentEntity(
                     id = remoteDoc.id,
                     title = remoteDoc.title,
                     type_code = remoteDoc.type.code,
-                    last_updated = parseIsoDate(remoteDoc.updated_at)
+                    last_updated = parseIsoDate(remoteDoc.updated_at),
+                    is_downloaded = downloadedIds.contains(remoteDoc.id)
                 ))
 
                 // Fetch full tree for this document to get structure and articles
@@ -139,6 +143,72 @@ class LocalLegalRepository(
         return 0L 
     }
 
+    suspend fun downloadDocument(documentId: String) {
+        val response = apiService.downloadDocument(documentId)
+        val data = response.data
+        
+        val nodes = mutableListOf<NodeEntity>()
+        val articles = mutableListOf<ArticleEntity>()
+
+        // Map Nodes
+        data.nodes.forEach { node ->
+            nodes.add(NodeEntity(
+                id = node.id,
+                document_id = documentId,
+                parent_id = null, // Backend should ideally provide parent info if hierarchical, or flat list needs checks
+                title = node.title ?: "",
+                sort_order = node.order
+            ))
+        }
+
+        // Map Articles
+        data.articles.forEach { article ->
+            articles.add(ArticleEntity(
+                id = article.id,
+                node_id = article.parent_node_id,
+                number = article.number,
+                content = article.content ?: "",
+                is_favorite = false // Will be ignored by Upsert if row exists? No, Upsert replaces.
+                // Critical: We might lose favorite status if we upsert blind.
+                // MibekoDao.upsertArticles uses REPLACE/UPSERT.
+                // SQLite Upsert preserves if logic added, but Room @Upsert usually replaces.
+                // We typically need to read favorite status or use partial update?
+                // For MVP, simplistic approach: Assume sync brings fresh data. 
+                // But Favorites MUST be preserved.
+                // 'is_favorite' is in ArticleEntity.
+                // We should probably NOT change is_favorite during download if it exists.
+                // But room @Upsert overrides.
+                // We need to implement careful Upsert in DAO or logic here.
+                // Logic: is_favorite = false.
+                // If it was true, it becomes false. BAD.
+            ))
+        }
+        
+        // FIXME: Handling Favorite preservation is tricky with full Upsert.
+        // Option: In DAO, use: INSERT INTO ... ON CONFLICT(id) DO UPDATE SET content=excluded.content ... (not changing is_favorite)
+        // For now, let's implement the basic flow and note the risk.
+        // Actually, we can fetch existing favorites IDs first.
+        
+        val favoriteIds = mibekoDao.getFavoriteArticles().first().map { it.article.id }.toSet()
+        
+        val articlesWithFavorites = articles.map { 
+            it.copy(is_favorite = favoriteIds.contains(it.id))
+        }
+
+        mibekoDao.syncAll(
+            documents = emptyList(), // Don't touch doc here or do we need to set is_downloaded?
+            nodes = nodes,
+            articles = articlesWithFavorites
+        )
+        
+        mibekoDao.updateDocumentDownloadStatus(documentId, true)
+    }
+
+    suspend fun removeDownload(documentId: String) {
+        mibekoDao.deleteNonFavoriteArticlesFromDocument(documentId)
+        mibekoDao.updateDocumentDownloadStatus(documentId, false)
+    }
+
     fun getLawCodes(): Flow<List<com.mibeko.mibeko.data.LawCodeSpec>> {
         return mibekoDao.getAllDocuments().map { docs ->
             docs.map { it.toLawCodeSpec() }
@@ -148,22 +218,14 @@ class LocalLegalRepository(
     fun getFavoriteArticles(): Flow<List<ArticleSpec>> {
         return mibekoDao.getFavoriteArticles().map { results ->
             results.map { result ->
-                result.article.toArticleSpec(
-                    codeId = result.document_id,
-                    title = result.node_title,
-                    breadcrumb = result.node_title
-                )
+                result.toArticleSpec()
             }
         }
     }
 
     fun getArticleById(id: String): Flow<ArticleSpec?> {
         return mibekoDao.getArticleById(id).map { result ->
-            result?.article?.toArticleSpec(
-                codeId = result.document_id,
-                title = result.node_title,
-                breadcrumb = result.node_title
-            )
+            result?.toArticleSpec()
         }
     }
 
@@ -185,6 +247,7 @@ class LocalLegalRepository(
         return if (shouldUseNetwork) {
             try {
                 val response = apiService.searchArticles(query)
+                // Map remote results. They are not downloaded, so isDownloaded = false default in Mapper.
                 val articles = response.data.map { it.toArticleSpec() }
                 SearchResult.Success(articles, isFromNetwork = true)
             } catch (e: Exception) {
@@ -207,11 +270,7 @@ class LocalLegalRepository(
      */
     private suspend fun searchLocally(query: String): List<ArticleSpec> {
         return mibekoDao.searchArticles(query).first().map { result ->
-            result.article.toArticleSpec(
-                codeId = result.document_id,
-                title = result.node_title,
-                breadcrumb = result.node_title
-            )
+            result.toArticleSpec()
         }
     }
 
@@ -224,11 +283,7 @@ class LocalLegalRepository(
     fun search(query: String): Flow<List<ArticleSpec>> {
         return mibekoDao.searchArticles(query).map { results ->
             results.map { result ->
-                result.article.toArticleSpec(
-                    codeId = result.document_id,
-                    title = result.node_title,
-                    breadcrumb = result.node_title
-                )
+                result.toArticleSpec()
             }
         }
     }

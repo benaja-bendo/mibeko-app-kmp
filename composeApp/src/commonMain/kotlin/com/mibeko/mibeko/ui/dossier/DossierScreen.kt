@@ -48,14 +48,14 @@ class DossierScreen : Screen {
                     actions = {
                         IconButton(onClick = { /* TODO: Show search */ }) {
                             Icon(
-                                Icons.Default.Search,
+                                Icons.Filled.Search,
                                 contentDescription = "Rechercher",
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                         IconButton(onClick = { /* TODO: Show filter */ }) {
                             Icon(
-                                Icons.Default.FilterList,
+                                Icons.Filled.FilterList,
                                 contentDescription = "Filtrer",
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
@@ -69,7 +69,7 @@ class DossierScreen : Screen {
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
                     Icon(
-                        Icons.Default.Add,
+                        Icons.Filled.Add,
                         contentDescription = "Créer un dossier",
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
@@ -94,7 +94,7 @@ class DossierScreen : Screen {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(
-                                Icons.Default.Error,
+                                Icons.Filled.Error,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(48.dp)
@@ -112,7 +112,7 @@ class DossierScreen : Screen {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(
-                                Icons.Default.FolderOpen,
+                                Icons.Filled.FolderOpen,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(64.dp)
@@ -202,7 +202,7 @@ fun DossierCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Default.Folder,
+                    Icons.Filled.Folder,
                     contentDescription = null,
                     tint = parseColor(dossier.color),
                     modifier = Modifier.size(32.dp)
@@ -238,7 +238,7 @@ fun DossierCard(
             Box {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
-                        Icons.Default.MoreVert,
+                        Icons.Filled.MoreVert,
                         contentDescription = "Options",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -254,7 +254,7 @@ fun DossierCard(
                             onEdit()
                         },
                         leadingIcon = {
-                            Icon(Icons.Default.Edit, contentDescription = null)
+                            Icon(Icons.Filled.Edit, contentDescription = null)
                         }
                     )
                     DropdownMenuItem(
@@ -265,7 +265,7 @@ fun DossierCard(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Delete,
+                                Icons.Filled.Delete,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error
                             )

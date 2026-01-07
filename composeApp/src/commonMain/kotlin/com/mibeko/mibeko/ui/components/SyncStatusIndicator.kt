@@ -62,7 +62,7 @@ fun SyncStatusIndicator(
             when (state) {
                 SyncState.SYNCING -> {
                     Icon(
-                        imageVector = Icons.Default.Sync,
+                        imageVector = Icons.Filled.Sync,
                         contentDescription = "Syncing",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
@@ -72,7 +72,7 @@ fun SyncStatusIndicator(
                 }
                 SyncState.UP_TO_DATE -> {
                     Icon(
-                        imageVector = Icons.Default.CheckCircle,
+                        imageVector = Icons.Filled.CheckCircle,
                         contentDescription = "Up to date",
                         tint = LegalValid,
                         modifier = Modifier.size(16.dp)
@@ -80,7 +80,7 @@ fun SyncStatusIndicator(
                 }
                 SyncState.ERROR -> {
                     Icon(
-                        imageVector = Icons.Default.Sync, // Or Error icon
+                        imageVector = Icons.Filled.Sync, // Or Error icon
                         contentDescription = "Error",
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(16.dp)

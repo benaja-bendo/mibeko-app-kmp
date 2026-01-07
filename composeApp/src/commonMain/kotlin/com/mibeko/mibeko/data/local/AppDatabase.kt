@@ -15,7 +15,7 @@ import com.mibeko.mibeko.data.local.entities.*
         DossierEntity::class,
         DossierArticleEntity::class
     ],
-    version = 3
+    version = 4
 )
 
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -24,5 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
 }
 
 @Suppress("NO_ACTUAL_FOR_EXPECT")
-expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase>
+expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase> {
+    override fun initialize(): AppDatabase
+}
 

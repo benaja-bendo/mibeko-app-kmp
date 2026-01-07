@@ -123,7 +123,7 @@ class ActiveSearchScreen : Screen {
                                 viewModel.updateLiveQuery("")
                             }) {
                                 Icon(
-                                    Icons.Default.Close,
+                                    Icons.Filled.Close,
                                     contentDescription = "Effacer",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -191,7 +191,7 @@ class ActiveSearchScreen : Screen {
                     items(recentSearches) { query ->
                         SuggestionItem(
                             text = query,
-                            icon = Icons.Default.History,
+                            icon = Icons.Filled.History,
                             onClick = {
                                 navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.SearchResults(query)) {
                                     popUpTo(com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch) { inclusive = true }
@@ -213,7 +213,7 @@ class ActiveSearchScreen : Screen {
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(
-                                    Icons.Default.Search,
+                                    Icons.Filled.Search,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.outline,
                                     modifier = Modifier.size(64.dp)
@@ -274,7 +274,7 @@ private fun SuggestionItem(
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
-                        Icons.Default.Close,
+                        Icons.Filled.Close,
                         contentDescription = "Supprimer",
                         tint = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.size(16.dp)

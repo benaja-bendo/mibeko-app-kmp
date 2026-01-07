@@ -10,8 +10,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+// import androidx.compose.material.icons.automirrored.filled.ChevronRight
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -158,7 +158,7 @@ fun ArticleItem(article: ArticleEntity, onClick: () -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Gavel,
+                    imageVector = Icons.Filled.Gavel,
                     contentDescription = null,
                     tint = MibekoGold,
                     modifier = Modifier.size(24.dp)
@@ -181,11 +181,10 @@ fun ArticleItem(article: ArticleEntity, onClick: () -> Unit) {
                 )
             }
             Icon(
-                imageVector = Icons.Default.ChevronRight,
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Temporary replacement for ChevronRight
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.outline
             )
         }
     }
 }
-

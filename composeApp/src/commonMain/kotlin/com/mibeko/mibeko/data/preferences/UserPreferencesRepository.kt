@@ -20,6 +20,7 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
         private const val KEY_APP_THEME = "app_theme"
         private const val KEY_LAST_SYNC_TIMESTAMP = "last_sync_timestamp"
         private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
+        private const val KEY_DISCLAIMER_ACCEPTED = "disclaimer_accepted"
     }
 
     /**
@@ -122,5 +123,19 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
      */
     fun clearAll() {
         settings.clear()
+    }
+
+    /**
+     * Checks if the user has accepted the disclaimer.
+     */
+    fun hasAcceptedDisclaimer(): Boolean {
+        return settings.getBoolean(KEY_DISCLAIMER_ACCEPTED, false)
+    }
+
+    /**
+     * Marks the disclaimer as accepted.
+     */
+    fun setDisclaimerAccepted() {
+        settings.putBoolean(KEY_DISCLAIMER_ACCEPTED, true)
     }
 }

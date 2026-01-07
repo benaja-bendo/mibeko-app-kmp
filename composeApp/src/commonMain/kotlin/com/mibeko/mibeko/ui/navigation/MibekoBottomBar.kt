@@ -23,7 +23,7 @@ fun MibekoBottomBar(navController: NavController) {
         tonalElevation = 0.dp
     ) {
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Home, contentDescription = "Accueil") },
+            icon = { Icon(Icons.Filled.Home, contentDescription = "Accueil") },
             label = { Text("Accueil") },
             selected = currentRoute == Screen.Home::class.qualifiedName,
             onClick = { 
@@ -44,20 +44,20 @@ fun MibekoBottomBar(navController: NavController) {
             }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Folder, contentDescription = "Dossiers") },
+            icon = { Icon(Icons.Filled.Folder, contentDescription = "Dossiers") },
             label = { Text("Dossiers") },
             selected = currentRoute == Screen.Dossiers::class.qualifiedName,
-            onClick = { 
+            onClick = {
                 navController.navigate(Screen.Dossiers) {
                     launchSingleTop = true
                 }
             }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Settings, contentDescription = "Réglages") },
+            icon = { Icon(Icons.Filled.Settings, contentDescription = "Réglages") },
             label = { Text("Réglages") },
             selected = currentRoute == Screen.Settings::class.qualifiedName,
-            onClick = { 
+            onClick = {
                 navController.navigate(Screen.Settings) {
                     launchSingleTop = true
                 }

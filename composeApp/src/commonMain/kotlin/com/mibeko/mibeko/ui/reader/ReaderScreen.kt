@@ -62,7 +62,7 @@ data class ReaderScreen(val articleId: String) : Screen {
                     },
                     actions = {
                         IconButton(onClick = { }) { 
-                            Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                            Icon(Icons.Filled.MoreVert, contentDescription = "Options")
                         }
                         Spacer(modifier = Modifier.width(16.dp)) 
                     }
@@ -76,8 +76,8 @@ data class ReaderScreen(val articleId: String) : Screen {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         ReaderNavAction("Précédent", Icons.AutoMirrored.Filled.KeyboardArrowLeft) { }
                         ReaderNavAction("Suivant", Icons.AutoMirrored.Filled.KeyboardArrowRight) { }
-                        ReaderNavAction("Favori", if (currentArticle.isFavorite) Icons.Default.Star else Icons.Default.StarBorder) { }
-                        ReaderNavAction("Partager", Icons.Default.Share) { }
+                        ReaderNavAction("Favori", if (currentArticle.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder) { }
+                        ReaderNavAction("Partager", Icons.Filled.Share) { }
                     }
                 }
             },

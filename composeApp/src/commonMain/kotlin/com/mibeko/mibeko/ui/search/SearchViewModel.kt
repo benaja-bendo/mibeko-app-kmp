@@ -40,6 +40,9 @@ class SearchViewModel(
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
     val suggestions: StateFlow<List<String>> = _suggestions.asStateFlow()
     
+    private var allSearchResults: List<ArticleSpec> = emptyList()
+
+    
     /**
      * Recent search history from local storage.
      */
@@ -62,8 +65,7 @@ class SearchViewModel(
      * Update filter and reapply to current results.
      */
     fun updateFilter(filter: String) {
-        val currentResults = _uiState.value.results
-        val filteredResults = applyFilter(currentResults, filter)
+        val filteredResults = applyFilter(allSearchResults, filter)
         _uiState.value = _uiState.value.copy(
             currentFilter = filter,
             results = filteredResults
@@ -95,7 +97,8 @@ class SearchViewModel(
             
             when (val result = repository.searchHybrid(query)) {
                 is SearchResult.Success -> {
-                    val filteredResults = applyFilter(result.articles, _uiState.value.currentFilter)
+                    allSearchResults = result.articles
+                    val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
                     _uiState.value = SearchUiState(
                         isLoading = false,
                         results = filteredResults,
@@ -104,7 +107,8 @@ class SearchViewModel(
                     )
                 }
                 is SearchResult.Error -> {
-                    val filteredResults = applyFilter(result.fallbackArticles, _uiState.value.currentFilter)
+                    allSearchResults = result.fallbackArticles
+                    val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
                     _uiState.value = SearchUiState(
                         isLoading = false,
                         results = filteredResults,
@@ -127,6 +131,7 @@ class SearchViewModel(
         return when (filter) {
             "Codes" -> results.filter { it.title.contains("Code", ignoreCase = true) }
             "Lois" -> results.filter { it.title.contains("Loi", ignoreCase = true) }
+            "Downloaded" -> results.filter { it.isDownloaded }
             else -> results
         }
     }

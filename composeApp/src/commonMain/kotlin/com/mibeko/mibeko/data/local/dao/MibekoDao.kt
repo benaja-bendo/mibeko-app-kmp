@@ -35,11 +35,21 @@ interface MibekoDao {
     @Query("SELECT * FROM documents")
     fun getAllDocuments(): Flow<List<DocumentEntity>>
 
+    @Query("SELECT id FROM documents WHERE is_downloaded = 1")
+    suspend fun getDownloadedDocumentIds(): List<String>
+
+    @Query("UPDATE documents SET is_downloaded = :isDownloaded WHERE id = :documentId")
+    suspend fun updateDocumentDownloadStatus(documentId: String, isDownloaded: Boolean)
+
+    @Query("DELETE FROM articles WHERE node_id IN (SELECT id FROM nodes WHERE document_id = :documentId) AND is_favorite = 0")
+    suspend fun deleteNonFavoriteArticlesFromDocument(documentId: String)
+
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title 
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
+        JOIN documents ON nodes.document_id = documents.id
         WHERE articles.is_favorite = 1
     """)
     fun getFavoriteArticles(): Flow<List<ArticleSearchResult>>
@@ -73,18 +83,20 @@ interface MibekoDao {
 
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title 
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
+        JOIN documents ON nodes.document_id = documents.id
         WHERE articles.id = :id
     """)
     fun getArticleById(id: String): Flow<ArticleSearchResult?>
 
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title 
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
+        JOIN documents ON nodes.document_id = documents.id
         JOIN articles_fts ON articles.id = articles_fts.rowid 
         WHERE articles_fts MATCH :query
     """)
@@ -152,7 +164,8 @@ interface MibekoDao {
 data class ArticleSearchResult(
     @Embedded val article: ArticleEntity,
     val document_id: String,
-    val node_title: String
+    val node_title: String,
+    val doc_is_downloaded: Boolean
 )
 
 data class DossierArticleWithDetails(

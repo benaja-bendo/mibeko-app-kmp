@@ -8,5 +8,6 @@ data class DocumentEntity(
     @PrimaryKey val id: String,
     val title: String,
     val type_code: String,
-    val last_updated: Long
+    val last_updated: Long,
+    val is_downloaded: Boolean = false
 )

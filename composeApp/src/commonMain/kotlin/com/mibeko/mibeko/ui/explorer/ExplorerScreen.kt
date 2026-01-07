@@ -97,7 +97,7 @@ fun ExplorerItem(code: com.mibeko.mibeko.data.LawCodeSpec, onClick: () -> Unit) 
                 modifier = Modifier.size(40.dp)
             ) {
                 Icon(
-                    imageVector = if (code.title.contains("Pénal", ignoreCase = true)) Icons.Default.Gavel else Icons.Default.Balance,
+                    imageVector = if (code.title.contains("Pénal", ignoreCase = true)) Icons.Filled.Gavel else Icons.Filled.Balance,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(8.dp)

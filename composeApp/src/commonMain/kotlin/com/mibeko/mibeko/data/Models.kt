@@ -4,7 +4,8 @@ data class LawCodeSpec(
     val id: String,
     val title: String,
     val icon: String, // Simple identifier for icon selection
-    val lastUpdated: String
+    val lastUpdated: String,
+    val isDownloaded: Boolean = false
 )
 
 data class ArticleSpec(
@@ -14,7 +15,8 @@ data class ArticleSpec(
     val title: String,
     val content: String,
     val breadcrumb: String,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    val isDownloaded: Boolean = false
 )
 
 data class ExplorerNode(

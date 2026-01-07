@@ -10,12 +10,27 @@ class LegalApiService(
 ) {
     
     /**
+     * Fetch the global catalog status.
+     * Used to detect if app needs to update its local database.
+     */
+    suspend fun fetchCatalog(): ApiResponse<RemoteCatalogData> {
+        return client.get("$baseUrl/v1/catalog").body()
+    }
+
+    /**
      * Fetch paginated list of legal documents.
      */
     suspend fun fetchDocuments(page: Int = 1): RemoteDocumentResponse {
         return client.get("$baseUrl/v1/legal-documents") {
             parameter("page", page)
         }.body()
+    }
+
+    /**
+     * Fetch a single legal document with its structure and articles.
+     */
+    suspend fun fetchDocument(documentId: String): ApiResponse<RemoteDocument> {
+        return client.get("$baseUrl/v1/legal-documents/$documentId").body()
     }
 
     /**
@@ -35,24 +50,41 @@ class LegalApiService(
     }
 
     /**
-     * Search legal documents by title.
+     * Search articles by content using hybrid search (vector + full-text).
+     * Returns results with document context and breadcrumb.
      */
-    suspend fun searchDocuments(query: String, page: Int = 1): RemoteDocumentResponse {
-        return client.get("$baseUrl/v1/legal-documents") {
-            parameter("search", query)
-            parameter("page", page)
+    suspend fun searchArticles(
+        query: String, 
+        documentId: String? = null, 
+        perPage: Int = 20
+    ): RemoteSearchResponse {
+        return client.get("$baseUrl/v1/search") {
+            parameter("q", query)
+            documentId?.let { parameter("document_id", it) }
+            parameter("per_page", perPage)
         }.body()
     }
 
     /**
-     * Search articles by content or number.
-     * Returns results with document context and breadcrumb.
+     * Download a full document (structure + articles) for offline use.
      */
-    suspend fun searchArticles(query: String, type: String? = null, page: Int = 1): RemoteSearchResponse {
-        return client.get("$baseUrl/v1/articles/search") {
-            parameter("q", query)
-            type?.let { parameter("type", it) }
-            parameter("page", page)
+    suspend fun downloadDocument(documentId: String, nodeId: String? = null): RemoteDownloadResponse {
+        return client.get("$baseUrl/v1/legal-documents/$documentId/download") {
+            nodeId?.let { parameter("node_id", it) }
         }.body()
+    }
+
+    /**
+     * Fetch list of document types.
+     */
+    suspend fun fetchDocumentTypes(): ApiResponse<List<RemoteDocumentType>> {
+        return client.get("$baseUrl/v1/document-types").body()
+    }
+
+    /**
+     * Fetch list of institutions.
+     */
+    suspend fun fetchInstitutions(): ApiResponse<List<RemoteInstitution>> {
+        return client.get("$baseUrl/v1/institutions").body()
     }
 }

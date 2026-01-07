@@ -10,10 +10,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -108,6 +109,11 @@ data class SearchResultsScreen(val query: String) : Screen {
                         label = "Lois",
                         onClick = { viewModel.updateFilter("Lois") }
                     )
+                    FilterChipItem(
+                        selected = uiState.currentFilter == "Downloaded",
+                        label = "Mes téléchargements",
+                        onClick = { viewModel.updateFilter("Downloaded") }
+                    )
                 }
 
                 // Loading indicator
@@ -149,6 +155,7 @@ data class SearchResultsScreen(val query: String) : Screen {
                                 source = article.breadcrumb,
                                 snippet = article.content,
                                 query = query,
+                                isDownloaded = article.isDownloaded,
                                 onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id)) }
                             )
                         }
@@ -186,7 +193,7 @@ private fun NetworkStatusBanner(
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
-                        Icons.Default.CloudOff,
+                        Icons.Filled.CloudOff,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.size(18.dp)
@@ -201,7 +208,7 @@ private fun NetworkStatusBanner(
                 }
                 IconButton(onClick = onRetry) {
                     Icon(
-                        Icons.Default.Refresh,
+                        Icons.Filled.Refresh,
                         contentDescription = "Réessayer",
                         tint = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -221,7 +228,7 @@ private fun NetworkStatusBanner(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Default.Wifi,
+                    Icons.Filled.Wifi,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(14.dp)
@@ -236,6 +243,7 @@ private fun NetworkStatusBanner(
         }
     }
 }
+
 
 @Composable
 private fun FilterChipItem(
@@ -272,6 +280,7 @@ private fun SearchResultCard(
     source: String,
     snippet: String,
     query: String,
+    isDownloaded: Boolean,
     onClick: () -> Unit
 ) {
     Card(
@@ -319,13 +328,29 @@ private fun SearchResultCard(
             }
             
             Icon(
-                Icons.Default.ChevronRight,
+                Icons.AutoMirrored.Filled.ArrowBack, // Temporary replacement
                 contentDescription = "Voir",
                 tint = MaterialTheme.colorScheme.outline,
                 modifier = Modifier
                     .size(20.dp)
                     .align(Alignment.CenterVertically)
             )
+            
+            if (isDownloaded) {
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = "Téléchargé",
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(start = 8.dp).size(16.dp).align(Alignment.Top)
+                )
+            } else {
+                 Icon(
+                    Icons.Filled.Cloud,
+                    contentDescription = "En ligne",
+                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(start = 8.dp).size(16.dp).align(Alignment.Top)
+                )
+            }
         }
     }
 }
@@ -342,7 +367,7 @@ private fun EmptyResultsState(query: String) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                Icons.Default.FilterList,
+                Icons.Filled.FilterList,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.size(64.dp)

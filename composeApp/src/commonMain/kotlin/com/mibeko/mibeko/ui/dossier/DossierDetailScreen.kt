@@ -64,7 +64,7 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                     actions = {
                         IconButton(onClick = { /* TODO: More options */ }) {
                             Icon(
-                                Icons.Default.MoreVert,
+                                Icons.Filled.MoreVert,
                                 contentDescription = "Options",
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
@@ -107,7 +107,7 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Default.Folder,
+                                Icons.Filled.Folder,
                                 contentDescription = null,
                                 tint = Color.White,
                                 modifier = Modifier.size(48.dp)
@@ -276,7 +276,7 @@ fun DossierArticleCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Default.Description,
+                    Icons.Filled.Description,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
@@ -326,7 +326,7 @@ fun DossierArticleCard(
             Box {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
-                        Icons.Default.MoreVert,
+                        Icons.Filled.MoreVert,
                         contentDescription = "Options",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -342,7 +342,7 @@ fun DossierArticleCard(
                             onEditNote()
                         },
                         leadingIcon = {
-                            Icon(Icons.Default.Edit, contentDescription = null)
+                            Icon(Icons.Filled.Edit, contentDescription = null)
                         }
                     )
                     DropdownMenuItem(
@@ -353,7 +353,7 @@ fun DossierArticleCard(
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.RemoveCircle,
+                                Icons.Filled.RemoveCircle,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error
                             )
@@ -383,22 +383,22 @@ fun DossierActionBar(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             ActionButton(
-                icon = Icons.Default.Add,
+                icon = Icons.Filled.Add,
                 label = "Ajouter\nArticle",
                 onClick = onAddArticle
             )
             ActionButton(
-                icon = Icons.Default.Share,
+                icon = Icons.Filled.Share,
                 label = "Partager",
                 onClick = onShare
             )
             ActionButton(
-                icon = Icons.Default.Edit,
+                icon = Icons.Filled.Edit,
                 label = "Modifier",
                 onClick = onEdit
             )
             ActionButton(
-                icon = Icons.Default.PictureAsPdf,
+                icon = Icons.Filled.PictureAsPdf,
                 label = "Exporter\nPDF",
                 onClick = onExportPdf
             )

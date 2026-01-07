@@ -167,7 +167,7 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                     SettingsSwitch(
                         title = "Mode Hors-ligne uniquement",
                         subtitle = "N'utilise pas le réseau pour les recherches",
-                        icon = Icons.Default.WifiOff,
+                        icon = Icons.Filled.WifiOff,
                         checked = uiState.isOfflineModeEnabled,
                         onCheckedChange = { viewModel.setOfflineMode(it) }
                     )
@@ -192,7 +192,7 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(
-                                Icons.Default.CloudOff,
+                                Icons.Filled.CloudOff,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.outline,
                                 modifier = Modifier.size(48.dp)
@@ -226,7 +226,7 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                 
                 // --- APPLICATION SETTINGS ---
                 SettingsGroup("Application") {
-                    SettingsItem("Langue", "Français", Icons.Default.Language)
+                    SettingsItem("Langue", "Français", Icons.Filled.Language)
                     SettingsItem(
                         title = "Thème", 
                         subtitle = when(uiState.currentTheme) {
@@ -234,13 +234,13 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                             UserPreferencesRepository.AppTheme.LIGHT -> "Clair"
                             UserPreferencesRepository.AppTheme.DARK -> "Sombre"
                         }, 
-                        icon = Icons.Default.Brightness4,
+                        icon = Icons.Filled.Brightness4,
                         onClick = { showThemeDialog = true }
                     )
                     SettingsSwitch(
                         title = "Notifications", 
                         subtitle = if (uiState.isNotificationsEnabled) "Activées" else "Désactivées", 
-                        icon = Icons.Default.Notifications,
+                        icon = Icons.Filled.Notifications,
                         checked = uiState.isNotificationsEnabled,
                         onCheckedChange = { viewModel.setNotificationsEnabled(it) }
                     )
@@ -251,36 +251,36 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                     SettingsItem(
                         title = "Mise à jour de la base", 
                         subtitle = "Dernière vérification : ${uiState.lastUpdateDate}", 
-                        icon = Icons.Default.Update
+                        icon = Icons.Filled.Update
                     )
                     SettingsItem(
                         title = "Espace disque utilisé", 
                         subtitle = uiState.diskUsage, 
-                        icon = Icons.Default.Storage,
+                        icon = Icons.Filled.Storage,
                         onClick = { viewModel.refreshDiskUsage() }
                     )
                 }
                 
                 // --- ABOUT SECTION ---
                 SettingsGroup("À propos") {
-                    SettingsItem("Version", "1.0.2 (Production)", Icons.Default.Info)
-                    SettingsItem("Contactez-nous", "contact@mibeko.cg", Icons.Default.Email)
+                    SettingsItem("Version", "1.0.2 (Production)", Icons.Filled.Info)
+                    SettingsItem("Contactez-nous", "contact@mibeko.cg", Icons.Filled.Email)
                     SettingsItem(
                         title = "Conditions d'utilisation", 
                         subtitle = "Lire les conditions", 
-                        icon = Icons.Default.Description,
+                        icon = Icons.Filled.Description,
                         onClick = { showTerms = true }
                     )
                     SettingsItem(
                         title = "Politique de confidentialité", 
                         subtitle = "Données personnelles", 
-                        icon = Icons.Default.PrivacyTip,
+                        icon = Icons.Filled.PrivacyTip,
                         onClick = { showPrivacy = true }
                     )
                     SettingsItem(
                         title = "Mentions Légales", 
                         subtitle = "Clause de non-responsabilité", 
-                        icon = Icons.Default.Gavel,
+                        icon = Icons.Filled.Gavel,
                         onClick = { showDisclaimer = true }
                     )
                 }
@@ -338,7 +338,7 @@ fun SettingsItem(title: String, subtitle: String, icon: ImageVector, onClick: ()
                 Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
             }
         }
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
+        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
     }
 }
 
@@ -401,8 +401,8 @@ fun DownloadableDocumentItem(
             Icon(
                 when (typeCode.uppercase()) {
                     "CODE" -> Icons.AutoMirrored.Filled.MenuBook
-                    "LOI" -> Icons.Default.Gavel
-                    "DECRET" -> Icons.Default.Description
+                    "LOI" -> Icons.Filled.Gavel
+                    "DECRET" -> Icons.Filled.Description
                     else -> Icons.AutoMirrored.Filled.Article
                 },
                 contentDescription = null,
@@ -438,7 +438,7 @@ fun DownloadableDocumentItem(
             } else if (isDownloaded) {
                 IconButton(onClick = onDelete) {
                     Icon(
-                        Icons.Default.Delete,
+                        Icons.Filled.Delete,
                         contentDescription = "Supprimer",
                         tint = MaterialTheme.colorScheme.error
                     )
@@ -446,7 +446,7 @@ fun DownloadableDocumentItem(
             } else {
                 IconButton(onClick = onDownload) {
                     Icon(
-                        Icons.Default.CloudDownload,
+                        Icons.Filled.CloudDownload,
                         contentDescription = "Télécharger",
                         tint = MaterialTheme.colorScheme.primary
                     )

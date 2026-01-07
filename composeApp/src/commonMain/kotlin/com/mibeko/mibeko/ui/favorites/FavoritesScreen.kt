@@ -56,7 +56,7 @@ class FavoritesScreen : Screen {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Default.CheckCircle,
+                            Icons.Filled.CheckCircle,
                             contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier.size(16.dp)
@@ -113,7 +113,7 @@ fun FavoriteItemCard(number: String, breadcrumb: String) {
             
             IconButton(onClick = { }) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = Icons.Filled.Delete,
                     contentDescription = "Supprimer",
                     tint = Color(0xFFB00020)
                 )

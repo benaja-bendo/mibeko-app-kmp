@@ -22,7 +22,7 @@ class MibekoApp : Application() {
             modules(commonModule, module {
                 single<com.mibeko.mibeko.di.AppConfig> {
                     object : com.mibeko.mibeko.di.AppConfig {
-                        override val baseUrl = BuildConfig.BASE_URL
+                        override val baseUrl = ApiConstants.BASE_URL
                     }
                 }
             })

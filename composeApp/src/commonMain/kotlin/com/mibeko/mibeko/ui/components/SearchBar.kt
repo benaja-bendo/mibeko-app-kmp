@@ -68,7 +68,7 @@ fun MibekoSearchBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Search,
+                imageVector = Icons.Filled.Search,
                 contentDescription = "Rechercher",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)

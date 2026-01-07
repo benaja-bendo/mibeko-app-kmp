@@ -170,7 +170,7 @@ class HomeScreen : Screen {
                                 ThemeCard(
                                     title = "Contrat de Travail & Licenciement",
                                     subtitle = "Droits des travailleurs et employeurs",
-                                    icon = Icons.Default.Work
+                                    icon = Icons.Filled.Work
                                 ) {
                                     navController.navigate(MibekoScreen.SearchResults("Travail licenciement"))
                                 }
@@ -178,7 +178,7 @@ class HomeScreen : Screen {
                                 ThemeCard(
                                     title = "Mariage, Divorce & Famille",
                                     subtitle = "Vie privée et protection familiale",
-                                    icon = Icons.Default.FamilyRestroom
+                                    icon = Icons.Filled.FamilyRestroom
                                 ) {
                                     navController.navigate(MibekoScreen.SearchResults("Famille mariage"))
                                 }
@@ -186,7 +186,7 @@ class HomeScreen : Screen {
                                 ThemeCard(
                                     title = "Location & Logement",
                                     subtitle = "Baux d'habitation et droits locatifs",
-                                    icon = Icons.Default.HomeWork
+                                    icon = Icons.Filled.HomeWork
                                 ) {
                                     navController.navigate(MibekoScreen.SearchResults("Location bail"))
                                 }
@@ -194,7 +194,7 @@ class HomeScreen : Screen {
                                 ThemeCard(
                                     title = "Création d'entreprises",
                                     subtitle = "Droit des affaires et entrepreneuriat",
-                                    icon = Icons.Default.BusinessCenter
+                                    icon = Icons.Filled.BusinessCenter
                                 ) {
                                     navController.navigate(MibekoScreen.SearchResults("Commerce entreprise"))
                                 }
@@ -282,7 +282,7 @@ private fun HomeHeader(
                     )
                 } else {
                     Icon(
-                        Icons.Default.Sync,
+                        Icons.Filled.Sync,
                         contentDescription = "Synchroniser",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -327,7 +327,7 @@ private fun NoDataCard(onSyncClick: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    Icons.Default.CloudOff,
+                    Icons.Filled.CloudOff,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.size(24.dp)
@@ -357,7 +357,7 @@ private fun NoDataCard(onSyncClick: () -> Unit) {
                     containerColor = MaterialTheme.colorScheme.onErrorContainer
                 )
             ) {
-                Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Synchroniser maintenant")
             }
@@ -367,11 +367,11 @@ private fun NoDataCard(onSyncClick: () -> Unit) {
 
 private fun getCodeIcon(title: String): ImageVector {
     return when {
-        title.contains("Pénal", ignoreCase = true) -> Icons.Default.Gavel
-        title.contains("Civil", ignoreCase = true) -> Icons.Default.Balance
-        title.contains("Travail", ignoreCase = true) -> Icons.Default.Work
-        title.contains("Famille", ignoreCase = true) -> Icons.Default.FamilyRestroom
-        title.contains("Commercial", ignoreCase = true) -> Icons.Default.Business
+        title.contains("Pénal", ignoreCase = true) -> Icons.Filled.Gavel
+        title.contains("Civil", ignoreCase = true) -> Icons.Filled.Balance
+        title.contains("Travail", ignoreCase = true) -> Icons.Filled.Work
+        title.contains("Famille", ignoreCase = true) -> Icons.Filled.FamilyRestroom
+        title.contains("Commercial", ignoreCase = true) -> Icons.Filled.Business
         else -> Icons.AutoMirrored.Filled.MenuBook
     }
 }

@@ -3,6 +3,7 @@ package com.mibeko.mibeko.di
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
 import org.koin.mp.KoinPlatform
+import com.mibeko.mibeko.ApiConstants
 
 fun initKoin() {
     // Guard against double initialization
@@ -17,7 +18,7 @@ fun initKoin() {
         modules(commonModule, module {
             single<AppConfig> {
                 object : AppConfig {
-                    override val baseUrl = "http://192.168.1.149:8000/api"
+                    override val baseUrl = ApiConstants.BASE_URL
                 }
             }
         })
