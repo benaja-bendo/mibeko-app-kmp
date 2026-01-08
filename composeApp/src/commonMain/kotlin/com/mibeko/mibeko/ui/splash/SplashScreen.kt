@@ -59,18 +59,18 @@ class SplashScreen : Screen {
             // Wait for a moment
             delay(1200)
 
-            // Navigate based on onboarding status
             // Navigate based on status
-            if (!userPreferences.hasAcceptedDisclaimer()) {
-                 navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Disclaimer) {
+            // Flow: Onboarding -> Disclaimer -> Home
+            if (!userPreferences.hasCompletedOnboarding()) {
+                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Onboarding) {
                     popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Splash) { inclusive = true }
                 }
-            } else if (userPreferences.hasCompletedOnboarding()) {
-                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Home) {
+            } else if (!userPreferences.hasAcceptedDisclaimer()) {
+                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Disclaimer) {
                     popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Splash) { inclusive = true }
                 }
             } else {
-                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Onboarding) {
+                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Home) {
                     popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Splash) { inclusive = true }
                 }
             }

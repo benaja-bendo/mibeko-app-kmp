@@ -10,6 +10,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/**
+ * Represents a recently viewed item for the home screen.
+ */
+data class RecentItem(
+    val id: String,
+    val title: String
+)
+
 class HomeViewModel(private val repository: LocalLegalRepository) : ViewModel() {
 
     val lawCodes: StateFlow<List<LawCodeSpec>> = repository.getLawCodes()
@@ -18,9 +26,24 @@ class HomeViewModel(private val repository: LocalLegalRepository) : ViewModel() 
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing
     
+    // Recently viewed items for the home screen
+    private val _recentItems = MutableStateFlow<List<RecentItem>>(emptyList())
+    val recentItems: StateFlow<List<RecentItem>> = _recentItems
+    
     // User requested error handling
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
+    
+    init {
+        // Load recent items on init (placeholder - would come from local DB in real impl)
+        loadRecentItems()
+    }
+    
+    private fun loadRecentItems() {
+        // For now, this is a placeholder. In a real implementation,
+        // this would query recent views from local storage.
+        // The UI will show demo items if this is empty.
+    }
 
     fun clearError() {
         _error.value = null
@@ -41,3 +64,4 @@ class HomeViewModel(private val repository: LocalLegalRepository) : ViewModel() 
         }
     }
 }
+

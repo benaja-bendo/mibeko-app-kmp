@@ -139,7 +139,7 @@ class ActiveSearchScreen : Screen {
                     .padding(padding),
                 contentPadding = PaddingValues(16.dp)
             ) {
-                // Live suggestions (when typing)
+                // Live suggestions (when typing) - Navigate directly to article
                 if (searchText.isNotBlank() && suggestions.isNotEmpty()) {
                     item {
                         Text(
@@ -152,12 +152,12 @@ class ActiveSearchScreen : Screen {
                     }
                     
                     items(suggestions.take(5)) { suggestion ->
-                        SuggestionItem(
-                            text = suggestion,
-                            icon = Icons.AutoMirrored.Filled.Article,
+                        ArticleSuggestionItem(
+                            suggestion = suggestion,
                             onClick = {
-                                viewModel.saveSearch(suggestion)
-                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.SearchResults(suggestion)) {
+                                viewModel.saveSearch("${suggestion.number} - ${suggestion.breadcrumb}")
+                                // Navigate directly to article reader
+                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(suggestion.id)) {
                                     popUpTo(com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch) { inclusive = true }
                                 }
                             }
@@ -229,6 +229,72 @@ class ActiveSearchScreen : Screen {
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * New composable for ArticleSuggestion items with source indicators.
+ * Shows article number, breadcrumb, and an icon indicating if downloaded.
+ */
+@Composable
+private fun ArticleSuggestionItem(
+    suggestion: com.mibeko.mibeko.data.ArticleSuggestion,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Source indicator icon
+            Icon(
+                imageVector = if (suggestion.isDownloaded) 
+                    Icons.Filled.CheckCircle 
+                else 
+                    Icons.Filled.Cloud,
+                contentDescription = if (suggestion.isDownloaded) 
+                    "Disponible hors-ligne" 
+                else 
+                    "En ligne",
+                tint = if (suggestion.isDownloaded) 
+                    MaterialTheme.colorScheme.secondary 
+                else 
+                    MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(20.dp)
+            )
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Article ${suggestion.number}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+                Text(
+                    text = suggestion.breadcrumb,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+            
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Ouvrir",
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

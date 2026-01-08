@@ -295,16 +295,27 @@ class LocalLegalRepository(
     /**
      * Get autocomplete suggestions for a query.
      * Uses hybrid approach: API if online, local if offline.
-     * Returns formatted strings like "Article 45 - Code du Travail".
+     * Returns ArticleSuggestion objects with IDs for direct navigation.
      */
-    suspend fun getAutocompleteSuggestionsHybrid(query: String): List<String> {
+    suspend fun getAutocompleteSuggestionsHybrid(query: String): List<com.mibeko.mibeko.data.ArticleSuggestion> {
         val shouldUseNetwork = networkChecker.isNetworkAvailable() && 
                                !userPreferencesRepository.isOfflineModeEnabled()
         
         return if (shouldUseNetwork) {
             try {
                 val response = apiService.searchArticles(query)
-                response.data.take(10).map { "${it.number} - ${it.breadcrumb}" }
+                // Get local downloaded IDs to mark which are available offline
+                val downloadedIds = mibekoDao.getDownloadedDocumentIds().toSet()
+                
+                response.data.take(10).map { result ->
+                    com.mibeko.mibeko.data.ArticleSuggestion(
+                        id = result.id,
+                        number = result.number,
+                        breadcrumb = result.breadcrumb,
+                        isDownloaded = downloadedIds.contains(result.document_id),
+                        contentSnippet = result.content?.take(100)
+                    )
+                }
             } catch (e: Exception) {
                 getAutocompleteSuggestionsLocally(query)
             }
@@ -313,9 +324,15 @@ class LocalLegalRepository(
         }
     }
 
-    private suspend fun getAutocompleteSuggestionsLocally(query: String): List<String> {
+    private suspend fun getAutocompleteSuggestionsLocally(query: String): List<com.mibeko.mibeko.data.ArticleSuggestion> {
         return mibekoDao.searchArticles(query).first().take(10).map { result ->
-            "${result.article.number} - ${result.node_title}"
+            com.mibeko.mibeko.data.ArticleSuggestion(
+                id = result.article.id,
+                number = result.article.number,
+                breadcrumb = result.node_title,
+                isDownloaded = result.doc_is_downloaded,
+                contentSnippet = result.article.content?.take(100)
+            )
         }
     }
 
@@ -323,10 +340,16 @@ class LocalLegalRepository(
      * Legacy Flow-based autocomplete for backward compatibility.
      * Always uses local Room database.
      */
-    fun getAutocompleteSuggestions(query: String): Flow<List<String>> {
+    fun getAutocompleteSuggestions(query: String): Flow<List<com.mibeko.mibeko.data.ArticleSuggestion>> {
         return mibekoDao.searchArticles(query).map { results ->
             results.take(10).map { result ->
-                "${result.article.number} - ${result.node_title}"
+                com.mibeko.mibeko.data.ArticleSuggestion(
+                    id = result.article.id,
+                    number = result.article.number,
+                    breadcrumb = result.node_title,
+                    isDownloaded = result.doc_is_downloaded,
+                    contentSnippet = result.article.content?.take(100)
+                )
             }
         }
     }

@@ -4,22 +4,25 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
@@ -30,10 +33,11 @@ import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen as MibekoScreen
-import com.mibeko.mibeko.ui.components.MibekoSearchBar
-import com.mibeko.mibeko.ui.components.QuickAccessCard
-import com.mibeko.mibeko.ui.components.ThemeCard
-import org.koin.compose.koinInject
+
+// Brand colors matching the reference design
+private val MibekoPrimaryBlue = Color(0xFF1A3A6B)
+private val MibekoSecondaryBlue = Color(0xFF2E5A9C)
+private val MibekoGold = Color(0xFFB8860B)
 
 class HomeScreen : Screen {
 
@@ -43,11 +47,11 @@ class HomeScreen : Screen {
         val viewModel = koinViewModel<HomeViewModel>()
         
         val lawCodes by viewModel.lawCodes.collectAsState()
+        val recentItems by viewModel.recentItems.collectAsState()
         val isSyncing by viewModel.isSyncing.collectAsState()
         val error by viewModel.error.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
         
-        // Animation states
         var showContent by remember { mutableStateOf(false) }
         
         LaunchedEffect(Unit) {
@@ -64,141 +68,84 @@ class HomeScreen : Screen {
 
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            containerColor = MaterialTheme.colorScheme.background,
-            topBar = {
-                Column(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.background)
-                        .statusBarsPadding()
-                ) {
-                    HomeHeader(
-                        isSyncing = isSyncing,
-                        isOfflineReady = lawCodes.isNotEmpty(),
-                        onSyncClick = { viewModel.syncData() }
-                    )
-                    MibekoSearchBar(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        onClick = { navController.navigate(MibekoScreen.ActiveSearch) }
-                    )
-                }
-            }
+            containerColor = Color(0xFFF5F5F5) // Light gray background
         ) { padding ->
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = padding.calculateTopPadding(),
-                    bottom = 24.dp
-                )
+                contentPadding = PaddingValues(bottom = 80.dp) // Room for bottom nav
             ) {
-                // No data warning
-                if (lawCodes.isEmpty() && !isSyncing) {
-                    item {
-                        NoDataCard(onSyncClick = { viewModel.syncData() })
-                    }
-                }
-                
-                // Quick Access Section (for Experts)
+                // Blue Header with Logo
                 item {
-                    AnimatedVisibility(
-                        visible = showContent && lawCodes.isNotEmpty(),
-                        enter = fadeIn() + slideInVertically { 20 }
-                    ) {
-                        Column(modifier = Modifier.padding(top = 24.dp)) {
-                            SectionHeader(
-                                title = "Accès Rapide",
-                                subtitle = "Codes les plus consultés"
-                            )
-                            
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(lawCodes.take(4)) { code ->
-                                    QuickAccessCard(
-                                        title = code.title,
-                                        icon = getCodeIcon(code.title)
-                                    ) {
-                                        navController.navigate(MibekoScreen.Explorer)
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    HomeHeader()
                 }
                 
-                // Loading state for codes
-                if (isSyncing && lawCodes.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(40.dp),
-                                    strokeWidth = 3.dp
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    "Chargement des codes...",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
+                // Search Bar
+                item {
+                    SearchBar(
+                        onClick = { navController.navigate(MibekoScreen.ActiveSearch) }
+                    )
                 }
                 
-                // Life Themes Section (for Citizens)
+                // Quick Access Grid (2x2)
                 item {
                     AnimatedVisibility(
                         visible = showContent,
+                        enter = fadeIn() + slideInVertically { 20 }
+                    ) {
+                        QuickAccessGrid(
+                            onCodesClick = { navController.navigate(MibekoScreen.Explorer) },
+                            onLoisClick = { navController.navigate(MibekoScreen.Explorer) },
+                            onDownloadsClick = { navController.navigate(MibekoScreen.Settings) },
+                            onFavorisClick = { navController.navigate(MibekoScreen.Dossiers) }
+                        )
+                    }
+                }
+                
+                // Consultés Récemment Section
+                item {
+                    AnimatedVisibility(
+                        visible = showContent && recentItems.isNotEmpty(),
                         enter = fadeIn() + slideInVertically { 40 }
                     ) {
-                        Column(modifier = Modifier.padding(top = 32.dp)) {
-                            SectionHeader(
-                                title = "Thématiques de Vie",
-                                subtitle = "Trouvez par situation"
+                        Column(
+                            modifier = Modifier.padding(top = 24.dp)
+                        ) {
+                            Text(
+                                text = "Consultés Récemment",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
-                            
-                            Column(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                ThemeCard(
-                                    title = "Contrat de Travail & Licenciement",
-                                    subtitle = "Droits des travailleurs et employeurs",
-                                    icon = Icons.Filled.Work
-                                ) {
-                                    navController.navigate(MibekoScreen.SearchResults("Travail licenciement"))
-                                }
-                                
-                                ThemeCard(
-                                    title = "Mariage, Divorce & Famille",
-                                    subtitle = "Vie privée et protection familiale",
-                                    icon = Icons.Filled.FamilyRestroom
-                                ) {
-                                    navController.navigate(MibekoScreen.SearchResults("Famille mariage"))
-                                }
-                                
-                                ThemeCard(
-                                    title = "Location & Logement",
-                                    subtitle = "Baux d'habitation et droits locatifs",
-                                    icon = Icons.Filled.HomeWork
-                                ) {
-                                    navController.navigate(MibekoScreen.SearchResults("Location bail"))
-                                }
-                                
-                                ThemeCard(
-                                    title = "Création d'entreprises",
-                                    subtitle = "Droit des affaires et entrepreneuriat",
-                                    icon = Icons.Filled.BusinessCenter
-                                ) {
-                                    navController.navigate(MibekoScreen.SearchResults("Commerce entreprise"))
-                                }
-                            }
+                        }
+                    }
+                }
+                
+                // Recent items list
+                if (showContent && recentItems.isNotEmpty()) {
+                    items(recentItems.take(5)) { item ->
+                        RecentItemRow(
+                            title = item.title,
+                            onClick = { navController.navigate(MibekoScreen.Reader(item.id)) }
+                        )
+                    }
+                }
+                
+                // Example recent items if empty (for demo)
+                if (showContent && recentItems.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier.padding(top = 24.dp)
+                        ) {
+                            Text(
+                                text = "Consultés Récemment",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            RecentItemRow(title = "Code Pénal - Art. 12", onClick = { })
+                            RecentItemRow(title = "Loi n° 2023-15", onClick = { })
                         }
                     }
                 }
@@ -207,171 +154,240 @@ class HomeScreen : Screen {
     }
 }
 
+/**
+ * Blue gradient header with Mibeko logo and title
+ */
 @Composable
-private fun HomeHeader(
-    isSyncing: Boolean,
-    isOfflineReady: Boolean,
-    onSyncClick: () -> Unit
-) {
-    Row(
+private fun HomeHeader() {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Logo and title
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                painter = painterResource(Res.drawable.logo),
-                contentDescription = null,
-                tint = Color.Unspecified,
-                modifier = Modifier.size(32.dp)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(MibekoPrimaryBlue, MibekoSecondaryBlue)
+                )
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Mibeko",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        
-        // Status and sync
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Offline status indicator
-            if (isOfflineReady) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    shape = CircleShape
-                                )
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            "Hors-ligne",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-            
-            // Sync button
-            IconButton(
-                onClick = onSyncClick,
-                enabled = !isSyncing
-            ) {
-                if (isSyncing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Icon(
-                        Icons.Filled.Sync,
-                        contentDescription = "Synchroniser",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SectionHeader(title: String, subtitle: String) {
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun NoDataCard(onSyncClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
-        ),
-        shape = RoundedCornerShape(16.dp)
+            .statusBarsPadding()
+            .padding(vertical = 32.dp),
+        contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Filled.CloudOff,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    "Aucune donnée disponible",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
+            // Logo
+            Icon(
+                painter = painterResource(Res.drawable.logo),
+                contentDescription = "Mibeko Logo",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(64.dp)
+            )
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            Text(
-                "Synchronisez pour accéder aux textes juridiques même hors-ligne.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Button(
-                onClick = onSyncClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.onErrorContainer
+            // Title
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Mibeko",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
-            ) {
-                Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Synchroniser maintenant")
+                Text(
+                    text = "Mobile",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MibekoGold,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
 }
 
-private fun getCodeIcon(title: String): ImageVector {
-    return when {
-        title.contains("Pénal", ignoreCase = true) -> Icons.Filled.Gavel
-        title.contains("Civil", ignoreCase = true) -> Icons.Filled.Balance
-        title.contains("Travail", ignoreCase = true) -> Icons.Filled.Work
-        title.contains("Famille", ignoreCase = true) -> Icons.Filled.FamilyRestroom
-        title.contains("Commercial", ignoreCase = true) -> Icons.Filled.Business
-        else -> Icons.AutoMirrored.Filled.MenuBook
+/**
+ * Search bar styled like the reference design
+ */
+@Composable
+private fun SearchBar(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .offset(y = (-20).dp)
+            .padding(horizontal = 24.dp)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+            shape = RoundedCornerShape(28.dp),
+            color = Color.White,
+            shadowElevation = 4.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = Color.Gray,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Rechercher dans les textes officiels...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 2x2 Grid of quick access cards
+ */
+@Composable
+private fun QuickAccessGrid(
+    onCodesClick: () -> Unit,
+    onLoisClick: () -> Unit,
+    onDownloadsClick: () -> Unit,
+    onFavorisClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // First row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            QuickAccessTile(
+                title = "Codes en vigueur",
+                icon = Icons.AutoMirrored.Filled.MenuBook,
+                iconTint = MibekoSecondaryBlue,
+                modifier = Modifier.weight(1f),
+                onClick = onCodesClick
+            )
+            QuickAccessTile(
+                title = "Lois & Décrets\nRécents",
+                icon = Icons.Filled.Gavel,
+                iconTint = MibekoGold,
+                modifier = Modifier.weight(1f),
+                onClick = onLoisClick
+            )
+        }
+        
+        // Second row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            QuickAccessTile(
+                title = "Mes\nTéléchargements",
+                icon = Icons.Filled.CloudDownload,
+                iconTint = MibekoSecondaryBlue,
+                modifier = Modifier.weight(1f),
+                onClick = onDownloadsClick
+            )
+            QuickAccessTile(
+                title = "Favoris",
+                icon = Icons.Filled.Star,
+                iconTint = MibekoGold,
+                modifier = Modifier.weight(1f),
+                onClick = onFavorisClick
+            )
+        }
+    }
+}
+
+/**
+ * Individual quick access tile card
+ */
+@Composable
+private fun QuickAccessTile(
+    title: String,
+    icon: ImageVector,
+    iconTint: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.height(120.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(36.dp)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = Color.Black,
+                maxLines = 2,
+                lineHeight = 16.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
+    }
+}
+
+/**
+ * Recent item row with chevron
+ */
+@Composable
+private fun RecentItemRow(
+    title: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = Color.White
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Ouvrir",
+                tint = Color.Gray,
+                modifier = Modifier.size(24.dp)
+            )
+        }
     }
 }

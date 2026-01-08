@@ -76,8 +76,16 @@ class OnboardingScreen : Screen {
 
         fun completeOnboarding() {
             userPreferences.setOnboardingCompleted()
-            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Home) {
-                popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Onboarding) { inclusive = true }
+            
+            // Navigate to Disclaimer if not accepted, otherwise Home
+            if (!userPreferences.hasAcceptedDisclaimer()) {
+                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Disclaimer) {
+                    popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Onboarding) { inclusive = true }
+                }
+            } else {
+                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Home) {
+                    popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Onboarding) { inclusive = true }
+                }
             }
         }
 

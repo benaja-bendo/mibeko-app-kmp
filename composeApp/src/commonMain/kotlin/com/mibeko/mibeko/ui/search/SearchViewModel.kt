@@ -37,8 +37,8 @@ class SearchViewModel(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
     
-    private val _suggestions = MutableStateFlow<List<String>>(emptyList())
-    val suggestions: StateFlow<List<String>> = _suggestions.asStateFlow()
+    private val _suggestions = MutableStateFlow<List<com.mibeko.mibeko.data.ArticleSuggestion>>(emptyList())
+    val suggestions: StateFlow<List<com.mibeko.mibeko.data.ArticleSuggestion>> = _suggestions.asStateFlow()
     
     private var allSearchResults: List<ArticleSpec> = emptyList()
 
