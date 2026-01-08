@@ -7,20 +7,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,6 +31,10 @@ import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen as MibekoScreen
+import com.mibeko.mibeko.ui.components.NetworkStatusBanner
+import com.mibeko.mibeko.ui.components.DashboardButtonsRow
+import com.mibeko.mibeko.ui.components.FundamentalTextCard
+import com.mibeko.mibeko.ui.components.LifeThemeItem
 
 // Brand colors matching the reference design
 private val MibekoPrimaryBlue = Color(0xFF1A3A6B)
@@ -46,21 +48,20 @@ class HomeScreen : Screen {
         val navController = LocalNavController.current
         val viewModel = koinViewModel<HomeViewModel>()
         
-        val lawCodes by viewModel.lawCodes.collectAsState()
-        val recentItems by viewModel.recentItems.collectAsState()
-        val isSyncing by viewModel.isSyncing.collectAsState()
-        val error by viewModel.error.collectAsState()
+        val uiState by viewModel.uiState.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
         
         var showContent by remember { mutableStateOf(false) }
         
+        // Refresh network status on resume
         LaunchedEffect(Unit) {
+            viewModel.refreshNetworkStatus()
             delay(100)
             showContent = true
         }
 
-        LaunchedEffect(error) {
-            error?.let {
+        LaunchedEffect(uiState.error) {
+            uiState.error?.let {
                 snackbarHostState.showSnackbar(it)
                 viewModel.clearError()
             }
@@ -68,15 +69,23 @@ class HomeScreen : Screen {
 
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            containerColor = Color(0xFFF5F5F5) // Light gray background
+            containerColor = Color(0xFFF5F5F5)
         ) { padding ->
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp) // Room for bottom nav
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 // Blue Header with Logo
                 item {
                     HomeHeader()
+                }
+                
+                // Network Status Banner (FR3)
+                item {
+                    NetworkStatusBanner(
+                        isNetworkAvailable = uiState.isNetworkAvailable,
+                        isSyncing = uiState.isSyncing
+                    )
                 }
                 
                 // Search Bar
@@ -86,32 +95,94 @@ class HomeScreen : Screen {
                     )
                 }
                 
-                // Quick Access Grid (2x2)
+                // Zone 1: Dashboard Buttons (Dossiers + Téléchargements)
                 item {
                     AnimatedVisibility(
                         visible = showContent,
                         enter = fadeIn() + slideInVertically { 20 }
                     ) {
-                        QuickAccessGrid(
-                            onCodesClick = { navController.navigate(MibekoScreen.Explorer) },
-                            onLoisClick = { navController.navigate(MibekoScreen.Explorer) },
+                        DashboardButtonsRow(
+                            onDossiersClick = { navController.navigate(MibekoScreen.Dossiers) },
                             onDownloadsClick = { navController.navigate(MibekoScreen.Settings) },
-                            onFavorisClick = { navController.navigate(MibekoScreen.Dossiers) }
+                            downloadProgress = uiState.downloadInProgress?.progress,
+                            modifier = Modifier.padding(top = 8.dp)
                         )
                     }
                 }
                 
-                // Consultés Récemment Section
+                // Zone 2: Textes Fondamentaux (Horizontal Carousel)
                 item {
                     AnimatedVisibility(
-                        visible = showContent && recentItems.isNotEmpty(),
+                        visible = showContent && uiState.fundamentalTexts.isNotEmpty(),
+                        enter = fadeIn() + slideInVertically { 30 }
+                    ) {
+                        Column(modifier = Modifier.padding(top = 24.dp)) {
+                            Text(
+                                text = "Textes Fondamentaux",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(uiState.fundamentalTexts) { text ->
+                                    FundamentalTextCard(
+                                        text = text,
+                                        onClick = { 
+                                            navController.navigate(MibekoScreen.DocumentDetail(text.id))
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Empty state placeholder when no fundamental texts loaded
+                if (showContent && uiState.fundamentalTexts.isEmpty()) {
+                    item {
+                        Column(modifier = Modifier.padding(top = 24.dp)) {
+                            Text(
+                                text = "Textes Fondamentaux",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // Demo placeholders
+                                items(listOf(
+                                    FundamentalText("1", "Constitution", "Constitution", false, "CONSTITUTION"),
+                                    FundamentalText("2", "Code de la Famille", "Famille", false, "CODE"),
+                                    FundamentalText("3", "Code Pénal", "Pénal", false, "CODE")
+                                )) { text ->
+                                    FundamentalTextCard(
+                                        text = text,
+                                        onClick = { }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Zone 3: Thématiques de Vie (Vertical List)
+                item {
+                    AnimatedVisibility(
+                        visible = showContent,
                         enter = fadeIn() + slideInVertically { 40 }
                     ) {
-                        Column(
-                            modifier = Modifier.padding(top = 24.dp)
-                        ) {
+                        Column(modifier = Modifier.padding(top = 24.dp)) {
                             Text(
-                                text = "Consultés Récemment",
+                                text = "Thématiques de Vie",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black,
@@ -121,32 +192,17 @@ class HomeScreen : Screen {
                     }
                 }
                 
-                // Recent items list
-                if (showContent && recentItems.isNotEmpty()) {
-                    items(recentItems.take(5)) { item ->
-                        RecentItemRow(
-                            title = item.title,
-                            onClick = { navController.navigate(MibekoScreen.Reader(item.id)) }
+                // Life themes list items
+                if (showContent) {
+                    items(uiState.lifeThemes) { theme ->
+                        LifeThemeItem(
+                            theme = theme,
+                            onClick = {
+                                // TODO: Navigate to filtered article list by theme
+                                // For now, navigate to explorer
+                                navController.navigate(MibekoScreen.Explorer)
+                            }
                         )
-                    }
-                }
-                
-                // Example recent items if empty (for demo)
-                if (showContent && recentItems.isEmpty()) {
-                    item {
-                        Column(
-                            modifier = Modifier.padding(top = 24.dp)
-                        ) {
-                            Text(
-                                text = "Consultés Récemment",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-                            RecentItemRow(title = "Code Pénal - Art. 12", onClick = { })
-                            RecentItemRow(title = "Loi n° 2023-15", onClick = { })
-                        }
                     }
                 }
             }
@@ -241,153 +297,6 @@ private fun SearchBar(onClick: () -> Unit) {
                     color = Color.Gray
                 )
             }
-        }
-    }
-}
-
-/**
- * 2x2 Grid of quick access cards
- */
-@Composable
-private fun QuickAccessGrid(
-    onCodesClick: () -> Unit,
-    onLoisClick: () -> Unit,
-    onDownloadsClick: () -> Unit,
-    onFavorisClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // First row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            QuickAccessTile(
-                title = "Codes en vigueur",
-                icon = Icons.AutoMirrored.Filled.MenuBook,
-                iconTint = MibekoSecondaryBlue,
-                modifier = Modifier.weight(1f),
-                onClick = onCodesClick
-            )
-            QuickAccessTile(
-                title = "Lois & Décrets\nRécents",
-                icon = Icons.Filled.Gavel,
-                iconTint = MibekoGold,
-                modifier = Modifier.weight(1f),
-                onClick = onLoisClick
-            )
-        }
-        
-        // Second row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            QuickAccessTile(
-                title = "Mes\nTéléchargements",
-                icon = Icons.Filled.CloudDownload,
-                iconTint = MibekoSecondaryBlue,
-                modifier = Modifier.weight(1f),
-                onClick = onDownloadsClick
-            )
-            QuickAccessTile(
-                title = "Favoris",
-                icon = Icons.Filled.Star,
-                iconTint = MibekoGold,
-                modifier = Modifier.weight(1f),
-                onClick = onFavorisClick
-            )
-        }
-    }
-}
-
-/**
- * Individual quick access tile card
- */
-@Composable
-private fun QuickAccessTile(
-    title: String,
-    icon: ImageVector,
-    iconTint: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.height(120.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(36.dp)
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black,
-                maxLines = 2,
-                lineHeight = 16.sp,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-        }
-    }
-}
-
-/**
- * Recent item row with chevron
- */
-@Composable
-private fun RecentItemRow(
-    title: String,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = Color.White
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Black,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Ouvrir",
-                tint = Color.Gray,
-                modifier = Modifier.size(24.dp)
-            )
         }
     }
 }

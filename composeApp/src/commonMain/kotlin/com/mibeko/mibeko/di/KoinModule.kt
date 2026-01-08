@@ -57,7 +57,7 @@ val commonModule = module {
     single { LocalLegalRepository(get(), get(), get(), get()) }
     single { DossierRepository(get()) }
 
-    viewModel { HomeViewModel(get()) }
+    viewModel { HomeViewModel(get(), get()) }
     viewModel { SearchViewModel(get(), get()) }
     viewModel { ReaderViewModel(get()) }
     viewModel { DocumentDetailViewModel(get()) }
