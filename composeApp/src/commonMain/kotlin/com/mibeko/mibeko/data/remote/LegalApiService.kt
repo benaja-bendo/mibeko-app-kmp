@@ -54,13 +54,15 @@ class LegalApiService(
      * Returns results with document context and breadcrumb.
      */
     suspend fun searchArticles(
-        query: String, 
-        documentId: String? = null, 
+        query: String? = null,
+        documentId: String? = null,
+        tag: String? = null,
         perPage: Int = 20
     ): RemoteSearchResponse {
         return client.get("$baseUrl/v1/search") {
-            parameter("q", query)
+            query?.let { parameter("q", it) }
             documentId?.let { parameter("document_id", it) }
+            tag?.let { parameter("tag", it) }
             parameter("per_page", perPage)
         }.body()
     }

@@ -240,26 +240,30 @@ class LocalLegalRepository(
      * @param query The search query string
      * @return SearchResult containing articles and source information
      */
-    suspend fun searchHybrid(query: String): SearchResult {
+    suspend fun searchHybrid(query: String? = null, tag: String? = null): SearchResult {
+        if (query == null && tag == null) {
+            return SearchResult.Success(emptyList(), isFromNetwork = false)
+        }
+
         val shouldUseNetwork = networkChecker.isNetworkAvailable() && 
                                !userPreferencesRepository.isOfflineModeEnabled()
         
         return if (shouldUseNetwork) {
             try {
-                val response = apiService.searchArticles(query)
+                val response = apiService.searchArticles(query = query, tag = tag)
                 // Map remote results. They are not downloaded, so isDownloaded = false default in Mapper.
                 val articles = response.data.map { it.toArticleSpec() }
                 SearchResult.Success(articles, isFromNetwork = true)
             } catch (e: Exception) {
                 // Network request failed, fallback to local search
-                val localResults = searchLocally(query)
+                val localResults = searchLocally(query = query, tag = tag)
                 SearchResult.Error(
                     message = "Erreur réseau: ${e.message ?: "Connexion impossible"}",
                     fallbackArticles = localResults
                 )
             }
         } else {
-            val localResults = searchLocally(query)
+            val localResults = searchLocally(query = query, tag = tag)
             SearchResult.Success(localResults, isFromNetwork = false)
         }
     }
@@ -268,9 +272,11 @@ class LocalLegalRepository(
      * Local-only search using Room database.
      * Used as primary when offline or as fallback when API fails.
      */
-    private suspend fun searchLocally(query: String): List<ArticleSpec> {
-        return mibekoDao.searchArticles(query).first().map { result ->
-            result.toArticleSpec()
+    private suspend fun searchLocally(query: String? = null, tag: String? = null): List<ArticleSpec> {
+        return when {
+            tag != null -> mibekoDao.searchArticlesByTag(tag).first().map { it.toArticleSpec() }
+            query != null -> mibekoDao.searchArticles(query).first().map { it.toArticleSpec() }
+            else -> emptyList()
         }
     }
 

@@ -198,9 +198,7 @@ class HomeScreen : Screen {
                         LifeThemeItem(
                             theme = theme,
                             onClick = {
-                                // TODO: Navigate to filtered article list by theme
-                                // For now, navigate to explorer
-                                navController.navigate(MibekoScreen.Explorer)
+                                navController.navigate(MibekoScreen.SearchResults(tag = theme.filterTag))
                             }
                         )
                     }

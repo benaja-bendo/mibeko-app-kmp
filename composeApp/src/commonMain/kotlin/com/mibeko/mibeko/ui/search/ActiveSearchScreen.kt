@@ -33,7 +33,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * Full-screen active search interface.
  * Features auto-focus, recent searches, and live suggestions.
  */
-class ActiveSearchScreen : Screen {
+class ActiveSearchScreen(val tag: String? = null) : Screen {
     
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable

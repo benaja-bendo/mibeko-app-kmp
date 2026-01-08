@@ -25,13 +25,13 @@ sealed class Screen {
     data object Settings : Screen()
     
     @Serializable
-    data class SearchResults(val query: String) : Screen()
+    data class SearchResults(val query: String? = null, val tag: String? = null) : Screen()
     
     @Serializable
     data object Onboarding : Screen()
     
     @Serializable
-    data object ActiveSearch : Screen()
+    data class ActiveSearch(val tag: String? = null) : Screen()
     
     @Serializable
     data class DocumentDetail(val documentId: String) : Screen()

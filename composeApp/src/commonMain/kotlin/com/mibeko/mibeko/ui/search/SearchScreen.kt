@@ -33,7 +33,7 @@ import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.components.HighlightedText
 import com.mibeko.mibeko.ui.components.SearchResultsShimmer
 
-data class SearchResultsScreen(val query: String) : Screen {
+data class SearchResultsScreen(val query: String? = null, val tag: String? = null) : Screen {
     
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
@@ -42,9 +42,13 @@ data class SearchResultsScreen(val query: String) : Screen {
         val viewModel = koinViewModel<SearchViewModel>()
         val uiState by viewModel.uiState.collectAsState()
 
-        LaunchedEffect(query) {
-            viewModel.updateQuery(query)
-            viewModel.saveSearch(query)
+        LaunchedEffect(query, tag) {
+            if (tag != null) {
+                viewModel.performSearchByTag(tag)
+            } else if (query != null) {
+                viewModel.updateQuery(query)
+                viewModel.saveSearch(query)
+            }
         }
 
         Scaffold(
@@ -57,7 +61,7 @@ data class SearchResultsScreen(val query: String) : Screen {
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                "\"$query\"",
+                                if (tag != null) "Thématique : $tag" else "\"$query\"",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -165,7 +169,7 @@ data class SearchResultsScreen(val query: String) : Screen {
                     ) {
                         if (uiState.results.isEmpty()) {
                             item {
-                                EmptyResultsState(query = query)
+                                EmptyResultsState(query = query ?: tag ?: "")
                             }
                         } else {
                             items(uiState.results) { article ->
@@ -173,7 +177,7 @@ data class SearchResultsScreen(val query: String) : Screen {
                                     articleNumber = article.number,
                                     source = article.breadcrumb,
                                     snippet = article.content ?: "",
-                                    query = query,
+                                    query = query ?: "",
                                     isDownloaded = article.isDownloaded,
                                     onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id)) }
                                 )

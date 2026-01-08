@@ -55,6 +55,18 @@ interface MibekoDao {
     fun getFavoriteArticles(): Flow<List<ArticleSearchResult>>
 
     @Transaction
+    @Query("""
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded
+        FROM articles 
+        JOIN nodes ON articles.node_id = nodes.id
+        JOIN documents ON nodes.document_id = documents.id
+        JOIN article_tags ON articles.id = article_tags.article_id
+        JOIN tags ON article_tags.tag_id = tags.id
+        WHERE tags.slug = :tagSlug
+    """)
+    fun searchArticlesByTag(tagSlug: String): Flow<List<ArticleSearchResult>>
+
+    @Transaction
     suspend fun syncAll(
         documents: List<DocumentEntity>,
         nodes: List<NodeEntity>,
@@ -175,4 +187,3 @@ data class DossierArticleWithDetails(
     val personal_note: String?,
     val added_at: Long
 )
-

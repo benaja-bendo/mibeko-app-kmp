@@ -84,7 +84,7 @@ fun App() {
                 
                 composable<Screen.SearchResults> { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.SearchResults>()
-                    SearchResultsScreen(route.query).Content() 
+                    SearchResultsScreen(query = route.query, tag = route.tag).Content() 
                 }
                 
                 composable<Screen.DocumentDetail> { backStackEntry ->

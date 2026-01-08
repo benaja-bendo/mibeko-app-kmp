@@ -41,7 +41,7 @@ class SearchViewModel(
     val suggestions: StateFlow<List<com.mibeko.mibeko.data.ArticleSuggestion>> = _suggestions.asStateFlow()
     
     private var allSearchResults: List<ArticleSpec> = emptyList()
-
+    private var currentTag: String? = null
     
     /**
      * Recent search history from local storage.
@@ -87,15 +87,46 @@ class SearchViewModel(
         }
     }
     
-    /**
-     * Perform hybrid search with loading state.
-     * Queries API if online, falls back to local Room if offline or on error.
-     */
-    private fun performSearch(query: String) {
+    fun performSearch(query: String) {
+        currentTag = null
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
-            when (val result = repository.searchHybrid(query)) {
+            when (val result = repository.searchHybrid(query = query)) {
+                is SearchResult.Success -> {
+                    allSearchResults = result.articles
+                    val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
+                    _uiState.value = SearchUiState(
+                        isLoading = false,
+                        results = filteredResults,
+                        isFromNetwork = result.isFromNetwork,
+                        currentFilter = _uiState.value.currentFilter
+                    )
+                }
+                is SearchResult.Error -> {
+                    allSearchResults = result.fallbackArticles
+                    val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
+                    _uiState.value = SearchUiState(
+                        isLoading = false,
+                        results = filteredResults,
+                        errorMessage = result.message,
+                        isFromNetwork = false,
+                        currentFilter = _uiState.value.currentFilter
+                    )
+                }
+                is SearchResult.Loading -> {
+                    _uiState.value = _uiState.value.copy(isLoading = true)
+                }
+            }
+        }
+    }
+
+    fun performSearchByTag(tag: String) {
+        currentTag = tag
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            
+            when (val result = repository.searchHybrid(tag = tag)) {
                 is SearchResult.Success -> {
                     allSearchResults = result.articles
                     val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
@@ -140,9 +171,13 @@ class SearchViewModel(
      * Retry search after error.
      */
     fun retrySearch() {
-        val currentQuery = _query.value
-        if (currentQuery.isNotEmpty()) {
-            performSearch(currentQuery)
+        if (currentTag != null) {
+            performSearchByTag(currentTag!!)
+        } else {
+            val currentQuery = _query.value
+            if (currentQuery.isNotEmpty()) {
+                performSearch(currentQuery)
+            }
         }
     }
     
