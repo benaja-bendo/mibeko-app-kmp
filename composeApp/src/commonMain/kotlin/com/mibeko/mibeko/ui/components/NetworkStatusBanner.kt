@@ -34,15 +34,15 @@ fun NetworkStatusBanner(
         modifier = modifier
     ) {
         val backgroundColor = if (!isNetworkAvailable) {
-            Color(0xFFFFF3E0) // Light orange for offline
+            MaterialTheme.colorScheme.tertiaryContainer // Themed warning/offline background
         } else {
-            Color(0xFFE3F2FD) // Light blue for syncing
+            MaterialTheme.colorScheme.primaryContainer // Themed syncing background
         }
         
         val contentColor = if (!isNetworkAvailable) {
-            Color(0xFFE65100) // Deep orange text
+            MaterialTheme.colorScheme.onTertiaryContainer
         } else {
-            Color(0xFF1565C0) // Blue text
+            MaterialTheme.colorScheme.onPrimaryContainer
         }
         
         Row(

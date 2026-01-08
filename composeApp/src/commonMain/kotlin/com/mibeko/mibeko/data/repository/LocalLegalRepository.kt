@@ -223,6 +223,24 @@ class LocalLegalRepository(
         }
     }
 
+    suspend fun getDocumentStats(): List<com.mibeko.mibeko.data.remote.DocumentStats> {
+        val shouldUseNetwork = networkChecker.isNetworkAvailable() && 
+                               !userPreferencesRepository.isOfflineModeEnabled()
+        
+        return if (shouldUseNetwork) {
+            try {
+                val response = apiService.fetchStats()
+                response.data ?: emptyList()
+            } catch (e: Exception) {
+                // Fallback to local stats if offline
+                // For MVP: Return empty or implement local count logic
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+    }
+
     fun getArticleById(id: String): Flow<ArticleSpec?> {
         return mibekoDao.getArticleById(id).map { result ->
             result?.toArticleSpec()

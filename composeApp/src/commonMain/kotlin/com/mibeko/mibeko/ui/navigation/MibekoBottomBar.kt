@@ -34,11 +34,11 @@ fun MibekoBottomBar(navController: NavController) {
             }
         )
         NavigationBarItem(
-            icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Explorer") },
-            label = { Text("Explorer") },
-            selected = currentRoute == Screen.Explorer::class.qualifiedName,
+            icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Bibliothèque") },
+            label = { Text("Bibliothèque") },
+            selected = currentRoute == Screen.Library::class.qualifiedName,
             onClick = { 
-                navController.navigate(Screen.Explorer) {
+                navController.navigate(Screen.Library) {
                     launchSingleTop = true
                 }
             }

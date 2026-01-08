@@ -51,20 +51,20 @@ class FavoritesScreen : Screen {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF1B5E20))
+                        .background(MaterialTheme.colorScheme.primaryContainer)
                         .padding(12.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Filled.CheckCircle,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Vos favoris sont disponibles hors ligne",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -115,7 +115,7 @@ fun FavoriteItemCard(number: String, breadcrumb: String) {
                 Icon(
                     imageVector = Icons.Filled.Delete,
                     contentDescription = "Supprimer",
-                    tint = Color(0xFFB00020)
+                    tint = MaterialTheme.colorScheme.error
                 )
             }
         }

@@ -281,18 +281,18 @@ fun DossierCard(
 fun DossierTagChip(tag: DossierTag) {
     val (backgroundColor, textColor, label) = when (tag) {
         DossierTag.EN_COURS -> Triple(
-            Color(0xFFE3F2FD),
-            Color(0xFF1565C0),
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.onPrimaryContainer,
             "En Cours"
         )
         DossierTag.URGENT -> Triple(
-            Color(0xFFFFEBEE),
-            Color(0xFFD32F2F),
+            MaterialTheme.colorScheme.errorContainer,
+            MaterialTheme.colorScheme.onErrorContainer,
             "Urgent"
         )
         DossierTag.ARCHIVE -> Triple(
-            Color(0xFFF5F5F5),
-            Color(0xFF757575),
+            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant,
             "Archivé"
         )
     }

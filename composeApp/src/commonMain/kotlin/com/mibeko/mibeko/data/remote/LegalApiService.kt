@@ -21,9 +21,15 @@ class LegalApiService(
      * Fetch paginated list of legal documents.
      */
     suspend fun fetchDocuments(page: Int = 1): RemoteDocumentResponse {
-        return client.get("$baseUrl/v1/legal-documents") {
+        val response = client.get("${baseUrl}/v1/catalog") {
             parameter("page", page)
-        }.body()
+        }
+        return response.body()
+    }
+
+    suspend fun fetchStats(): ApiResponse<List<DocumentStats>> {
+        val response = client.get("${baseUrl}/v1/catalog/stats")
+        return response.body()
     }
 
     /**

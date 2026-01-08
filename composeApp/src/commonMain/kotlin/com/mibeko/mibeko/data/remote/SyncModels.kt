@@ -14,7 +14,7 @@ import kotlinx.serialization.Serializable
 data class ApiResponse<T>(
     val success: Boolean,
     val message: String,
-    val data: T
+    val data: T? = null
 )
 
 /**
@@ -91,6 +91,13 @@ data class RemoteMeta(
     val last_page: Int,
     val per_page: Int,
     val total: Int
+)
+
+@Serializable
+data class DocumentStats(
+    val type_name: String,
+    val type_code: String,
+    val count: Int
 )
 
 @Serializable

@@ -3,9 +3,12 @@ package com.mibeko.mibeko.ui.search
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,6 +20,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -95,33 +99,42 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                 )
 
                 // Filter Chips
-                Row(
+                LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(vertical = 12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    FilterChipItem(
-                        selected = uiState.currentFilter == "Tout",
-                        label = "Tout",
-                        count = if (uiState.currentFilter == "Tout") uiState.results.size else null,
-                        onClick = { viewModel.updateFilter("Tout") }
-                    )
-                    FilterChipItem(
-                        selected = uiState.currentFilter == "Codes",
-                        label = "Codes",
-                        onClick = { viewModel.updateFilter("Codes") }
-                    )
-                    FilterChipItem(
-                        selected = uiState.currentFilter == "Lois",
-                        label = "Lois",
-                        onClick = { viewModel.updateFilter("Lois") }
-                    )
-                    FilterChipItem(
-                        selected = uiState.currentFilter == "Downloaded",
-                        label = "Mes téléchargements",
-                        onClick = { viewModel.updateFilter("Downloaded") }
-                    )
+                    item {
+                        FilterChipItem(
+                            selected = uiState.currentFilter == "Tout",
+                            label = "Tout",
+                            count = if (uiState.currentFilter == "Tout") uiState.results.size else null,
+                            onClick = { viewModel.updateFilter("Tout") }
+                        )
+                    }
+                    item {
+                        FilterChipItem(
+                            selected = uiState.currentFilter == "Codes",
+                            label = "Codes",
+                            onClick = { viewModel.updateFilter("Codes") }
+                        )
+                    }
+                    item {
+                        FilterChipItem(
+                            selected = uiState.currentFilter == "Lois",
+                            label = "Lois",
+                            onClick = { viewModel.updateFilter("Lois") }
+                        )
+                    }
+                    item {
+                        FilterChipItem(
+                            selected = uiState.currentFilter == "Downloaded",
+                            label = "Mes téléchargements",
+                            onClick = { viewModel.updateFilter("Downloaded") }
+                        )
+                    }
                 }
 
                 // Loading with shimmer
@@ -313,87 +326,96 @@ private fun SearchResultCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(14.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, 
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            // Accent bar indicating document type
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                            )
-                        )
-                    )
-            )
-            
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Header: Source and Download Status
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    // Status indicator
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                // Document Type Badge & Source
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    val isCode = source.contains("Code", ignoreCase = true)
+                    Surface(
+                        color = if (isCode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+                        shape = RoundedCornerShape(4.dp)
                     ) {
-                        if (isDownloaded) {
-                            Icon(
-                                Icons.Filled.CheckCircle,
-                                contentDescription = "Disponible hors-ligne",
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        } else {
-                            Icon(
-                                Icons.Filled.Cloud,
-                                contentDescription = "En ligne",
-                                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
                         Text(
-                            text = articleNumber,
-                            style = MaterialTheme.typography.titleSmall,
+                            text = if (isCode) "CODE" else "LOI",
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = if (isCode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                     
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     
-                    // Source / breadcrumb
                     Text(
-                        text = source,
+                        text = source.split(">").last().trim(),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 1
                     )
+                }
+
+                if (isDownloaded) {
+                    Icon(
+                        Icons.Filled.CheckCircle,
+                        contentDescription = "Disponible hors-ligne",
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Article Number and Content
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Article $articleNumber",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     
                     // Highlighted excerpt
                     HighlightedText(
-                        text = snippet.take(180) + if (snippet.length > 180) "..." else "",
+                        text = snippet.trim().take(200) + if (snippet.length > 200) "..." else "",
                         query = query,
-                        maxLines = 3,
-                        fontSize = 13.sp,
-                        lineHeight = 19.sp
+                        maxLines = 4,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 
-                // Chevron
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Voir",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                     modifier = Modifier
                         .size(24.dp)
                         .align(Alignment.CenterVertically)
@@ -405,24 +427,25 @@ private fun SearchResultCard(
 
 @Composable
 private fun EmptyResultsState(query: String) {
+    val viewModel = koinViewModel<SearchViewModel>()
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 64.dp, horizontal = 32.dp),
+            .padding(vertical = 48.dp, horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Illustration
         Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            shape = RoundedCornerShape(24.dp),
-            modifier = Modifier.size(100.dp)
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+            shape = RoundedCornerShape(32.dp),
+            modifier = Modifier.size(120.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.Filled.SearchOff,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.size(48.dp)
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    modifier = Modifier.size(56.dp)
                 )
             }
         }
@@ -430,33 +453,62 @@ private fun EmptyResultsState(query: String) {
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            "Aucun résultat pour \"$query\"",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            "Aucun résultat trouvé",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
         
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            "Vérifiez l'orthographe ou essayez des termes plus généraux",
+            "Nous n'avons rien trouvé pour \"$query\".",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
         
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text(
+            "Essayez l'une de ces recherches :",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
         
         // Suggestion chips
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            listOf("licenciement", "bail", "mariage").forEach { suggestion ->
+            listOf("Constitution", "Code du travail", "Divorce", "Bail commercial").forEach { suggestion ->
                 SuggestionChip(
-                    onClick = { /* Could trigger search */ },
+                    onClick = { viewModel.performSearch(suggestion) },
                     label = { Text(suggestion) },
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp)
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FlowRow(
+    modifier: Modifier = Modifier,
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    content: @Composable () -> Unit
+) {
+    androidx.compose.foundation.layout.FlowRow(
+        modifier = modifier,
+        horizontalArrangement = horizontalArrangement,
+        verticalArrangement = verticalArrangement
+    ) {
+        content()
     }
 }

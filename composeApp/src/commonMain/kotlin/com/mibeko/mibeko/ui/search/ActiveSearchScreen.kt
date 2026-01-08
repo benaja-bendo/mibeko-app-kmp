@@ -56,16 +56,16 @@ class ActiveSearchScreen(val tag: String? = null) : Screen {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surface,
-                    shadowElevation = 2.dp
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .statusBarsPadding()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(8.dp)
-                            .statusBarsPadding(),
+                            .padding(horizontal = 4.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = { navController.popBackStack() }) {
@@ -76,60 +76,84 @@ class ActiveSearchScreen(val tag: String? = null) : Screen {
                             )
                         }
                         
-                        TextField(
-                            value = searchText,
-                            onValueChange = { 
-                                searchText = it
-                                viewModel.updateLiveQuery(it)
-                            },
+                        Surface(
                             modifier = Modifier
                                 .weight(1f)
-                                .focusRequester(focusRequester),
-                            placeholder = {
-                                Text(
-                                    "Rechercher...",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                .height(48.dp)
+                                .padding(end = 12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(24.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
                                 )
-                            },
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                cursorColor = MaterialTheme.colorScheme.primary
-                            ),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(
-                                onSearch = {
-                                    if (searchText.isNotBlank()) {
-                                        focusManager.clearFocus()
-                                        viewModel.saveSearch(searchText)
-                                        navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.SearchResults(searchText)) {
-                                            popUpTo<com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch> { inclusive = true }
+                                
+                                TextField(
+                                    value = searchText,
+                                    onValueChange = { 
+                                        searchText = it
+                                        viewModel.updateLiveQuery(it)
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .focusRequester(focusRequester),
+                                    placeholder = {
+                                        Text(
+                                            "Rechercher un article, une loi...",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent,
+                                        cursorColor = MaterialTheme.colorScheme.primary
+                                    ),
+                                    textStyle = MaterialTheme.typography.bodyMedium,
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                    keyboardActions = KeyboardActions(
+                                        onSearch = {
+                                            if (searchText.isNotBlank()) {
+                                                focusManager.clearFocus()
+                                                viewModel.saveSearch(searchText)
+                                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.SearchResults(searchText)) {
+                                                    popUpTo<com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch> { inclusive = true }
+                                                }
+                                            }
                                         }
+                                    )
+                                )
+                                
+                                if (searchText.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = { 
+                                            searchText = ""
+                                            viewModel.updateLiveQuery("")
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Cancel,
+                                            contentDescription = "Effacer",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp)
+                                        )
                                     }
                                 }
-                            )
-                        )
-                        
-                        AnimatedVisibility(
-                            visible = searchText.isNotEmpty(),
-                            enter = fadeIn() + scaleIn(),
-                            exit = fadeOut() + scaleOut()
-                        ) {
-                            IconButton(onClick = { 
-                                searchText = ""
-                                viewModel.updateLiveQuery("")
-                            }) {
-                                Icon(
-                                    Icons.Filled.Close,
-                                    contentDescription = "Effacer",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
                         }
                     }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 }
             }
         ) { padding ->

@@ -69,7 +69,7 @@ class HomeScreen : Screen {
 
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            containerColor = Color(0xFFF5F5F5)
+            containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -103,7 +103,7 @@ class HomeScreen : Screen {
                     ) {
                         DashboardButtonsRow(
                             onDossiersClick = { navController.navigate(MibekoScreen.Dossiers) },
-                            onDownloadsClick = { navController.navigate(MibekoScreen.Settings) },
+                            onDownloadsClick = { navController.navigate(MibekoScreen.Downloads) },
                             downloadProgress = uiState.downloadInProgress?.progress,
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -113,7 +113,7 @@ class HomeScreen : Screen {
                 // Zone 2: Textes Fondamentaux (Horizontal Carousel)
                 item {
                     AnimatedVisibility(
-                        visible = showContent && uiState.fundamentalTexts.isNotEmpty(),
+                        visible = !uiState.isLoading && uiState.fundamentalTexts.isNotEmpty(),
                         enter = fadeIn() + slideInVertically { 30 }
                     ) {
                         Column(modifier = Modifier.padding(top = 24.dp)) {
@@ -121,7 +121,7 @@ class HomeScreen : Screen {
                                 text = "Textes Fondamentaux",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                             
@@ -142,32 +142,66 @@ class HomeScreen : Screen {
                     }
                 }
                 
-                // Empty state placeholder when no fundamental texts loaded
-                if (showContent && uiState.fundamentalTexts.isEmpty()) {
+                // Loading Shimmer for Fundamental Texts
+                if (uiState.isLoading) {
+                    item {
+                        Column(modifier = Modifier.padding(top = 24.dp, start = 16.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .width(150.dp)
+                                    .height(20.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                repeat(3) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = 140.dp, height = 180.dp)
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Empty state placeholder when no fundamental texts loaded and not loading
+                if (!uiState.isLoading && uiState.fundamentalTexts.isEmpty()) {
                     item {
                         Column(modifier = Modifier.padding(top = 24.dp)) {
                             Text(
                                 text = "Textes Fondamentaux",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                             
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+                                    .padding(24.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                // Demo placeholders
-                                items(listOf(
-                                    FundamentalText("1", "Constitution", "Constitution", false, "CONSTITUTION"),
-                                    FundamentalText("2", "Code de la Famille", "Famille", false, "CODE"),
-                                    FundamentalText("3", "Code Pénal", "Pénal", false, "CODE")
-                                )) { text ->
-                                    FundamentalTextCard(
-                                        text = text,
-                                        onClick = { }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Default.Description,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(48.dp)
                                     )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "Aucun texte disponible hors-ligne",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    TextButton(onClick = { viewModel.syncData() }) {
+                                        Text("Synchroniser le catalogue")
+                                    }
                                 }
                             }
                         }
@@ -185,7 +219,7 @@ class HomeScreen : Screen {
                                 text = "Thématiques de Vie",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
@@ -273,7 +307,7 @@ private fun SearchBar(onClick: () -> Unit) {
                 .fillMaxWidth()
                 .clickable(onClick = onClick),
             shape = RoundedCornerShape(28.dp),
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 4.dp
         ) {
             Row(
@@ -285,14 +319,14 @@ private fun SearchBar(onClick: () -> Unit) {
                 Icon(
                     Icons.Filled.Search,
                     contentDescription = null,
-                    tint = Color.Gray,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(22.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = "Rechercher dans les textes officiels...",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

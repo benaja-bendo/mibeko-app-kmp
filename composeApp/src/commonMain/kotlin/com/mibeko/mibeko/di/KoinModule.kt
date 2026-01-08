@@ -10,6 +10,8 @@ import com.mibeko.mibeko.ui.home.HomeViewModel
 import com.mibeko.mibeko.ui.search.SearchViewModel
 import com.mibeko.mibeko.ui.reader.ReaderViewModel
 import com.mibeko.mibeko.ui.details.DocumentDetailViewModel
+import com.mibeko.mibeko.ui.library.LibraryViewModel
+import com.mibeko.mibeko.ui.downloads.DownloadsViewModel
 import com.mibeko.mibeko.ui.dossier.DossierDetailViewModel
 import com.mibeko.mibeko.ui.dossier.DossierViewModel
 import com.mibeko.mibeko.ui.favorites.FavoritesViewModel
@@ -63,6 +65,8 @@ val commonModule = module {
     viewModel { DocumentDetailViewModel(get()) }
     viewModel { FavoritesViewModel(get()) }
     viewModel { SettingsViewModel(get(), get()) }
+    viewModel { LibraryViewModel(get()) }
+    viewModel { DownloadsViewModel(get()) }
     viewModel { DossierViewModel(get()) }
     viewModel { params -> DossierDetailViewModel(params.get(), get()) }
 }

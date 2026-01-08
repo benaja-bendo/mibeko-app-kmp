@@ -8,6 +8,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.TextUnit
 
 /**
@@ -21,10 +22,11 @@ fun HighlightedText(
     modifier: Modifier = Modifier,
     maxLines: Int = 3,
     fontSize: TextUnit = TextUnit.Unspecified,
-    lineHeight: TextUnit = TextUnit.Unspecified
+    lineHeight: TextUnit = TextUnit.Unspecified,
+    color: Color = Color.Unspecified
 ) {
     val highlightColor = MaterialTheme.colorScheme.primary
-    val normalColor = MaterialTheme.colorScheme.onSurface
+    val normalColor = if (color != Color.Unspecified) color else MaterialTheme.colorScheme.onSurface
     
     val annotatedString = buildAnnotatedString {
         if (query.isBlank()) {

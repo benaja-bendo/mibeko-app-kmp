@@ -25,6 +25,7 @@ data class RecentItem(
  * UI State for the home screen.
  */
 data class HomeUiState(
+    val isLoading: Boolean = true,
     val isNetworkAvailable: Boolean = true,
     val isOfflineMode: Boolean = false,
     val downloadInProgress: DownloadProgress? = null,
@@ -59,6 +60,7 @@ class HomeViewModel(
     init {
         loadInitialState()
         observeLawCodes()
+        initialSyncIfNeeded()
     }
     
     private fun loadInitialState() {
@@ -66,10 +68,26 @@ class HomeViewModel(
         val isOnline = networkChecker.isNetworkAvailable()
         _uiState.value = _uiState.value.copy(
             isNetworkAvailable = isOnline,
-            lifeThemes = LifeThemes.all
+            lifeThemes = LifeThemes.all,
+            isLoading = true
         )
         
         loadRecentItems()
+    }
+
+    /**
+     * Sync catalog if no data exists locally.
+     */
+    private fun initialSyncIfNeeded() {
+        viewModelScope.launch {
+            repository.getLawCodes().collect { codes ->
+                if (codes.isEmpty() && networkChecker.isNetworkAvailable()) {
+                    syncData()
+                } else {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                }
+            }
+        }
     }
     
     /**
@@ -167,7 +185,7 @@ class HomeViewModel(
     fun syncData() {
         viewModelScope.launch {
             _isSyncing.value = true
-            _uiState.value = _uiState.value.copy(isSyncing = true)
+            _uiState.value = _uiState.value.copy(isSyncing = true, isLoading = true)
             _error.value = null
             try {
                 repository.sync()
@@ -178,7 +196,7 @@ class HomeViewModel(
                 _uiState.value = _uiState.value.copy(error = errorMsg)
             } finally {
                 _isSyncing.value = false
-                _uiState.value = _uiState.value.copy(isSyncing = false)
+                _uiState.value = _uiState.value.copy(isSyncing = false, isLoading = false)
             }
         }
     }

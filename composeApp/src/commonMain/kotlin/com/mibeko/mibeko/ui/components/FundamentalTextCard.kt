@@ -83,7 +83,7 @@ fun FundamentalTextCard(
                             modifier = Modifier
                                 .size(20.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF4CAF50)), // Green
+                                .background(MaterialTheme.colorScheme.primary), // Use themed primary color instead of hardcoded green
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(

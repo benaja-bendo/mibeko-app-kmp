@@ -27,7 +27,6 @@ import com.mibeko.mibeko.ui.theme.MibekoGold
 import cafe.adriel.voyager.core.screen.Screen
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.reader.ReaderScreen
-import com.mibeko.mibeko.ui.explorer.ExplorerScreen
 
 data class DocumentDetailScreen(val documentId: String) : Screen {
 

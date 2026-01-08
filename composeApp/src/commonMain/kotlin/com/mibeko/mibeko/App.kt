@@ -12,7 +12,6 @@ import androidx.navigation.toRoute
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 import com.mibeko.mibeko.ui.home.HomeScreen
-import com.mibeko.mibeko.ui.explorer.ExplorerScreen
 import com.mibeko.mibeko.ui.favorites.FavoritesScreen
 import com.mibeko.mibeko.ui.settings.SettingsScreen
 import com.mibeko.mibeko.ui.search.ActiveSearchScreen
@@ -22,6 +21,8 @@ import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.splash.SplashScreen
 import com.mibeko.mibeko.ui.dossier.DossierScreen
 import com.mibeko.mibeko.ui.dossier.DossierDetailScreen
+import com.mibeko.mibeko.ui.library.LibraryScreen
+import com.mibeko.mibeko.ui.downloads.DownloadsScreen
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.theme.MibekoTheme
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -48,7 +49,7 @@ fun App() {
             // Screens that should show the bottom bar
         val bottomBarScreens = listOf(
             Screen.Home::class.qualifiedName,
-            Screen.Explorer::class.qualifiedName,
+            Screen.Library::class.qualifiedName,
             Screen.Dossiers::class.qualifiedName,
             Screen.Settings::class.qualifiedName
         )
@@ -76,7 +77,6 @@ fun App() {
                 composable<Screen.Disclaimer> { com.mibeko.mibeko.ui.onboarding.DisclaimerScreen().Content() }
                 composable<Screen.Onboarding> { com.mibeko.mibeko.ui.onboarding.OnboardingScreen().Content() }
                 composable<Screen.Home> { HomeScreen().Content() }
-                composable<Screen.Explorer> { ExplorerScreen().Content() }
                 composable<Screen.Favorites> { FavoritesScreen().Content() }
                 composable<Screen.Settings> { SettingsScreen().Content() }
                 composable<Screen.ActiveSearch> { backStackEntry ->
@@ -84,6 +84,8 @@ fun App() {
                     ActiveSearchScreen(tag = route.tag).Content()
                 }
                 composable<Screen.Dossiers> { DossierScreen().Content() }
+                composable<Screen.Library> { LibraryScreen().Content() }
+                composable<Screen.Downloads> { DownloadsScreen().Content() }
                 
                 composable<Screen.SearchResults> { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.SearchResults>()

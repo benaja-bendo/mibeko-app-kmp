@@ -16,9 +16,6 @@ sealed class Screen {
     data object Home : Screen()
     
     @Serializable
-    data object Explorer : Screen()
-    
-    @Serializable
     data object Favorites : Screen()
     
     @Serializable
@@ -41,6 +38,12 @@ sealed class Screen {
     
     @Serializable
     data object Dossiers : Screen()
+
+    @Serializable
+    data object Library : Screen()
+
+    @Serializable
+    data object Downloads : Screen()
     
     @Serializable
     data class DossierDetail(val dossierId: String) : Screen()
