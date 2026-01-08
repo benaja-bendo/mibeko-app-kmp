@@ -106,7 +106,7 @@ class ActiveSearchScreen(val tag: String? = null) : Screen {
                                         focusManager.clearFocus()
                                         viewModel.saveSearch(searchText)
                                         navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.SearchResults(searchText)) {
-                                            popUpTo(com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch) { inclusive = true }
+                                            popUpTo<com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch> { inclusive = true }
                                         }
                                     }
                                 }
@@ -158,7 +158,7 @@ class ActiveSearchScreen(val tag: String? = null) : Screen {
                                 viewModel.saveSearch("${suggestion.number} - ${suggestion.breadcrumb}")
                                 // Navigate directly to article reader
                                 navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(suggestion.id)) {
-                                    popUpTo(com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch) { inclusive = true }
+                                    popUpTo<com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch> { inclusive = true }
                                 }
                             }
                         )
@@ -194,7 +194,7 @@ class ActiveSearchScreen(val tag: String? = null) : Screen {
                             icon = Icons.Filled.History,
                             onClick = {
                                 navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.SearchResults(query)) {
-                                    popUpTo(com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch) { inclusive = true }
+                                    popUpTo<com.mibeko.mibeko.ui.navigation.Screen.ActiveSearch> { inclusive = true }
                                 }
                             },
                             onDelete = { viewModel.removeFromHistory(query) }

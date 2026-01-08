@@ -91,7 +91,7 @@ class HomeScreen : Screen {
                 // Search Bar
                 item {
                     SearchBar(
-                        onClick = { navController.navigate(MibekoScreen.ActiveSearch) }
+                        onClick = { navController.navigate(MibekoScreen.ActiveSearch()) }
                     )
                 }
                 

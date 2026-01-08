@@ -79,7 +79,10 @@ fun App() {
                 composable<Screen.Explorer> { ExplorerScreen().Content() }
                 composable<Screen.Favorites> { FavoritesScreen().Content() }
                 composable<Screen.Settings> { SettingsScreen().Content() }
-                composable<Screen.ActiveSearch> { ActiveSearchScreen().Content() }
+                composable<Screen.ActiveSearch> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.ActiveSearch>()
+                    ActiveSearchScreen(tag = route.tag).Content()
+                }
                 composable<Screen.Dossiers> { DossierScreen().Content() }
                 
                 composable<Screen.SearchResults> { backStackEntry ->
