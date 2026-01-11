@@ -39,7 +39,7 @@ class LocalLegalRepository(
 
         while (currentPage <= totalPages) {
             val response = apiService.fetchDocuments(currentPage)
-            totalPages = response.meta?.last_page ?: 1
+            totalPages = response.pagination?.last_page ?: 1
 
             val documents = mutableListOf<DocumentEntity>()
             val allNodes = mutableListOf<NodeEntity>()
@@ -140,7 +140,11 @@ class LocalLegalRepository(
     }
 
     private fun parseIsoDate(isoString: String): Long {
-        return 0L 
+        return try {
+            kotlinx.datetime.Instant.parse(isoString).toEpochMilliseconds()
+        } catch (e: Exception) {
+            0L
+        }
     }
 
     suspend fun downloadDocument(documentId: String) {
