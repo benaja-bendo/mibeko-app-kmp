@@ -35,7 +35,7 @@ class DownloadsViewModel(
             _uiState.update { it.copy(isLoading = true) }
             
             combine(
-                repository.getLawCodes(),
+                repository.getDownloadedDocuments(),
                 repository.getOfflineArticles()
             ) { codes, articles ->
                 Pair(codes, articles)

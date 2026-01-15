@@ -89,12 +89,14 @@ class DownloadsScreen : Screen {
                             downloadingIds = uiState.downloadingIds,
                             onDownload = { viewModel.downloadDocument(it) },
                             onRemove = { viewModel.removeDownload(it) },
-                            onNavigate = { id -> navController.navigate(NavScreen.DocumentDetail(id)) }
+                            onNavigate = { id -> navController.navigate(NavScreen.DocumentDetail(id)) },
+                            onNavigateToLibrary = { navController.navigate(NavScreen.Library) }
                         )
                         1 -> ArticleList(
                             articles = uiState.offlineArticles,
                             onRemove = { viewModel.removeArticleDownload(it) },
-                            onNavigate = { id -> navController.navigate(NavScreen.Reader(id)) }
+                            onNavigate = { id -> navController.navigate(NavScreen.Reader(id)) },
+                            onNavigateToLibrary = { navController.navigate(NavScreen.Library) }
                         )
                     }
                 }
@@ -109,10 +111,11 @@ private fun DocumentList(
     downloadingIds: Set<String>,
     onDownload: (String) -> Unit,
     onRemove: (String) -> Unit,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    onNavigateToLibrary: () -> Unit
 ) {
     if (documents.isEmpty()) {
-        EmptyState("Aucun document disponible")
+        EmptyState("Aucun document téléchargé", onNavigateToLibrary)
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -138,11 +141,12 @@ private fun DocumentList(
 private fun ArticleList(
     articles: List<ArticleSpec>,
     onRemove: (String) -> Unit,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    onNavigateToLibrary: () -> Unit
 ) {
     val downloadedArticles = articles.filter { it.isDownloaded }
     if (downloadedArticles.isEmpty()) {
-        EmptyState("Aucun article hors-ligne")
+        EmptyState("Aucun article hors-ligne", onNavigateToLibrary)
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -165,12 +169,45 @@ private fun ArticleList(
 }
 
 @Composable
-private fun EmptyState(message: String) {
+private fun EmptyState(message: String, onNavigateToLibrary: () -> Unit = {}) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+            Surface(
+                modifier = Modifier.size(80.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.CloudDownload,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                message,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Vous n'avez pas encore de contenu disponible hors-ligne.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            Button(
+                onClick = onNavigateToLibrary,
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+            ) {
+                Text("Explorer la bibliothèque")
+            }
         }
     }
 }

@@ -321,6 +321,12 @@ class LocalLegalRepository(
         }
     }
 
+    fun getDownloadedDocuments(): Flow<List<com.mibeko.mibeko.data.LawCodeSpec>> {
+        return mibekoDao.getDownloadedDocuments().map { docs ->
+            docs.map { it.toLawCodeSpec() }
+        }
+    }
+
     fun getFavoriteArticles(): Flow<List<ArticleSpec>> {
         return mibekoDao.getFavoriteArticles().map { results ->
             results.map { result ->

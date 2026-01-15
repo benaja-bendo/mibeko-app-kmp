@@ -35,6 +35,9 @@ interface MibekoDao {
     @Query("SELECT * FROM documents")
     fun getAllDocuments(): Flow<List<DocumentEntity>>
 
+    @Query("SELECT * FROM documents WHERE is_downloaded = 1")
+    fun getDownloadedDocuments(): Flow<List<DocumentEntity>>
+
     @Query("SELECT id FROM documents WHERE is_downloaded = 1")
     suspend fun getDownloadedDocumentIds(): List<String>
 
