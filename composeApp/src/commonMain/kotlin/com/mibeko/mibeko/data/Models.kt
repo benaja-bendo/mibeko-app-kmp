@@ -3,6 +3,7 @@ package com.mibeko.mibeko.data
 data class LawCodeSpec(
     val id: String,
     val title: String,
+    val type: String, // Added for filtering
     val icon: String, // Simple identifier for icon selection
     val lastUpdated: String,
     val isDownloaded: Boolean = false

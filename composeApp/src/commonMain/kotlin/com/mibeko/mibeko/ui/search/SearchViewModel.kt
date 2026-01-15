@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 data class SearchUiState(
     val isLoading: Boolean = false,
     val results: List<ArticleSpec> = emptyList(),
+    val aiAnswer: String? = null,
     val errorMessage: String? = null,
     val isFromNetwork: Boolean = false,
     val currentFilter: String = "Tout"
@@ -99,6 +100,7 @@ class SearchViewModel(
                     _uiState.value = SearchUiState(
                         isLoading = false,
                         results = filteredResults,
+                        aiAnswer = result.aiAnswer,
                         isFromNetwork = result.isFromNetwork,
                         currentFilter = _uiState.value.currentFilter
                     )
@@ -133,6 +135,7 @@ class SearchViewModel(
                     _uiState.value = SearchUiState(
                         isLoading = false,
                         results = filteredResults,
+                        aiAnswer = result.aiAnswer,
                         isFromNetwork = result.isFromNetwork,
                         currentFilter = _uiState.value.currentFilter
                     )

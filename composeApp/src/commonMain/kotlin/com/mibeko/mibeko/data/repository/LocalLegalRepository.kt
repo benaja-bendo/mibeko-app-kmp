@@ -11,17 +11,24 @@ import com.mibeko.mibeko.data.local.entities.NodeEntity
 import com.mibeko.mibeko.data.local.entities.TagEntity
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.LegalApiService
+import com.mibeko.mibeko.data.remote.ApiResponse
 import com.mibeko.mibeko.data.remote.RemoteNode
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.datetime.Instant
+import com.mibeko.mibeko.getCurrentTimeMillis
 
 /**
  * Sealed class representing the result of a search operation.
  */
 sealed class SearchResult {
-    data class Success(val articles: List<ArticleSpec>, val isFromNetwork: Boolean) : SearchResult()
+    data class Success(
+        val articles: List<ArticleSpec>,
+        val aiAnswer: String? = null,
+        val isFromNetwork: Boolean
+    ) : SearchResult()
     data class Error(val message: String, val fallbackArticles: List<ArticleSpec>) : SearchResult()
     object Loading : SearchResult()
 }
@@ -34,12 +41,37 @@ class LocalLegalRepository(
 ) {
 
     suspend fun sync() {
+        val lastSync = userPreferencesRepository.getLastSyncTimestamp()
+        if (lastSync > 0) {
+            // Convert timestamp to ISO string for backend
+            val since = Instant.fromEpochMilliseconds(lastSync).toString()
+            try {
+                val serverTime = syncUpdates(since)
+                if (serverTime != null) {
+                    val newTimestamp = parseIsoDate(serverTime)
+                    if (newTimestamp > 0) {
+                        userPreferencesRepository.setLastSyncTimestamp(newTimestamp)
+                    }
+                }
+                return
+            } catch (e: Exception) {
+                // If differential sync fails, fallback to full sync
+                e.printStackTrace()
+            }
+        }
+
         var currentPage = 1
         var totalPages = 1
+        var finalServerTime: String? = null
 
         while (currentPage <= totalPages) {
             val response = apiService.fetchDocuments(currentPage)
             totalPages = response.pagination?.last_page ?: 1
+            
+            // Capture server time from last page or metadata if available
+            // Note: fetchDocuments might need to return server_time too in its meta
+            // For now, if fetchDocuments meta is RemotePagination, it might not have server_time.
+            // Let's assume we'll use current time if not provided.
 
             val documents = mutableListOf<DocumentEntity>()
             val allNodes = mutableListOf<NodeEntity>()
@@ -47,6 +79,8 @@ class LocalLegalRepository(
 
             // Get currently downloaded IDs to preserve state
             val downloadedIds = mibekoDao.getDownloadedDocumentIds().toSet()
+            // Get favorite IDs to preserve them
+            val favoriteIds = mibekoDao.getFavoriteArticles().first().map { it.article.id }.toSet()
 
             for (remoteDoc in response.data) {
                 // Map document
@@ -60,20 +94,26 @@ class LocalLegalRepository(
 
                 // Fetch full tree for this document to get structure and articles
                 val treeNodes = apiService.fetchDocumentTree(remoteDoc.id)
-                flattenTree(remoteDoc.id, treeNodes, allNodes, allArticles)
+                flattenTree(remoteDoc.id, treeNodes, allNodes, allArticles, favoriteIds)
             }
 
             mibekoDao.syncAll(documents, allNodes, allArticles)
             currentPage++
         }
+        
+        // If it was a full sync, set timestamp to now
+        userPreferencesRepository.setLastSyncTimestamp(getCurrentTimeMillis())
     }
 
-    suspend fun syncUpdates(since: String) {
+    suspend fun syncUpdates(since: String): String? {
         val response = apiService.fetchUpdates(since)
         
         val updatedArticles = mutableListOf<ArticleEntity>()
         val updatedTags = mutableListOf<TagEntity>()
         val updatedArticleTags = mutableListOf<ArticleTagEntity>()
+
+        // Get favorite IDs to preserve them
+        val favoriteIds = mibekoDao.getFavoriteArticles().first().map { it.article.id }.toSet()
 
         response.data.updated.forEach { remoteArticle ->
             updatedArticles.add(ArticleEntity(
@@ -81,7 +121,7 @@ class LocalLegalRepository(
                 node_id = remoteArticle.parent_node_id ?: "",
                 number = remoteArticle.number,
                 content = remoteArticle.content ?: "",
-                is_favorite = false
+                is_favorite = favoriteIds.contains(remoteArticle.id)
             ))
 
             remoteArticle.tags.forEach { tagName ->
@@ -110,13 +150,16 @@ class LocalLegalRepository(
             articleTags = updatedArticleTags,
             deletedArticleIds = response.data.deleted_ids
         )
+        
+        return response.meta.server_time
     }
 
     private fun flattenTree(
         documentId: String,
         nodes: List<RemoteNode>,
         outNodes: MutableList<NodeEntity>,
-        outArticles: MutableList<ArticleEntity>
+        outArticles: MutableList<ArticleEntity>,
+        favoriteIds: Set<String> = emptySet()
     ) {
         nodes.forEach { node ->
             outNodes.add(NodeEntity(
@@ -133,7 +176,7 @@ class LocalLegalRepository(
                     node_id = node.id,
                     number = articleBrief.number,
                     content = articleBrief.content ?: "",
-                    is_favorite = false
+                    is_favorite = favoriteIds.contains(articleBrief.id)
                 ))
             }
         }
@@ -141,7 +184,7 @@ class LocalLegalRepository(
 
     private fun parseIsoDate(isoString: String): Long {
         return try {
-            kotlinx.datetime.Instant.parse(isoString).toEpochMilliseconds()
+            Instant.parse(isoString).toEpochMilliseconds()
         } catch (e: Exception) {
             0L
         }
@@ -245,6 +288,32 @@ class LocalLegalRepository(
         }
     }
 
+    /**
+     * Fetch home page data from API.
+     */
+    /**
+     * Fetch list of document types.
+     */
+    suspend fun getDocumentTypes(): List<com.mibeko.mibeko.data.remote.RemoteDocumentType> {
+        val shouldUseNetwork = networkChecker.isNetworkAvailable() && 
+                               !userPreferencesRepository.isOfflineModeEnabled()
+        
+        return if (shouldUseNetwork) {
+            try {
+                val response = apiService.fetchDocumentTypes()
+                response.data ?: emptyList()
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+    }
+
+    suspend fun getHomeData(): ApiResponse<com.mibeko.mibeko.data.remote.RemoteHomeData> {
+        return apiService.fetchHomeData()
+    }
+
     fun getArticleById(id: String): Flow<ArticleSpec?> {
         return mibekoDao.getArticleById(id).map { result ->
             result?.toArticleSpec()
@@ -274,8 +343,12 @@ class LocalLegalRepository(
             try {
                 val response = apiService.searchArticles(query = query, tag = tag)
                 // Map remote results. They are not downloaded, so isDownloaded = false default in Mapper.
-                val articles = response.data.map { it.toArticleSpec() }
-                SearchResult.Success(articles, isFromNetwork = true)
+                val articles = response.data.sources.map { it.toArticleSpec() }
+                SearchResult.Success(
+                    articles = articles,
+                    aiAnswer = response.data.answer,
+                    isFromNetwork = true
+                )
             } catch (e: Exception) {
                 // Network request failed, fallback to local search
                 val localResults = searchLocally(query = query, tag = tag)
@@ -335,7 +408,7 @@ class LocalLegalRepository(
                 // Get local downloaded IDs to mark which are available offline
                 val downloadedIds = mibekoDao.getDownloadedDocumentIds().toSet()
                 
-                response.data.take(10).map { result ->
+                response.data.sources.take(10).map { result ->
                     com.mibeko.mibeko.data.ArticleSuggestion(
                         id = result.id,
                         number = result.number,

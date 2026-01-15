@@ -47,6 +47,9 @@ sealed class Screen {
     
     @Serializable
     data class DossierDetail(val dossierId: String) : Screen()
+    
+    @Serializable
+    data class DocumentList(val typeCode: String, val typeName: String) : Screen()
 }
 
 val LocalNavController = staticCompositionLocalOf<NavController> {

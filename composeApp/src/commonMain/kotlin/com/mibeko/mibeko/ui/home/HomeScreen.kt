@@ -6,6 +6,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -32,17 +34,15 @@ import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen as MibekoScreen
 import com.mibeko.mibeko.ui.components.NetworkStatusBanner
-import com.mibeko.mibeko.ui.components.DashboardButtonsRow
-import com.mibeko.mibeko.ui.components.FundamentalTextCard
-import com.mibeko.mibeko.ui.components.LifeThemeItem
-
-// Brand colors matching the reference design
-private val MibekoPrimaryBlue = Color(0xFF1A3A6B)
-private val MibekoSecondaryBlue = Color(0xFF2E5A9C)
-private val MibekoGold = Color(0xFFB8860B)
+import com.mibeko.mibeko.ui.theme.MibekoGold
+import com.mibeko.mibeko.ui.theme.MibekoBluePrimary
+import com.mibeko.mibeko.ui.theme.MibekoBlueDark
 
 class HomeScreen : Screen {
 
+    /**
+     * Contenu principal de la page d'accueil.
+     */
     @Composable
     override fun Content() {
         val navController = LocalNavController.current
@@ -53,7 +53,7 @@ class HomeScreen : Screen {
         
         var showContent by remember { mutableStateOf(false) }
         
-        // Refresh network status on resume
+        // Refresh data on resume
         LaunchedEffect(Unit) {
             viewModel.refreshNetworkStatus()
             delay(100)
@@ -80,6 +80,16 @@ class HomeScreen : Screen {
                     HomeHeader()
                 }
                 
+                // Search Bar and Suggestions
+                item {
+                    SearchSection(
+                        suggestions = uiState.aiSuggestions,
+                        onSearch = { query -> 
+                            navController.navigate(MibekoScreen.SearchResults(query = query))
+                        }
+                    )
+                }
+
                 // Network Status Banner (FR3)
                 item {
                     NetworkStatusBanner(
@@ -88,37 +98,15 @@ class HomeScreen : Screen {
                     )
                 }
                 
-                // Search Bar
-                item {
-                    SearchBar(
-                        onClick = { navController.navigate(MibekoScreen.ActiveSearch()) }
-                    )
-                }
-                
-                // Zone 1: Dashboard Buttons (Dossiers + Téléchargements)
+                // Zone 1: Popular Codes (Horizontal List)
                 item {
                     AnimatedVisibility(
-                        visible = showContent,
-                        enter = fadeIn() + slideInVertically { 20 }
-                    ) {
-                        DashboardButtonsRow(
-                            onDossiersClick = { navController.navigate(MibekoScreen.Dossiers) },
-                            onDownloadsClick = { navController.navigate(MibekoScreen.Downloads) },
-                            downloadProgress = uiState.downloadInProgress?.progress,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
-                }
-                
-                // Zone 2: Textes Fondamentaux (Horizontal Carousel)
-                item {
-                    AnimatedVisibility(
-                        visible = !uiState.isLoading && uiState.fundamentalTexts.isNotEmpty(),
+                        visible = !uiState.isLoading && uiState.popularCodes.isNotEmpty(),
                         enter = fadeIn() + slideInVertically { 30 }
                     ) {
                         Column(modifier = Modifier.padding(top = 24.dp)) {
                             Text(
-                                text = "Textes Fondamentaux",
+                                text = "Codes Populaires",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground,
@@ -129,11 +117,11 @@ class HomeScreen : Screen {
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(uiState.fundamentalTexts) { text ->
-                                    FundamentalTextCard(
-                                        text = text,
+                                items(uiState.popularCodes) { doc ->
+                                    PopularCodeCard(
+                                        title = doc.title,
                                         onClick = { 
-                                            navController.navigate(MibekoScreen.DocumentDetail(text.id))
+                                            navController.navigate(MibekoScreen.DocumentDetail(doc.id))
                                         }
                                     )
                                 }
@@ -142,81 +130,15 @@ class HomeScreen : Screen {
                     }
                 }
                 
-                // Loading Shimmer for Fundamental Texts
-                if (uiState.isLoading) {
-                    item {
-                        Column(modifier = Modifier.padding(top = 24.dp, start = 16.dp)) {
-                            Box(
-                                modifier = Modifier
-                                    .width(150.dp)
-                                    .height(20.dp)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                repeat(3) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(width = 140.dp, height = 180.dp)
-                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Empty state placeholder when no fundamental texts loaded and not loading
-                if (!uiState.isLoading && uiState.fundamentalTexts.isEmpty()) {
-                    item {
-                        Column(modifier = Modifier.padding(top = 24.dp)) {
-                            Text(
-                                text = "Textes Fondamentaux",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-                            
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
-                                    .padding(24.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        Icons.Default.Description,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(48.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "Aucun texte disponible hors-ligne",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    TextButton(onClick = { viewModel.syncData() }) {
-                                        Text("Synchroniser le catalogue")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Zone 3: Thématiques de Vie (Vertical List)
+                // Zone 2: Recently Added (Vertical List)
                 item {
                     AnimatedVisibility(
-                        visible = showContent,
+                        visible = !uiState.isLoading && uiState.recentlyAdded.isNotEmpty(),
                         enter = fadeIn() + slideInVertically { 40 }
                     ) {
                         Column(modifier = Modifier.padding(top = 24.dp)) {
                             Text(
-                                text = "Thématiques de Vie",
+                                text = "Ajouté Récemment",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground,
@@ -225,16 +147,25 @@ class HomeScreen : Screen {
                         }
                     }
                 }
-                
-                // Life themes list items
-                if (showContent) {
-                    items(uiState.lifeThemes) { theme ->
-                        LifeThemeItem(
-                            theme = theme,
+
+                if (!uiState.isLoading) {
+                    items(uiState.recentlyAdded) { doc ->
+                        RecentDocumentItem(
+                            title = doc.title,
+                            date = "Récemment", 
                             onClick = {
-                                navController.navigate(MibekoScreen.SearchResults(tag = theme.filterTag))
+                                navController.navigate(MibekoScreen.DocumentDetail(doc.id))
                             }
                         )
+                    }
+                }
+
+                // Empty state or Loading
+                if (uiState.isLoading) {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
             }
@@ -243,7 +174,7 @@ class HomeScreen : Screen {
 }
 
 /**
- * Blue gradient header with Mibeko logo and title
+ * En-tête avec dégradé bleu institutionnel, logo Mibeko et titre.
  */
 @Composable
 private fun HomeHeader() {
@@ -252,7 +183,7 @@ private fun HomeHeader() {
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(MibekoPrimaryBlue, MibekoSecondaryBlue)
+                    colors = listOf(MibekoBluePrimary, MibekoBlueDark)
                 )
             )
             .statusBarsPadding()
@@ -292,43 +223,251 @@ private fun HomeHeader() {
 }
 
 /**
- * Search bar styled like the reference design
+ * Rangée de flux pour les éléments de suggestion.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FlowRow(
+    modifier: Modifier = Modifier,
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    content: @Composable () -> Unit
+) {
+    androidx.compose.foundation.layout.FlowRow(
+        modifier = modifier,
+        horizontalArrangement = horizontalArrangement,
+        verticalArrangement = verticalArrangement
+    ) {
+        content()
+    }
+}
+
+/**
+ * Section de recherche avec champ de saisie et puces de suggestion.
  */
 @Composable
-private fun SearchBar(onClick: () -> Unit) {
-    Box(
+private fun SearchSection(
+    suggestions: List<String>,
+    onSearch: (String) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .offset(y = (-20).dp)
             .padding(horizontal = 24.dp)
     ) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
-            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 4.dp
+            shadowElevation = 8.dp,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Filled.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(22.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Rechercher dans les textes officiels...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "Posez votre question juridique (ex: \"Comment contester un licenciement ?\")...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(24.dp))
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.weight(1f),
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        decorationBox = { innerTextField ->
+                            if (searchQuery.isEmpty()) {
+                                Text(
+                                    "Licenciement sans cause réelle",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
+                            innerTextField()
+                        }
+                    )
+                    
+                    Button(
+                        onClick = { if (searchQuery.isNotEmpty()) onSearch(searchQuery) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF2E7D32) // Green button
+                        ),
+                        shape = RoundedCornerShape(20.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            "Assistant IA ✨",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // Suggestion Chips
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            suggestions.take(3).forEach { suggestion ->
+                SuggestionChip(
+                    text = suggestion,
+                    onClick = { onSearch(suggestion) }
                 )
             }
         }
     }
 }
+
+/**
+ * Puce de suggestion pour la recherche.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SuggestionChip(text: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.AutoAwesome,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Carte pour afficher un code populaire.
+ */
+@Composable
+private fun PopularCodeCard(title: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.size(width = 160.dp, height = 100.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.primary
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onPrimary,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Cloud,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "En ligne",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Élément de liste pour un document récent.
+ */
+@Composable
+private fun RecentDocumentItem(title: String, date: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+            ) {
+                Icon(
+                    Icons.Default.Description,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = date,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline
+            )
+        }
+    }
+}
+
+/**
+ * Blue gradient header with Mibeko logo and title
+ */

@@ -3,12 +3,14 @@ package com.mibeko.mibeko.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.LawCodeSpec
+import com.mibeko.mibeko.data.remote.ApiResponse
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -28,10 +30,10 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     val isNetworkAvailable: Boolean = true,
     val isOfflineMode: Boolean = false,
-    val downloadInProgress: DownloadProgress? = null,
-    val fundamentalTexts: List<FundamentalText> = emptyList(),
-    val lifeThemes: List<LifeTheme> = LifeThemes.all,
     val recentItems: List<RecentItem> = emptyList(),
+    val popularCodes: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList(),
+    val recentlyAdded: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList(),
+    val aiSuggestions: List<String> = emptyList(),
     val isSyncing: Boolean = false,
     val error: String? = null
 )
@@ -59,8 +61,57 @@ class HomeViewModel(
     
     init {
         loadInitialState()
-        observeLawCodes()
         initialSyncIfNeeded()
+        loadHomeData()
+    }
+    
+    private fun loadHomeData() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            try {
+                if (networkChecker.isNetworkAvailable()) {
+                    val response = repository.getHomeData()
+                    if (response.success && response.data != null) {
+                        _uiState.value = _uiState.value.copy(
+                            popularCodes = response.data.popular_codes,
+                            recentlyAdded = response.data.recently_added,
+                            aiSuggestions = response.data.ai_suggestions,
+                            isLoading = false
+                        )
+                        return@launch
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            
+            // Fallback: load from local if offline or API fails
+            loadLocalFallbacks()
+        }
+    }
+
+    private fun loadLocalFallbacks() {
+        viewModelScope.launch {
+            repository.getLawCodes().collect { codes ->
+                if (codes.isNotEmpty()) {
+                    // Use the first few codes as "popular" for MVP fallback
+                    val fallbackPopular = codes.take(5).map { code ->
+                        com.mibeko.mibeko.data.remote.RemoteDocument(
+                            id = code.id,
+                            title = code.title,
+                            status = "published",
+                            updated_at = ""
+                        )
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        popularCodes = fallbackPopular,
+                        isLoading = false
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                }
+            }
+        }
     }
     
     private fun loadInitialState() {
@@ -68,7 +119,6 @@ class HomeViewModel(
         val isOnline = networkChecker.isNetworkAvailable()
         _uiState.value = _uiState.value.copy(
             isNetworkAvailable = isOnline,
-            lifeThemes = LifeThemes.all,
             isLoading = true
         )
         
@@ -80,79 +130,12 @@ class HomeViewModel(
      */
     private fun initialSyncIfNeeded() {
         viewModelScope.launch {
-            repository.getLawCodes().collect { codes ->
-                if (codes.isEmpty() && networkChecker.isNetworkAvailable()) {
-                    syncData()
-                } else {
-                    _uiState.value = _uiState.value.copy(isLoading = false)
-                }
+            val codes = repository.getLawCodes().first()
+            if (codes.isEmpty() && networkChecker.isNetworkAvailable()) {
+                syncData()
+            } else {
+                _uiState.value = _uiState.value.copy(isLoading = false)
             }
-        }
-    }
-    
-    /**
-     * Observe law codes and extract fundamental texts for the carousel.
-     */
-    private fun observeLawCodes() {
-        viewModelScope.launch {
-            repository.getLawCodes().collect { codes ->
-                val fundamentals = extractFundamentalTexts(codes)
-                _uiState.value = _uiState.value.copy(
-                    fundamentalTexts = fundamentals
-                )
-            }
-        }
-    }
-    
-    /**
-     * Extract fundamental legal texts from all available codes.
-     * Prioritizes: Constitution, Code de la Famille, Code Pénal, Code du Travail
-     */
-    private fun extractFundamentalTexts(codes: List<LawCodeSpec>): List<FundamentalText> {
-        val priorityTitles = listOf(
-            "Constitution",
-            "Code de la Famille",
-            "Code Pénal",
-            "Code du Travail",
-            "Code Civil"
-        )
-        
-        // First, find codes matching priority titles
-        val priorityCodes = priorityTitles.mapNotNull { priority ->
-            codes.find { code -> 
-                code.title.contains(priority, ignoreCase = true) 
-            }
-        }
-        
-        // Then, add other codes up to a limit of 6
-        val otherCodes = codes
-            .filter { code -> priorityCodes.none { it.id == code.id } }
-            .take(6 - priorityCodes.size)
-        
-        return (priorityCodes + otherCodes).map { code ->
-            FundamentalText(
-                id = code.id,
-                title = code.title,
-                shortTitle = getShortTitle(code.title),
-                isDownloaded = code.isDownloaded,
-                typeCode = if (code.title.contains("Constitution", ignoreCase = true)) 
-                    "CONSTITUTION" else "CODE"
-            )
-        }
-    }
-    
-    /**
-     * Get a shortened title for display in cards.
-     */
-    private fun getShortTitle(title: String): String {
-        return when {
-            title.contains("Constitution", ignoreCase = true) -> "Constitution"
-            title.contains("Famille", ignoreCase = true) -> "Famille"
-            title.contains("Pénal", ignoreCase = true) -> "Pénal"  
-            title.contains("Travail", ignoreCase = true) -> "Travail"
-            title.contains("Civil", ignoreCase = true) -> "Civil"
-            title.length > 15 -> title.take(15) + "..."
-            else -> title
         }
     }
     
@@ -162,13 +145,6 @@ class HomeViewModel(
     fun refreshNetworkStatus() {
         val isOnline = networkChecker.isNetworkAvailable()
         _uiState.value = _uiState.value.copy(isNetworkAvailable = isOnline)
-    }
-    
-    /**
-     * Update download progress (called from download manager).
-     */
-    fun updateDownloadProgress(progress: DownloadProgress?) {
-        _uiState.value = _uiState.value.copy(downloadInProgress = progress)
     }
     
     private fun loadRecentItems() {

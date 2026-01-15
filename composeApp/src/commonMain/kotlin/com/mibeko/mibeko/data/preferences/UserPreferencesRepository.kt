@@ -21,6 +21,11 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
         private const val KEY_LAST_SYNC_TIMESTAMP = "last_sync_timestamp"
         private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         private const val KEY_DISCLAIMER_ACCEPTED = "disclaimer_accepted"
+        private const val KEY_TEXT_SIZE = "text_size"
+        private const val KEY_DYSLEXIA_FONT = "dyslexia_font_enabled"
+        private const val KEY_WIFI_ONLY_DOWNLOAD = "wifi_only_download"
+        private const val KEY_LEGAL_MONITORING = "legal_monitoring_enabled"
+        private const val KEY_DOSSIER_ALERTS = "dossier_alerts_enabled"
     }
 
     /**
@@ -28,6 +33,13 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
      */
     enum class AppTheme {
         SYSTEM, LIGHT, DARK
+    }
+
+    /**
+     * Represents text size options for reading.
+     */
+    enum class TextSize {
+        SMALL, MEDIUM, LARGE
     }
 
     /**
@@ -48,6 +60,81 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
     fun setAppTheme(theme: AppTheme) {
         settings.putString(KEY_APP_THEME, theme.name)
         _theme.value = theme
+    }
+
+    /**
+     * Gets the text size preference.
+     */
+    fun getTextSize(): TextSize {
+        val sizeName = settings.getString(KEY_TEXT_SIZE, TextSize.MEDIUM.name)
+        return try {
+            TextSize.valueOf(sizeName)
+        } catch (e: Exception) {
+            TextSize.MEDIUM
+        }
+    }
+
+    /**
+     * Sets the text size preference.
+     */
+    fun setTextSize(size: TextSize) {
+        settings.putString(KEY_TEXT_SIZE, size.name)
+    }
+
+    /**
+     * Checks if dyslexia font is enabled.
+     */
+    fun isDyslexiaFontEnabled(): Boolean {
+        return settings.getBoolean(KEY_DYSLEXIA_FONT, false)
+    }
+
+    /**
+     * Sets dyslexia font preference.
+     */
+    fun setDyslexiaFontEnabled(enabled: Boolean) {
+        settings.putBoolean(KEY_DYSLEXIA_FONT, enabled)
+    }
+
+    /**
+     * Checks if Wi-Fi only download is enabled.
+     */
+    fun isWifiOnlyDownloadEnabled(): Boolean {
+        return settings.getBoolean(KEY_WIFI_ONLY_DOWNLOAD, true)
+    }
+
+    /**
+     * Sets Wi-Fi only download preference.
+     */
+    fun setWifiOnlyDownloadEnabled(enabled: Boolean) {
+        settings.putBoolean(KEY_WIFI_ONLY_DOWNLOAD, enabled)
+    }
+
+    /**
+     * Checks if legal monitoring is enabled.
+     */
+    fun isLegalMonitoringEnabled(): Boolean {
+        return settings.getBoolean(KEY_LEGAL_MONITORING, true)
+    }
+
+    /**
+     * Sets legal monitoring preference.
+     */
+    fun setLegalMonitoringEnabled(enabled: Boolean) {
+        settings.putBoolean(KEY_LEGAL_MONITORING, enabled)
+    }
+
+    /**
+     * Checks if dossier alerts are enabled.
+     */
+    fun isDossierAlertsEnabled(): Boolean {
+        return settings.getBoolean(KEY_DOSSIER_ALERTS, true)
+    }
+
+    /**
+     * Sets dossier alerts preference.
+     */
+    fun setDossierAlertsEnabled(enabled: Boolean) {
+        settings.putBoolean(KEY_DOSSIER_ALERTS, enabled)
     }
 
     /**

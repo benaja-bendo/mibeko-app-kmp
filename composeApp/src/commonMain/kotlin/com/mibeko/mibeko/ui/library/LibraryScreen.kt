@@ -30,6 +30,9 @@ import androidx.compose.material.icons.filled.Search
 
 class LibraryScreen : Screen {
 
+    /**
+     * Contenu principal de la bibliothèque juridique.
+     */
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
@@ -60,7 +63,7 @@ class LibraryScreen : Screen {
                     )
                 )
             },
-            containerColor = Color(0xFFF5F5F5)
+            containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
@@ -71,39 +74,13 @@ class LibraryScreen : Screen {
                     HeroCard(
                         title = "CONSTITUTION",
                         subtitle = "Loi Fondamentale de la République du Congo",
-                        onClick = { /* Navigate to Constitution */ }
+                        onClick = { 
+                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentList(typeCode = "CONST", typeName = "Constitution"))
+                        }
                     )
                 }
 
-                // 2. Codes en vigueur (Horizontal Scroll)
-                item {
-                    Column(modifier = Modifier.padding(top = 24.dp)) {
-                        Text(
-                            text = "Codes en vigueur",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                        
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            // Filter only codes from documents
-                            val codes = uiState.documents.filter { it.title.contains("Code", ignoreCase = true) }
-                            items(codes) { code ->
-                                CodeCard(
-                                    code = code,
-                                    isDownloading = uiState.downloadingIds.contains(code.id),
-                                    onDownload = { viewModel.downloadDocument(code.id) },
-                                    onClick = { /* Navigate to Code */ }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 3. Hiérarchie des Normes (Vertical List)
+                // 2. Hiérarchie des Normes (Vertical List)
                 item {
                     Column(modifier = Modifier.padding(top = 24.dp, start = 16.dp, end = 16.dp)) {
                         Text(
@@ -119,33 +96,53 @@ class LibraryScreen : Screen {
                             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                         ) {
                             Column {
-                                HierarchyItem(
-                                    icon = Icons.Default.Public,
-                                    title = "Traités Internationaux",
-                                    count = uiState.stats.find { it.type_name.contains("Traité") }?.count ?: 0,
-                                    onClick = { /* Navigate */ }
-                                )
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                                HierarchyItem(
-                                    icon = Icons.Default.AccountBalance,
-                                    title = "Lois Organiques",
-                                    count = uiState.stats.find { it.type_name.contains("Organique") }?.count ?: 0,
-                                    onClick = { /* Navigate */ }
-                                )
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                                HierarchyItem(
-                                    icon = Icons.Default.Description,
-                                    title = "Lois Ordinaires",
-                                    count = uiState.stats.find { it.type_name.contains("Ordinaire") }?.count ?: 0,
-                                    onClick = { /* Navigate */ }
-                                )
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                                HierarchyItem(
-                                    icon = Icons.Default.Gavel,
-                                    title = "Ordonnances",
-                                    count = uiState.stats.find { it.type_name.contains("Ordonnance") }?.count ?: 0,
-                                    onClick = { /* Navigate */ }
-                                )
+                                if (uiState.documentTypes.isEmpty()) {
+                                    // Fallback if API fails
+                                    val fallbackTypes = listOf(
+                                        "Constitution" to Icons.Default.Balance,
+                                        "Traités Internationaux" to Icons.Default.Public,
+                                        "Lois Organiques" to Icons.Default.AccountBalance,
+                                        "Lois Ordinaires" to Icons.Default.Description,
+                                        "Ordonnances" to Icons.Default.Gavel,
+                                        "Décrets" to Icons.Default.Article,
+                                        "Arrêtés" to Icons.Default.Assignment
+                                    )
+                                    fallbackTypes.forEachIndexed { index, pair ->
+                                        HierarchyItem(
+                                            icon = pair.second,
+                                            title = pair.first,
+                                            count = uiState.stats.find { it.type_name.contains(pair.first.split(" ").last(), ignoreCase = true) }?.count ?: 0,
+                                            onClick = { 
+                                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentList(typeCode = pair.first, typeName = pair.first))
+                                            }
+                                        )
+                                        if (index < fallbackTypes.size - 1) {
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                                        }
+                                    }
+                                } else {
+                                    uiState.documentTypes.forEachIndexed { index, type ->
+                                        HierarchyItem(
+                                            icon = when {
+                                                type.name.contains("Constitution", true) -> Icons.Default.Balance
+                                                type.name.contains("Traité", true) -> Icons.Default.Public
+                                                type.name.contains("Organique", true) -> Icons.Default.AccountBalance
+                                                type.name.contains("Ordinaire", true) -> Icons.Default.Description
+                                                type.name.contains("Ordonnance", true) -> Icons.Default.Gavel
+                                                type.name.contains("Décret", true) -> Icons.Default.Article
+                                                else -> Icons.Default.Assignment
+                                            },
+                                            title = type.name,
+                                            count = uiState.stats.find { it.type_code == type.code }?.count ?: 0,
+                                            onClick = { 
+                                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentList(typeCode = type.code, typeName = type.name))
+                                            }
+                                        )
+                                        if (index < uiState.documentTypes.size - 1) {
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -155,6 +152,9 @@ class LibraryScreen : Screen {
     }
 }
 
+/**
+ * Carte de héros pour mettre en avant un document (ex: Constitution).
+ */
 @Composable
 private fun HeroCard(title: String, subtitle: String, onClick: () -> Unit) {
     Card(
@@ -195,6 +195,9 @@ private fun HeroCard(title: String, subtitle: String, onClick: () -> Unit) {
     }
 }
 
+/**
+ * Carte pour afficher un code avec option de téléchargement.
+ */
 @Composable
 private fun CodeCard(
     code: LawCodeSpec,
@@ -251,6 +254,9 @@ private fun CodeCard(
     }
 }
 
+/**
+ * Élément de liste pour la hiérarchie des normes.
+ */
 @Composable
 private fun HierarchyItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,

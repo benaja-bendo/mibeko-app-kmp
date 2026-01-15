@@ -7,6 +7,7 @@ fun DocumentEntity.toLawCodeSpec(): LawCodeSpec {
     return LawCodeSpec(
         id = id,
         title = title,
+        type = type_code,
         icon = type_code, // Using type_code as icon identifier as per plan
         lastUpdated = last_updated.toString(), // Simple conversion for now
         isDownloaded = is_downloaded

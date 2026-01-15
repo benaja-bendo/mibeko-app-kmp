@@ -44,7 +44,7 @@ val commonModule = module {
         }
     }
 
-    single { 
+    single {  
         getDatabaseBuilder().build()
     }
 
@@ -61,7 +61,7 @@ val commonModule = module {
 
     viewModel { HomeViewModel(get(), get()) }
     viewModel { SearchViewModel(get(), get()) }
-    viewModel { ReaderViewModel(get()) }
+    viewModel { ReaderViewModel(get(), get()) }
     viewModel { DocumentDetailViewModel(get()) }
     viewModel { FavoritesViewModel(get()) }
     viewModel { SettingsViewModel(get(), get()) }

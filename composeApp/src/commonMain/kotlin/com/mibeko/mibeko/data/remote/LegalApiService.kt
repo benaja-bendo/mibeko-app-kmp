@@ -33,6 +33,13 @@ class LegalApiService(
     }
 
     /**
+     * Fetch home page data (popular codes, recent documents, AI suggestions).
+     */
+    suspend fun fetchHomeData(): ApiResponse<RemoteHomeData> {
+        return client.get("$baseUrl/v1/home").body()
+    }
+
+    /**
      * Fetch a single legal document with its structure and articles.
      */
     suspend fun fetchDocument(documentId: String): ApiResponse<RemoteDocument> {

@@ -50,6 +50,7 @@ fun App() {
         val bottomBarScreens = listOf(
             Screen.Home::class.qualifiedName,
             Screen.Library::class.qualifiedName,
+            Screen.Favorites::class.qualifiedName,
             Screen.Dossiers::class.qualifiedName,
             Screen.Settings::class.qualifiedName
         )
@@ -105,6 +106,11 @@ fun App() {
                 composable<Screen.DossierDetail> { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.DossierDetail>()
                     DossierDetailScreen(route.dossierId).Content()
+                }
+                
+                composable<Screen.DocumentList> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.DocumentList>()
+                    com.mibeko.mibeko.ui.library.DocumentListScreen(route.typeCode, route.typeName).Content()
                 }
             }
         }

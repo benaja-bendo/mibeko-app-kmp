@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Wifi
@@ -39,6 +40,9 @@ import com.mibeko.mibeko.ui.components.SearchResultsShimmer
 
 data class SearchResultsScreen(val query: String? = null, val tag: String? = null) : Screen {
     
+    /**
+     * Contenu principal de la page de résultats de recherche.
+     */
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
@@ -128,13 +132,6 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                             onClick = { viewModel.updateFilter("Lois") }
                         )
                     }
-                    item {
-                        FilterChipItem(
-                            selected = uiState.currentFilter == "Downloaded",
-                            label = "Mes téléchargements",
-                            onClick = { viewModel.updateFilter("Downloaded") }
-                        )
-                    }
                 }
 
                 // Loading with shimmer
@@ -180,6 +177,45 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // Prominent Query Display
+                        item {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Votre requête",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = query ?: tag ?: "",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        // AI Answer section
+                        uiState.aiAnswer?.let { answer ->
+                            item {
+                                AiAnswerCard(answer = answer)
+                            }
+                            
+                            item {
+                                Text(
+                                    text = "Sources juridiques",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                                )
+                            }
+                        }
+
                         if (uiState.results.isEmpty()) {
                             item {
                                 EmptyResultsState(query = query ?: tag ?: "")
@@ -204,7 +240,58 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
 }
 
 /**
- * Banner showing network status and any error messages.
+ * Carte affichant la réponse générée par l'IA (RAG).
+ */
+@Composable
+private fun AiAnswerCard(answer: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 12.dp)
+            ) {
+                Icon(
+                    Icons.Filled.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Assistant Mibeko",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Text(
+                text = answer,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                lineHeight = 22.sp
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = "Cette réponse est générée par IA. Veuillez vérifier les sources ci-dessous.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+            )
+        }
+    }
+}
+
+/**
+ * Bannière indiquant l'état du réseau ou les erreurs de recherche.
  */
 @Composable
 private fun NetworkStatusBanner(
@@ -281,7 +368,9 @@ private fun NetworkStatusBanner(
     }
 }
 
-
+/**
+ * Puce de filtre pour affiner les résultats de recherche.
+ */
 @Composable
 private fun FilterChipItem(
     selected: Boolean,
@@ -311,6 +400,9 @@ private fun FilterChipItem(
     )
 }
 
+/**
+ * Carte affichant un article trouvé dans les résultats.
+ */
 @Composable
 private fun SearchResultCard(
     articleNumber: String,
@@ -425,6 +517,9 @@ private fun SearchResultCard(
     }
 }
 
+/**
+ * Vue affichée lorsqu'aucun résultat n'est trouvé.
+ */
 @Composable
 private fun EmptyResultsState(query: String) {
     val viewModel = koinViewModel<SearchViewModel>()
@@ -496,6 +591,9 @@ private fun EmptyResultsState(query: String) {
     }
 }
 
+/**
+ * Rangée de flux pour les éléments.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FlowRow(

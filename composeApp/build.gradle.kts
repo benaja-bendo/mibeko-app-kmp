@@ -76,6 +76,9 @@ kotlin {
 
             // Preferences
             implementation(libs.multiplatform.settings)
+
+            // Date & Time
+            implementation(libs.kotlinx.datetime)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

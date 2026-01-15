@@ -28,6 +28,9 @@ import org.koin.compose.viewmodel.koinViewModel
 
 class DossierScreen : Screen {
 
+    /**
+     * Contenu principal de l'écran des dossiers.
+     */
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
@@ -42,22 +45,21 @@ class DossierScreen : Screen {
                 TopAppBar(
                     title = { Text("Mes Dossiers", fontWeight = FontWeight.Bold) },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
                     ),
                     actions = {
                         IconButton(onClick = { /* TODO: Show search */ }) {
                             Icon(
                                 Icons.Filled.Search,
-                                contentDescription = "Rechercher",
-                                tint = MaterialTheme.colorScheme.onPrimary
+                                contentDescription = "Rechercher"
                             )
                         }
                         IconButton(onClick = { /* TODO: Show filter */ }) {
                             Icon(
                                 Icons.Filled.FilterList,
-                                contentDescription = "Filtrer",
-                                tint = MaterialTheme.colorScheme.onPrimary
+                                contentDescription = "Filtrer"
                             )
                         }
                     }

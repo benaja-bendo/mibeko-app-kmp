@@ -90,7 +90,8 @@ data class RemoteMeta(
     val current_page: Int,
     val last_page: Int,
     val per_page: Int,
-    val total: Int
+    val total: Int,
+    val server_time: String? = null
 )
 
 @Serializable
@@ -209,13 +210,19 @@ data class RemoteTreeResponse(
 
 /**
  * Response from the article search endpoint.
- * Uses the new API wrapper format.
+ * Supports RAG (AI Answer + Sources).
  */
 @Serializable
 data class RemoteSearchResponse(
     val success: Boolean = true,
     val message: String = "",
-    val data: List<RemoteSearchResult> = emptyList(),
+    val data: RemoteSearchData
+)
+
+@Serializable
+data class RemoteSearchData(
+    val answer: String? = null,
+    val sources: List<RemoteSearchResult> = emptyList(),
     val pagination: RemotePagination? = null
 )
 
@@ -236,6 +243,17 @@ data class RemoteSearchResult(
     val breadcrumb: String = "",
     val validation_status: String = "validated",
     val score: Double? = null  // Relevance score from hybrid search
+)
+
+// =============================================================================
+// Home Models
+// =============================================================================
+
+@Serializable
+data class RemoteHomeData(
+    val popular_codes: List<RemoteDocument>,
+    val recently_added: List<RemoteDocument>,
+    val ai_suggestions: List<String>
 )
 
 // =============================================================================

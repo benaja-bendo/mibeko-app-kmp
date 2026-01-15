@@ -26,35 +26,28 @@ import org.koin.compose.viewmodel.koinViewModel
 
 class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
 
+    /**
+     * Contenu principal de l'écran des réglages.
+     */
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<SettingsViewModel>()
         val uiState by viewModel.uiState.collectAsState()
-        var showDisclaimer by remember { mutableStateOf(false) }
+        val snackbarHostState = remember { SnackbarHostState() }
+        
         var showThemeDialog by remember { mutableStateOf(false) }
+        var showTextSizeDialog by remember { mutableStateOf(false) }
         var showTerms by remember { mutableStateOf(false) }
         var showPrivacy by remember { mutableStateOf(false) }
+        var showAbout by remember { mutableStateOf(false) }
 
-        if (showDisclaimer) {
-            AlertDialog(
-                onDismissRequest = { showDisclaimer = false },
-                title = { Text("Mentions Légales") },
-                text = {
-                    Text(
-                        "Mibeko est une application à but informatif recensant les textes de lois de la République du Congo.\n\n" +
-                        "Bien que nous nous efforcions de maintenir les données à jour, Mibeko ne peut être tenu responsable d'erreurs ou d'omissions. " +
-                        "Les textes officiels publiés au Journal Officiel font foi.\n\n" +
-                        "Cette application n'est pas affiliée au gouvernement congolais."
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = { showDisclaimer = false }) {
-                        Text("Compris")
-                    }
-                }
-            )
+        LaunchedEffect(uiState.syncError) {
+            uiState.syncError?.let {
+                snackbarHostState.showSnackbar(it)
+                viewModel.clearSyncError()
+            }
         }
 
         if (showThemeDialog) {
@@ -96,6 +89,70 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                 confirmButton = {
                     TextButton(onClick = { showThemeDialog = false }) {
                         Text("Annuler")
+                    }
+                }
+            )
+        }
+
+        if (showTextSizeDialog) {
+            AlertDialog(
+                onDismissRequest = { showTextSizeDialog = false },
+                title = { Text("Taille du texte") },
+                text = {
+                    Column {
+                        val sizes = listOf(
+                            UserPreferencesRepository.TextSize.SMALL to "Petit",
+                            UserPreferencesRepository.TextSize.MEDIUM to "Moyen",
+                            UserPreferencesRepository.TextSize.LARGE to "Grand"
+                        )
+                        sizes.forEach { pair ->
+                            val size = pair.first
+                            val label = pair.second
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { 
+                                        viewModel.setTextSize(size)
+                                        showTextSizeDialog = false 
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = uiState.textSize == size,
+                                    onClick = { 
+                                        viewModel.setTextSize(size)
+                                        showTextSizeDialog = false 
+                                    }
+                                )
+                                Text(text = label, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showTextSizeDialog = false }) {
+                        Text("Annuler")
+                    }
+                }
+            )
+        }
+
+        if (showAbout) {
+            AlertDialog(
+                onDismissRequest = { showAbout = false },
+                title = { Text("À propos") },
+                text = {
+                    Column {
+                        Text("Mibeko - Mobile", fontWeight = FontWeight.Bold)
+                        Text("Version: ${uiState.appVersion}")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Mibeko est une plateforme juridique centralisant les textes de loi de la République du Congo.")
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showAbout = false }) {
+                        Text("Fermer")
                     }
                 }
             )
@@ -146,10 +203,13 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
         }
 
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                TopAppBar(
-                    title = { Text("Réglages") },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                CenterAlignedTopAppBar(
+                    title = { Text("Réglages", fontWeight = FontWeight.Bold) },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
             },
             containerColor = MaterialTheme.colorScheme.background
@@ -162,71 +222,8 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // --- MODE HORS-LIGNE SECTION ---
-                SettingsGroup("Mode Hors-ligne") {
-                    SettingsSwitch(
-                        title = "Mode Hors-ligne uniquement",
-                        subtitle = "N'utilise pas le réseau pour les recherches",
-                        icon = Icons.Filled.WifiOff,
-                        checked = uiState.isOfflineModeEnabled,
-                        onCheckedChange = { viewModel.setOfflineMode(it) }
-                    )
-                }
-                
-                // --- DOWNLOAD MANAGER SECTION ---
-                SettingsGroup("Téléchargements") {
-                    if (uiState.isLoadingDocuments) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    } else if (uiState.documents.isEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                Icons.Filled.CloudOff,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "Aucun document disponible",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                "Synchronisez d'abord pour voir les documents",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
-                    } else {
-                        uiState.documents.forEach { doc ->
-                            DownloadableDocumentItem(
-                                title = doc.title,
-                                typeCode = doc.typeCode,
-                                isDownloaded = doc.isDownloaded,
-                                isDownloading = doc.isDownloading,
-                                downloadProgress = doc.downloadProgress,
-                                onDownload = { viewModel.downloadDocument(doc.id) },
-                                onDelete = { viewModel.deleteDocument(doc.id) }
-                            )
-                        }
-                    }
-                }
-                
-                // --- APPLICATION SETTINGS ---
-                SettingsGroup("Application") {
-                    SettingsItem("Langue", "Français", Icons.Filled.Language)
+                // --- CONFORT DE LECTURE ---
+                SettingsGroup("CONFORT DE LECTURE") {
                     SettingsItem(
                         title = "Thème", 
                         subtitle = when(uiState.currentTheme) {
@@ -234,64 +231,106 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                             UserPreferencesRepository.AppTheme.LIGHT -> "Clair"
                             UserPreferencesRepository.AppTheme.DARK -> "Sombre"
                         }, 
-                        icon = Icons.Filled.Brightness4,
+                        icon = Icons.Filled.Palette,
                         onClick = { showThemeDialog = true }
                     )
+                    SettingsItem(
+                        title = "Taille du texte", 
+                        subtitle = when(uiState.textSize) {
+                            UserPreferencesRepository.TextSize.SMALL -> "Petit"
+                            UserPreferencesRepository.TextSize.MEDIUM -> "Moyen"
+                            UserPreferencesRepository.TextSize.LARGE -> "Grand"
+                        }, 
+                        icon = Icons.Filled.TextFields,
+                        onClick = { showTextSizeDialog = true }
+                    )
                     SettingsSwitch(
-                        title = "Notifications", 
-                        subtitle = if (uiState.isNotificationsEnabled) "Activées" else "Désactivées", 
-                        icon = Icons.Filled.Notifications,
-                        checked = uiState.isNotificationsEnabled,
-                        onCheckedChange = { viewModel.setNotificationsEnabled(it) }
+                        title = "Police Dyslexie", 
+                        subtitle = if (uiState.isDyslexiaFontEnabled) "Oui" else "Non", 
+                        icon = Icons.Filled.FontDownload,
+                        checked = uiState.isDyslexiaFontEnabled,
+                        onCheckedChange = { viewModel.setDyslexiaFontEnabled(it) }
                     )
                 }
                 
-                // --- DATA SECTION ---
-                SettingsGroup("Données") {
+                // --- DONNÉES & HORS-LIGNE ---
+                SettingsGroup("DONNÉES & HORS-LIGNE") {
                     SettingsItem(
-                        title = "Mise à jour de la base", 
-                        subtitle = "Dernière vérification : ${uiState.lastUpdateDate}", 
-                        icon = Icons.Filled.Update
+                        title = "Mise à jour base", 
+                        subtitle = if (uiState.isSyncing) "Mise à jour..." else uiState.dbVersion, 
+                        icon = Icons.Filled.CloudSync,
+                        onClick = { viewModel.checkForUpdates() }
+                    )
+                    SettingsSwitch(
+                        title = "Téléchargement Wi-Fi", 
+                        subtitle = if (uiState.isWifiOnlyDownloadEnabled) "Oui" else "Non", 
+                        icon = Icons.Filled.Wifi,
+                        checked = uiState.isWifiOnlyDownloadEnabled,
+                        onCheckedChange = { viewModel.setWifiOnlyDownloadEnabled(it) }
                     )
                     SettingsItem(
-                        title = "Espace disque utilisé", 
+                        title = "Gérer le stockage", 
                         subtitle = uiState.diskUsage, 
-                        icon = Icons.Filled.Storage,
-                        onClick = { viewModel.refreshDiskUsage() }
+                        icon = Icons.Filled.SdCard,
+                        onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Downloads) }
                     )
                 }
                 
-                // --- ABOUT SECTION ---
-                SettingsGroup("À propos") {
-                    SettingsItem("Version", "1.0.2 (Production)", Icons.Filled.Info)
-                    SettingsItem("Contactez-nous", "contact@mibeko.cg", Icons.Filled.Email)
-                    SettingsItem(
-                        title = "Conditions d'utilisation", 
-                        subtitle = "Lire les conditions", 
-                        icon = Icons.Filled.Description,
-                        onClick = { showTerms = true }
+                // --- NOTIFICATIONS ---
+                SettingsGroup("NOTIFICATIONS") {
+                    SettingsSwitch(
+                        title = "Veille Juridique", 
+                        subtitle = if (uiState.isLegalMonitoringEnabled) "Activé" else "Désactivé", 
+                        icon = Icons.Filled.NotificationsActive,
+                        checked = uiState.isLegalMonitoringEnabled,
+                        onCheckedChange = { viewModel.setLegalMonitoringEnabled(it) }
                     )
+                    SettingsSwitch(
+                        title = "Alertes Dossiers", 
+                        subtitle = if (uiState.isDossierAlertsEnabled) "Activé" else "Désactivé", 
+                        icon = Icons.Filled.FolderSpecial,
+                        checked = uiState.isDossierAlertsEnabled,
+                        onCheckedChange = { viewModel.setDossierAlertsEnabled(it) }
+                    )
+                }
+                
+                // --- MIBEKO ---
+                SettingsGroup("MIBEKO") {
+                    SettingsItem("Aide & Support", "", Icons.Filled.HelpOutline)
                     SettingsItem(
-                        title = "Politique de confidentialité", 
-                        subtitle = "Données personnelles", 
+                        title = "Confidentialité", 
+                        subtitle = "", 
                         icon = Icons.Filled.PrivacyTip,
                         onClick = { showPrivacy = true }
                     )
                     SettingsItem(
-                        title = "Mentions Légales", 
-                        subtitle = "Clause de non-responsabilité", 
-                        icon = Icons.Filled.Gavel,
-                        onClick = { showDisclaimer = true }
+                        title = "À propos", 
+                        subtitle = uiState.appVersion, 
+                        icon = Icons.Filled.Info,
+                        onClick = { showAbout = true }
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                TextButton(
+                    onClick = { /* Handle logout */ },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text(
+                        "Se déconnecter",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = "© 2025 Mibeko - République du Congo",
+                    text = "© 2026 Mibeko - République du Congo",
                     modifier = Modifier.align(Alignment.CenterHorizontally),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    fontSize = 11.sp
                 )
                 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -301,6 +340,9 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
 }
 
 
+/**
+ * Groupe de réglages avec un titre.
+ */
 @Composable
 fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier = Modifier.padding(16.dp)) {
@@ -321,6 +363,9 @@ fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
+/**
+ * Élément de réglage simple avec icône, titre et sous-titre.
+ */
 @Composable
 fun SettingsItem(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit = {}) {
     Row(
@@ -343,7 +388,7 @@ fun SettingsItem(title: String, subtitle: String, icon: ImageVector, onClick: ()
 }
 
 /**
- * Settings item with a switch toggle.
+ * Élément de réglage avec un commutateur (switch).
  */
 @Composable
 fun SettingsSwitch(
@@ -376,7 +421,7 @@ fun SettingsSwitch(
 }
 
 /**
- * Item showing a downloadable document with download/delete action.
+ * Élément affichant un document téléchargeable avec actions de téléchargement/suppression.
  */
 @Composable
 fun DownloadableDocumentItem(

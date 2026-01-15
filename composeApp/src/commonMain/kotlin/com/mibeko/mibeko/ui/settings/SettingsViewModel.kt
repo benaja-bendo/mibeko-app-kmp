@@ -10,6 +10,7 @@ import com.mibeko.mibeko.util.formatTimestampToDate
 import com.mibeko.mibeko.util.getDatabaseSize
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.mibeko.mibeko.getCurrentTimeMillis
 
 /**
  * Represents a document's download state in the settings screen.
@@ -30,10 +31,19 @@ data class SettingsUiState(
     val isOfflineModeEnabled: Boolean = false,
     val documents: List<DocumentDownloadState> = emptyList(),
     val isLoadingDocuments: Boolean = false,
+    val isSyncing: Boolean = false,
+    val syncError: String? = null,
     val currentTheme: UserPreferencesRepository.AppTheme = UserPreferencesRepository.AppTheme.SYSTEM,
     val isNotificationsEnabled: Boolean = false,
     val lastUpdateDate: String = "Jamais",
-    val diskUsage: String = "0 B"
+    val diskUsage: String = "0 B",
+    val textSize: UserPreferencesRepository.TextSize = UserPreferencesRepository.TextSize.MEDIUM,
+    val isDyslexiaFontEnabled: Boolean = false,
+    val isWifiOnlyDownloadEnabled: Boolean = true,
+    val isLegalMonitoringEnabled: Boolean = true,
+    val isDossierAlertsEnabled: Boolean = true,
+    val appVersion: String = "v1.0.0",
+    val dbVersion: String = "v27.12.25" // Demo version from sketch
 )
 
 /**
@@ -64,7 +74,12 @@ class SettingsViewModel(
             isOfflineModeEnabled = offlineMode,
             currentTheme = theme,
             isNotificationsEnabled = notifications,
-            lastUpdateDate = formatTimestampToDate(lastSync)
+            lastUpdateDate = formatTimestampToDate(lastSync),
+            textSize = userPreferencesRepository.getTextSize(),
+            isDyslexiaFontEnabled = userPreferencesRepository.isDyslexiaFontEnabled(),
+            isWifiOnlyDownloadEnabled = userPreferencesRepository.isWifiOnlyDownloadEnabled(),
+            isLegalMonitoringEnabled = userPreferencesRepository.isLegalMonitoringEnabled(),
+            isDossierAlertsEnabled = userPreferencesRepository.isDossierAlertsEnabled()
         )
         
         // Load available documents
@@ -80,7 +95,7 @@ class SettingsViewModel(
                         id = code.id,
                         title = code.title,
                         typeCode = code.icon, // icon stores type_code
-                        isDownloaded = false, // TODO: Check is_downloaded field once added
+                        isDownloaded = code.isDownloaded,
                         isDownloading = false
                     )
                 }
@@ -110,6 +125,46 @@ class SettingsViewModel(
     }
 
     /**
+     * Update the text size.
+     */
+    fun setTextSize(size: UserPreferencesRepository.TextSize) {
+        userPreferencesRepository.setTextSize(size)
+        _uiState.value = _uiState.value.copy(textSize = size)
+    }
+
+    /**
+     * Toggle dyslexia font.
+     */
+    fun setDyslexiaFontEnabled(enabled: Boolean) {
+        userPreferencesRepository.setDyslexiaFontEnabled(enabled)
+        _uiState.value = _uiState.value.copy(isDyslexiaFontEnabled = enabled)
+    }
+
+    /**
+     * Toggle Wi-Fi only download.
+     */
+    fun setWifiOnlyDownloadEnabled(enabled: Boolean) {
+        userPreferencesRepository.setWifiOnlyDownloadEnabled(enabled)
+        _uiState.value = _uiState.value.copy(isWifiOnlyDownloadEnabled = enabled)
+    }
+
+    /**
+     * Toggle legal monitoring.
+     */
+    fun setLegalMonitoringEnabled(enabled: Boolean) {
+        userPreferencesRepository.setLegalMonitoringEnabled(enabled)
+        _uiState.value = _uiState.value.copy(isLegalMonitoringEnabled = enabled)
+    }
+
+    /**
+     * Toggle dossier alerts.
+     */
+    fun setDossierAlertsEnabled(enabled: Boolean) {
+        userPreferencesRepository.setDossierAlertsEnabled(enabled)
+        _uiState.value = _uiState.value.copy(isDossierAlertsEnabled = enabled)
+    }
+
+    /**
      * Toggle notifications.
      */
     fun setNotificationsEnabled(enabled: Boolean) {
@@ -125,6 +180,45 @@ class SettingsViewModel(
             val size = getDatabaseSize()
             _uiState.value = _uiState.value.copy(diskUsage = formatSize(size))
         }
+    }
+
+    /**
+     * Clear all offline data and database.
+     */
+    fun clearStorage() {
+        viewModelScope.launch {
+            // TODO: Implement actual clear storage logic
+            // legalRepository.clearAllData()
+            refreshDiskUsage()
+        }
+    }
+
+    /**
+     * Check for database updates and sync if necessary.
+     */
+    fun checkForUpdates() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSyncing = true, syncError = null)
+            try {
+                legalRepository.sync()
+                userPreferencesRepository.setLastSyncTimestamp(getCurrentTimeMillis())
+                refreshDiskUsage()
+                _uiState.value = _uiState.value.copy(
+                    isSyncing = false,
+                    lastUpdateDate = formatTimestampToDate(userPreferencesRepository.getLastSyncTimestamp())
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _uiState.value = _uiState.value.copy(
+                    isSyncing = false,
+                    syncError = "Erreur de mise à jour: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun clearSyncError() {
+        _uiState.value = _uiState.value.copy(syncError = null)
     }
 
     /**

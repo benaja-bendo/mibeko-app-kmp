@@ -8,9 +8,10 @@ import com.mibeko.mibeko.ui.components.SyncStatusIndicator
 import com.mibeko.mibeko.ui.components.SyncState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-// import androidx.compose.material.icons.automirrored.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material3.*
@@ -28,14 +29,27 @@ import cafe.adriel.voyager.core.screen.Screen
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.reader.ReaderScreen
 
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.text.style.TextAlign
+
 data class DocumentDetailScreen(val documentId: String) : Screen {
 
+    /**
+     * Contenu principal de l'écran de détail d'un document.
+     */
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<DocumentDetailViewModel>()
         val structure by viewModel.structure.collectAsState()
+        val document by viewModel.document.collectAsState()
+        
+        val backgroundColor = Color(0xFFF9F6F0) // Parchment white
+        val textColor = Color(0xFF1A1A1A)
 
         LaunchedEffect(documentId) {
             viewModel.loadStructure(documentId)
@@ -43,85 +57,147 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { 
-                        Column {
+                Column {
+                    TopAppBar(
+                        title = { 
                             Text(
-                                text = "Détails du Document", 
-                                style = MaterialTheme.typography.titleMedium
+                                text = document?.title ?: "Détails", 
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack, 
-                                contentDescription = "Retour",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    },
-                    actions = {
-                        SyncStatusIndicator(
-                            state = SyncState.UP_TO_DATE,
-                            modifier = Modifier.padding(end = 16.dp)
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-                )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour", tint = textColor)
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { /* Internal search */ }) {
+                                Icon(Icons.Filled.Search, contentDescription = "Rechercher", tint = textColor)
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor)
+                    )
+                    
+                    // Breadcrumb
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(textColor.copy(alpha = 0.05f))
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Bibliothèque Juridique", style = MaterialTheme.typography.labelSmall, color = textColor.copy(alpha = 0.6f))
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, modifier = Modifier.size(12.dp), tint = textColor.copy(alpha = 0.3f))
+                        Text(document?.title ?: "", style = MaterialTheme.typography.labelSmall, color = textColor, maxLines = 1)
+                    }
+                }
             },
-            containerColor = MaterialTheme.colorScheme.background
+            bottomBar = {
+                Surface(
+                    color = backgroundColor,
+                    shadowElevation = 8.dp,
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, textColor.copy(alpha = 0.1f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = { /* Download PDF */ },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Télécharger PDF", style = MaterialTheme.typography.labelLarge)
+                        }
+                        
+                        OutlinedButton(
+                            onClick = { /* Share */ },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Partager", style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
+                }
+            },
+            containerColor = backgroundColor
         ) { padding ->
             if (structure.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = padding.calculateTopPadding()),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = padding.calculateTopPadding()),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-                    // Header Space (could contain Document Title if available)
                     item {
-                        Text(
-                            text = "Table des matières",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = document?.title?.uppercase() ?: "",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = textColor,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 28.sp
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            HorizontalDivider(modifier = Modifier.width(40.dp), thickness = 2.dp, color = textColor.copy(alpha = 0.2f))
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            Text(
+                                text = "RECHERCHER une loi...",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = textColor.copy(alpha = 0.4f),
+                                fontWeight = FontWeight.Bold
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            HorizontalDivider(modifier = Modifier.width(40.dp), thickness = 2.dp, color = textColor.copy(alpha = 0.2f))
+                        }
                     }
 
-                    // Determine sort order
                     val sortedNodes = structure.keys.sortedBy { it.sort_order }
-
                     sortedNodes.forEach { node ->
                         item {
-                            Text(
-                                text = node.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                            )
+                            Surface(
+                                color = textColor.copy(alpha = 0.03f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = node.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textColor,
+                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                                )
+                            }
                         }
                         
                         val articles = structure[node]?.sortedBy { it.number.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 } ?: emptyList()
-                        
                         items(articles) { article ->
-                            ArticleItem(article) {
+                            ArticleItem(article, textColor) {
                                 navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id))
                             }
                         }
@@ -132,58 +208,40 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
     }
 }
 
+/**
+ * Élément de liste affichant un article dans la table des matières.
+ */
 @Composable
-fun ArticleItem(article: ArticleEntity, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = MaterialTheme.shapes.medium,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+fun ArticleItem(article: ArticleEntity, textColor: Color, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(MibekoGold.copy(alpha = 0.1f), MaterialTheme.shapes.small),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Gavel,
-                    contentDescription = null,
-                    tint = MibekoGold,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Article ${article.number}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = (article.content ?: "").take(80) + "...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Temporary replacement for ChevronRight
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Article ${article.number}",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = textColor,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, modifier = Modifier.size(16.dp), tint = textColor.copy(alpha = 0.3f))
+        }
+        
+        if (!article.content.isNullOrBlank()) {
+            Text(
+                text = article.content,
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor.copy(alpha = 0.7f),
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider(color = textColor.copy(alpha = 0.05f))
     }
 }
