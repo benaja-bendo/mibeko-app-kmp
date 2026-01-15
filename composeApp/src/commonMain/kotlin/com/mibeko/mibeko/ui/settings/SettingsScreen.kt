@@ -231,7 +231,7 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                             UserPreferencesRepository.AppTheme.LIGHT -> "Clair"
                             UserPreferencesRepository.AppTheme.DARK -> "Sombre"
                         }, 
-                        icon = Icons.Filled.Palette,
+                        icon = Icons.Filled.Contrast,
                         onClick = { showThemeDialog = true }
                     )
                     SettingsItem(
@@ -241,13 +241,13 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                             UserPreferencesRepository.TextSize.MEDIUM -> "Moyen"
                             UserPreferencesRepository.TextSize.LARGE -> "Grand"
                         }, 
-                        icon = Icons.Filled.TextFields,
+                        icon = Icons.Filled.FormatSize,
                         onClick = { showTextSizeDialog = true }
                     )
                     SettingsSwitch(
                         title = "Police Dyslexie", 
                         subtitle = if (uiState.isDyslexiaFontEnabled) "Oui" else "Non", 
-                        icon = Icons.Filled.FontDownload,
+                        icon = Icons.Filled.Abc,
                         checked = uiState.isDyslexiaFontEnabled,
                         onCheckedChange = { viewModel.setDyslexiaFontEnabled(it) }
                     )
@@ -271,7 +271,7 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                     SettingsItem(
                         title = "Gérer le stockage", 
                         subtitle = uiState.diskUsage, 
-                        icon = Icons.Filled.SdCard,
+                        icon = Icons.Filled.Storage,
                         onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Downloads) }
                     )
                 }
@@ -383,7 +383,7 @@ fun SettingsItem(title: String, subtitle: String, icon: ImageVector, onClick: ()
                 Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
             }
         }
-        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
     }
 }
 
