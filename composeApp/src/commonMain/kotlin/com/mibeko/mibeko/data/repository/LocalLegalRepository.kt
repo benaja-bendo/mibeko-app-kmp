@@ -79,8 +79,9 @@ class LocalLegalRepository(
 
             // Get currently downloaded IDs to preserve state
             val downloadedIds = mibekoDao.getDownloadedDocumentIds().toSet()
-            // Get favorite IDs to preserve them
+            // Get favorite and offline IDs to preserve them
             val favoriteIds = mibekoDao.getFavoriteArticles().first().map { it.article.id }.toSet()
+            val offlineIds = mibekoDao.getOfflineArticles().first().map { it.article.id }.toSet()
 
             for (remoteDoc in response.data) {
                 // Map document
@@ -94,7 +95,7 @@ class LocalLegalRepository(
 
                 // Fetch full tree for this document to get structure and articles
                 val treeNodes = apiService.fetchDocumentTree(remoteDoc.id)
-                flattenTree(remoteDoc.id, treeNodes, allNodes, allArticles, favoriteIds)
+                flattenTree(remoteDoc.id, treeNodes, allNodes, allArticles, favoriteIds, offlineIds)
             }
 
             mibekoDao.syncAll(documents, allNodes, allArticles)
@@ -112,8 +113,9 @@ class LocalLegalRepository(
         val updatedTags = mutableListOf<TagEntity>()
         val updatedArticleTags = mutableListOf<ArticleTagEntity>()
 
-        // Get favorite IDs to preserve them
+        // Get favorite and offline IDs to preserve them
         val favoriteIds = mibekoDao.getFavoriteArticles().first().map { it.article.id }.toSet()
+        val offlineIds = mibekoDao.getOfflineArticles().first().map { it.article.id }.toSet()
 
         response.data.updated.forEach { remoteArticle ->
             updatedArticles.add(ArticleEntity(
@@ -121,7 +123,8 @@ class LocalLegalRepository(
                 node_id = remoteArticle.parent_node_id ?: "",
                 number = remoteArticle.number,
                 content = remoteArticle.content ?: "",
-                is_favorite = favoriteIds.contains(remoteArticle.id)
+                is_favorite = favoriteIds.contains(remoteArticle.id),
+                is_offline = offlineIds.contains(remoteArticle.id)
             ))
 
             remoteArticle.tags.forEach { tagName ->
@@ -159,7 +162,8 @@ class LocalLegalRepository(
         nodes: List<RemoteNode>,
         outNodes: MutableList<NodeEntity>,
         outArticles: MutableList<ArticleEntity>,
-        favoriteIds: Set<String> = emptySet()
+        favoriteIds: Set<String> = emptySet(),
+        offlineIds: Set<String> = emptySet()
     ) {
         nodes.forEach { node ->
             outNodes.add(NodeEntity(
@@ -176,7 +180,8 @@ class LocalLegalRepository(
                     node_id = node.id,
                     number = articleBrief.number,
                     content = articleBrief.content ?: "",
-                    is_favorite = favoriteIds.contains(articleBrief.id)
+                    is_favorite = favoriteIds.contains(articleBrief.id),
+                    is_offline = offlineIds.contains(articleBrief.id)
                 ))
             }
         }
@@ -237,15 +242,19 @@ class LocalLegalRepository(
         // Actually, we can fetch existing favorites IDs first.
         
         val favoriteIds = mibekoDao.getFavoriteArticles().first().map { it.article.id }.toSet()
+        val offlineIds = mibekoDao.getOfflineArticles().first().map { it.article.id }.toSet()
         
-        val articlesWithFavorites = articles.map { 
-            it.copy(is_favorite = favoriteIds.contains(it.id))
+        val articlesWithStates = articles.map { 
+            it.copy(
+                is_favorite = favoriteIds.contains(it.id),
+                is_offline = offlineIds.contains(it.id)
+            )
         }
 
         mibekoDao.syncAll(
             documents = emptyList(), // Don't touch doc here or do we need to set is_downloaded?
             nodes = nodes,
-            articles = articlesWithFavorites
+            articles = articlesWithStates
         )
         
         mibekoDao.updateDocumentDownloadStatus(documentId, true)
@@ -254,6 +263,56 @@ class LocalLegalRepository(
     suspend fun removeDownload(documentId: String) {
         mibekoDao.deleteNonFavoriteArticlesFromDocument(documentId)
         mibekoDao.updateDocumentDownloadStatus(documentId, false)
+    }
+
+    /**
+     * Fetch a single document from the API and store it in the local database.
+     */
+    suspend fun fetchAndStoreDocument(documentId: String): com.mibeko.mibeko.data.LawCodeSpec? {
+        return try {
+            val response = apiService.fetchDocument(documentId)
+            val remoteDoc = response.data ?: return null
+            
+            val document = DocumentEntity(
+                id = remoteDoc.id,
+                title = remoteDoc.title,
+                type_code = remoteDoc.type?.code ?: "unknown",
+                last_updated = parseIsoDate(remoteDoc.updated_at),
+                is_downloaded = mibekoDao.getDownloadedDocumentIds().contains(remoteDoc.id)
+            )
+            
+            mibekoDao.upsertDocuments(listOf(document))
+            document.toLawCodeSpec()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Fetch the full structure tree for a document from the API and store it locally.
+     * This allows viewing the document even if not fully downloaded for offline use.
+     */
+    suspend fun fetchAndStoreDocumentStructure(documentId: String) {
+        try {
+            val treeNodes = apiService.fetchDocumentTree(documentId)
+            
+            val allNodes = mutableListOf<NodeEntity>()
+            val allArticles = mutableListOf<ArticleEntity>()
+            
+            // Get favorite and offline IDs to preserve them
+            val favoriteIds = mibekoDao.getFavoriteArticles().first().map { it.article.id }.toSet()
+            val offlineIds = mibekoDao.getOfflineArticles().first().map { it.article.id }.toSet()
+            
+            flattenTree(documentId, treeNodes, allNodes, allArticles, favoriteIds, offlineIds)
+            
+            // Only sync nodes and articles, don't touch other documents
+            mibekoDao.upsertNodes(allNodes)
+            mibekoDao.upsertArticles(allArticles)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            throw e
+        }
     }
 
     fun getLawCodes(): Flow<List<com.mibeko.mibeko.data.LawCodeSpec>> {
@@ -268,6 +327,56 @@ class LocalLegalRepository(
                 result.toArticleSpec()
             }
         }
+    }
+
+    fun getOfflineArticles(): Flow<List<ArticleSpec>> {
+        return mibekoDao.getOfflineArticles().map { results ->
+            results.map { result ->
+                result.toArticleSpec()
+            }
+        }
+    }
+
+    suspend fun toggleArticleOffline(article: ArticleSpec, isOffline: Boolean) {
+        if (isOffline) {
+            // Ensure the article and its node/document shell exist in DB
+            val document = DocumentEntity(
+                id = article.codeId,
+                title = "Document", // We might not have the full title if from search
+                type_code = "unknown",
+                last_updated = getCurrentTimeMillis(),
+                is_downloaded = false
+            )
+            val node = NodeEntity(
+                id = article.id, // In this app, often article ID and node ID are related or same in some contexts, 
+                                 // but let's check ArticleEntity.node_id
+                document_id = article.codeId,
+                parent_id = null,
+                title = article.title,
+                sort_order = 0
+            )
+            val entity = ArticleEntity(
+                id = article.id,
+                node_id = article.id, // Using article.id as node_id for simplicity if missing
+                number = article.number,
+                content = article.content,
+                is_favorite = article.isFavorite,
+                is_offline = true
+            )
+            
+            mibekoDao.upsertDocuments(listOf(document))
+            mibekoDao.upsertNodes(listOf(node))
+            mibekoDao.upsertArticles(listOf(entity))
+        } else {
+            mibekoDao.updateArticleOfflineStatus(article.id, false)
+        }
+    }
+
+    suspend fun removeArticleDownload(articleId: String) {
+        mibekoDao.updateArticleOfflineStatus(articleId, false)
+        // Note: We don't necessarily delete the article from DB here 
+        // because it might be part of a downloaded document or a favorite.
+        // The deleteNonFavoriteArticlesFromDocument handles the cleanup of documents.
     }
 
     suspend fun getDocumentStats(): List<com.mibeko.mibeko.data.remote.DocumentStats> {

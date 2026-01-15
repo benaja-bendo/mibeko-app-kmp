@@ -20,8 +20,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
+import com.mibeko.mibeko.data.ArticleSpec
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.ui.navigation.LocalNavController
+import com.mibeko.mibeko.ui.navigation.Screen as NavScreen
 import org.koin.compose.viewmodel.koinViewModel
 
 class DownloadsScreen : Screen {
@@ -33,6 +35,8 @@ class DownloadsScreen : Screen {
         val viewModel = koinViewModel<DownloadsViewModel>()
         val uiState by viewModel.uiState.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
+        var selectedTabIndex by remember { mutableStateOf(0) }
+        val tabs = listOf("Documents", "Articles")
 
         LaunchedEffect(uiState.error) {
             uiState.error?.let {
@@ -44,48 +48,53 @@ class DownloadsScreen : Screen {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                TopAppBar(
-                    title = { Text("Gestionnaire Hors-ligne") },
-                    navigationIcon = {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                Column {
+                    TopAppBar(
+                        title = { Text("Gestionnaire Hors-ligne") },
+                        navigationIcon = {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
                     )
-                )
+                    TabRow(
+                        selectedTabIndex = selectedTabIndex,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ) {
+                        tabs.forEachIndexed { index, title ->
+                            Tab(
+                                selected = selectedTabIndex == index,
+                                onClick = { selectedTabIndex = index },
+                                text = { Text(title) }
+                            )
+                        }
+                    }
+                }
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
-            if (uiState.isLoading && uiState.documents.isEmpty()) {
+            if (uiState.isLoading && uiState.documents.isEmpty() && uiState.offlineArticles.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (uiState.documents.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Aucun document disponible dans le catalogue", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item {
-                        InfoCard()
-                    }
-                    
-                    items(uiState.documents) { doc ->
-                        DownloadItemCard(
-                            document = doc,
-                            isDownloading = uiState.downloadingIds.contains(doc.id),
-                            onDownload = { viewModel.downloadDocument(doc.id) },
-                            onRemove = { viewModel.removeDownload(doc.id) }
+                Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                    when (selectedTabIndex) {
+                        0 -> DocumentList(
+                            documents = uiState.documents,
+                            downloadingIds = uiState.downloadingIds,
+                            onDownload = { viewModel.downloadDocument(it) },
+                            onRemove = { viewModel.removeDownload(it) },
+                            onNavigate = { id -> navController.navigate(NavScreen.DocumentDetail(id)) }
+                        )
+                        1 -> ArticleList(
+                            articles = uiState.offlineArticles,
+                            onRemove = { viewModel.removeArticleDownload(it) },
+                            onNavigate = { id -> navController.navigate(NavScreen.Reader(id)) }
                         )
                     }
                 }
@@ -95,35 +104,103 @@ class DownloadsScreen : Screen {
 }
 
 @Composable
-private fun InfoCard() {
+private fun DocumentList(
+    documents: List<LawCodeSpec>,
+    downloadingIds: Set<String>,
+    onDownload: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onNavigate: (String) -> Unit
+) {
+    if (documents.isEmpty()) {
+        EmptyState("Aucun document disponible")
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item { InfoCard("Documents", "Téléchargez les codes complets pour y accéder sans connexion.") }
+            items(documents) { doc ->
+                DownloadItemCard(
+                    title = doc.title,
+                    subtitle = if (doc.isDownloaded) "Disponible hors-ligne" else "En ligne uniquement",
+                    isDownloaded = doc.isDownloaded,
+                    isDownloading = downloadingIds.contains(doc.id),
+                    onAction = { if (doc.isDownloaded) onRemove(doc.id) else onDownload(doc.id) },
+                    onClick = { onNavigate(doc.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArticleList(
+    articles: List<ArticleSpec>,
+    onRemove: (String) -> Unit,
+    onNavigate: (String) -> Unit
+) {
+    val downloadedArticles = articles.filter { it.isDownloaded }
+    if (downloadedArticles.isEmpty()) {
+        EmptyState("Aucun article hors-ligne")
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item { InfoCard("Articles", "Articles que vous avez mis hors-ligne individuellement.") }
+            items(downloadedArticles) { article ->
+                DownloadItemCard(
+                    title = "Article ${article.number}",
+                    subtitle = article.breadcrumb,
+                    isDownloaded = true,
+                    isDownloading = false,
+                    onAction = { onRemove(article.id) },
+                    onClick = { onNavigate(article.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyState(message: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun InfoCard(title: String, description: String) {
     Surface(
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                "Mode Hors-ligne",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                "Téléchargez les codes pour pouvoir les consulter et faire des recherches même sans connexion internet.",
-                style = MaterialTheme.typography.bodySmall
-            )
+            Text(description, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
 
 @Composable
 private fun DownloadItemCard(
-    document: LawCodeSpec,
+    title: String,
+    subtitle: String,
+    isDownloaded: Boolean,
     isDownloading: Boolean,
-    onDownload: () -> Unit,
-    onRemove: () -> Unit
+    onAction: () -> Unit,
+    onClick: () -> Unit
 ) {
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
@@ -137,43 +214,22 @@ private fun DownloadItemCard(
                 modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.Description,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
+                Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             }
-            
             Spacer(modifier = Modifier.width(16.dp))
-            
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = document.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2
-                )
-                Text(
-                    text = if (document.isDownloaded) "Disponible hors-ligne" else "Disponible en ligne uniquement",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (document.isDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2)
+                Text(text = subtitle, style = MaterialTheme.typography.labelSmall, color = if (isDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            
             if (isDownloading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-            } else if (document.isDownloaded) {
-                Row {
-                    Icon(Icons.Default.FileDownloadDone, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(onClick = onRemove) {
-                        Icon(Icons.Default.Delete, contentDescription = "Supprimer", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
-                    }
-                }
             } else {
-                IconButton(onClick = onDownload) {
-                    Icon(Icons.Default.CloudDownload, contentDescription = "Télécharger", tint = MaterialTheme.colorScheme.primary)
+                IconButton(onClick = onAction) {
+                    Icon(
+                        if (isDownloaded) Icons.Default.Delete else Icons.Default.CloudDownload,
+                        contentDescription = null,
+                        tint = if (isDownloaded) MaterialTheme.colorScheme.error.copy(alpha = 0.7f) else MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }

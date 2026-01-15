@@ -205,6 +205,13 @@ data class ReaderScreen(val articleId: String) : Screen {
                                 IconButton(onClick = { /* Share */ }) {
                                     Icon(Icons.Default.Share, contentDescription = "Partager", tint = textColor)
                                 }
+                                IconButton(onClick = { viewModel.toggleOffline() }) {
+                                    Icon(
+                                        if (currentArticle.isDownloaded) Icons.Default.CloudDone else Icons.Default.CloudDownload,
+                                        contentDescription = "Hors-ligne",
+                                        tint = if (currentArticle.isDownloaded) MaterialTheme.colorScheme.primary else textColor
+                                    )
+                                }
                                 IconButton(onClick = { /* Favorite */ }) {
                                     Icon(
                                         if (currentArticle.isFavorite) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,

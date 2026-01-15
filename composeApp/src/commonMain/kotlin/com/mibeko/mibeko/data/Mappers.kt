@@ -23,7 +23,7 @@ fun com.mibeko.mibeko.data.local.dao.ArticleSearchResult.toArticleSpec(): Articl
         content = article.content,
         breadcrumb = node_title,
         isFavorite = article.is_favorite,
-        isDownloaded = doc_is_downloaded
+        isDownloaded = doc_is_downloaded || article.is_offline
     )
 }
 
@@ -32,7 +32,7 @@ fun ArticleEntity.toArticleSpec(
     codeId: String,
     title: String,
     breadcrumb: String,
-    isDownloaded: Boolean = false
+    isDocDownloaded: Boolean = false
 ): ArticleSpec {
     return ArticleSpec(
         id = id,
@@ -42,7 +42,7 @@ fun ArticleEntity.toArticleSpec(
         content = content,
         breadcrumb = breadcrumb,
         isFavorite = is_favorite,
-        isDownloaded = isDownloaded
+        isDownloaded = isDocDownloaded || is_offline
     )
 }
 

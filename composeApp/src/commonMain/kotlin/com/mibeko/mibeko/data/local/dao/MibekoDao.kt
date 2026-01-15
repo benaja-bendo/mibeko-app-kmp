@@ -41,7 +41,10 @@ interface MibekoDao {
     @Query("UPDATE documents SET is_downloaded = :isDownloaded WHERE id = :documentId")
     suspend fun updateDocumentDownloadStatus(documentId: String, isDownloaded: Boolean)
 
-    @Query("DELETE FROM articles WHERE node_id IN (SELECT id FROM nodes WHERE document_id = :documentId) AND is_favorite = 0")
+    @Query("UPDATE articles SET is_offline = :isOffline WHERE id = :articleId")
+    suspend fun updateArticleOfflineStatus(articleId: String, isOffline: Boolean)
+
+    @Query("DELETE FROM articles WHERE node_id IN (SELECT id FROM nodes WHERE document_id = :documentId) AND is_favorite = 0 AND is_offline = 0")
     suspend fun deleteNonFavoriteArticlesFromDocument(documentId: String)
 
     @Transaction
@@ -53,6 +56,16 @@ interface MibekoDao {
         WHERE articles.is_favorite = 1
     """)
     fun getFavoriteArticles(): Flow<List<ArticleSearchResult>>
+
+    @Transaction
+    @Query("""
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded
+        FROM articles 
+        JOIN nodes ON articles.node_id = nodes.id
+        JOIN documents ON nodes.document_id = documents.id
+        WHERE articles.is_offline = 1
+    """)
+    fun getOfflineArticles(): Flow<List<ArticleSearchResult>>
 
     @Transaction
     @Query("""

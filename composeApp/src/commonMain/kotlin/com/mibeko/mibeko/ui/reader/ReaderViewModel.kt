@@ -36,6 +36,19 @@ class ReaderViewModel(
     private val _isDyslexiaFontEnabled = MutableStateFlow(userPreferencesRepository.isDyslexiaFontEnabled())
     val isDyslexiaFontEnabled: StateFlow<Boolean> = _isDyslexiaFontEnabled.asStateFlow()
 
+    fun toggleOffline() {
+        val currentArticle = _uiState.value.article ?: return
+        viewModelScope.launch {
+            try {
+                repository.toggleArticleOffline(currentArticle, !currentArticle.isDownloaded)
+                // Reload article to update UI state
+                loadArticle(currentArticle.id)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Erreur: ${e.message}")
+            }
+        }
+    }
+
     fun loadArticle(id: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)

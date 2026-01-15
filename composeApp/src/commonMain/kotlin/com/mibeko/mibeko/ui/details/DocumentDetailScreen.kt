@@ -30,6 +30,8 @@ import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.reader.ReaderScreen
 
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
@@ -45,8 +47,9 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
     override fun Content() {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<DocumentDetailViewModel>()
-        val structure by viewModel.structure.collectAsState()
-        val document by viewModel.document.collectAsState()
+        
+        val uiState by viewModel.uiState.collectAsState()
+        val snackbarHostState = remember { SnackbarHostState() }
         
         val backgroundColor = Color(0xFFF9F6F0) // Parchment white
         val textColor = Color(0xFF1A1A1A)
@@ -55,13 +58,21 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
             viewModel.loadStructure(documentId)
         }
 
+        LaunchedEffect(uiState.error) {
+            uiState.error?.let {
+                snackbarHostState.showSnackbar(it)
+                viewModel.clearError()
+            }
+        }
+
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 Column {
                     TopAppBar(
                         title = { 
                             Text(
-                                text = document?.title ?: "Détails", 
+                                text = uiState.document?.title ?: "Détails", 
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = textColor,
@@ -92,7 +103,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                     ) {
                         Text("Bibliothèque Juridique", style = MaterialTheme.typography.labelSmall, color = textColor.copy(alpha = 0.6f))
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, modifier = Modifier.size(12.dp), tint = textColor.copy(alpha = 0.3f))
-                        Text(document?.title ?: "", style = MaterialTheme.typography.labelSmall, color = textColor, maxLines = 1)
+                        Text(uiState.document?.title ?: "", style = MaterialTheme.typography.labelSmall, color = textColor, maxLines = 1)
                     }
                 }
             },
@@ -109,14 +120,28 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Button(
-                            onClick = { /* Download PDF */ },
+                            onClick = { viewModel.toggleOffline() },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            shape = RoundedCornerShape(8.dp)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (uiState.document?.isDownloaded == true) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            enabled = !uiState.isDownloading
                         ) {
-                            Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Télécharger PDF", style = MaterialTheme.typography.labelLarge)
+                            if (uiState.isDownloading) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                            } else {
+                                Icon(
+                                    if (uiState.document?.isDownloaded == true) Icons.Default.CloudDone else Icons.Default.CloudDownload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    if (uiState.document?.isDownloaded == true) "Disponible Hors-ligne" else "Mettre Hors-ligne",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
                         }
                         
                         OutlinedButton(
@@ -134,71 +159,98 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
             },
             containerColor = backgroundColor
         ) { padding ->
-            if (structure.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = document?.title?.uppercase() ?: "",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = textColor,
-                                textAlign = TextAlign.Center,
-                                lineHeight = 28.sp
-                            )
-                            
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            HorizontalDivider(modifier = Modifier.width(40.dp), thickness = 2.dp, color = textColor.copy(alpha = 0.2f))
-                            
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            Text(
-                                text = "RECHERCHER une loi...",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = textColor.copy(alpha = 0.4f),
-                                fontWeight = FontWeight.Bold
-                            )
-                            
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            HorizontalDivider(modifier = Modifier.width(40.dp), thickness = 2.dp, color = textColor.copy(alpha = 0.2f))
-                        }
+            when {
+                uiState.isLoading -> {
+                    Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
-
-                    val sortedNodes = structure.keys.sortedBy { it.sort_order }
-                    sortedNodes.forEach { node ->
-                        item {
-                            Surface(
-                                color = textColor.copy(alpha = 0.03f),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = node.title,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = textColor,
-                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
-                                )
+                }
+                uiState.error != null && uiState.structure.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Gavel, null, modifier = Modifier.size(64.dp), tint = textColor.copy(alpha = 0.2f))
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = uiState.error ?: "Une erreur est survenue",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = textColor.copy(alpha = 0.6f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(onClick = { viewModel.loadStructure(documentId) }) {
+                                Text("Réessayer")
                             }
                         }
-                        
-                        val articles = structure[node]?.sortedBy { it.number.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 } ?: emptyList()
-                        items(articles) { article ->
-                            ArticleItem(article, textColor) {
-                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id))
+                    }
+                }
+                uiState.structure.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                        Text("Aucun contenu disponible", color = textColor.copy(alpha = 0.5f))
+                    }
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize().padding(padding),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = uiState.document?.title?.uppercase() ?: "",
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = textColor,
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 28.sp
+                                )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                HorizontalDivider(modifier = Modifier.width(40.dp), thickness = 2.dp, color = textColor.copy(alpha = 0.2f))
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                Text(
+                                    text = "RECHERCHER une loi...",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = textColor.copy(alpha = 0.4f),
+                                    fontWeight = FontWeight.Bold
+                                )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                HorizontalDivider(modifier = Modifier.width(40.dp), thickness = 2.dp, color = textColor.copy(alpha = 0.2f))
+                            }
+                        }
+
+                        val sortedNodes = uiState.structure.keys.sortedBy { it.sort_order }
+                        sortedNodes.forEach { node ->
+                            item {
+                                Surface(
+                                    color = textColor.copy(alpha = 0.03f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = node.title,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = textColor,
+                                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                                    )
+                                }
+                            }
+                            
+                            val articles = uiState.structure[node]?.sortedBy { it.number.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 } ?: emptyList()
+                            items(articles) { article ->
+                                ArticleItem(article, textColor) {
+                                    navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id))
+                                }
                             }
                         }
                     }

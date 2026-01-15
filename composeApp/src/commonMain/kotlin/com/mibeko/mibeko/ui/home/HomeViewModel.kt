@@ -72,9 +72,17 @@ class HomeViewModel(
                 if (networkChecker.isNetworkAvailable()) {
                     val response = repository.getHomeData()
                     if (response.success && response.data != null) {
+                        // Filter out documents with missing mandatory fields (id, title)
+                        val validPopular = response.data.popular_codes.filter { 
+                            it.id.isNotBlank() && it.title.isNotBlank() 
+                        }
+                        val validRecentlyAdded = response.data.recently_added.filter { 
+                            it.id.isNotBlank() && it.title.isNotBlank() 
+                        }
+                        
                         _uiState.value = _uiState.value.copy(
-                            popularCodes = response.data.popular_codes,
-                            recentlyAdded = response.data.recently_added,
+                            popularCodes = validPopular,
+                            recentlyAdded = validRecentlyAdded,
                             aiSuggestions = response.data.ai_suggestions,
                             isLoading = false
                         )

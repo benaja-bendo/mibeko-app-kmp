@@ -2,18 +2,16 @@ package com.mibeko.mibeko.ui.downloads
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mibeko.mibeko.data.ArticleSpec
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class DownloadsUiState(
     val isLoading: Boolean = false,
     val documents: List<LawCodeSpec> = emptyList(),
+    val offlineArticles: List<ArticleSpec> = emptyList(),
     val downloadingIds: Set<String> = emptySet(),
     val error: String? = null
 )
@@ -26,20 +24,27 @@ class DownloadsViewModel(
     val uiState: StateFlow<DownloadsUiState> = _uiState.asStateFlow()
 
     init {
-        loadDocuments()
+        loadData()
     }
 
     /**
-     * Load all documents and their download status.
+     * Load all documents and articles and their download status.
      */
-    fun loadDocuments() {
+    fun loadData() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            repository.getLawCodes().collect { codes ->
-                _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(isLoading = true) }
+            
+            combine(
+                repository.getLawCodes(),
+                repository.getOfflineArticles()
+            ) { codes, articles ->
+                Pair(codes, articles)
+            }.collect { (codes, articles) ->
+                _uiState.update { it.copy(
                     documents = codes,
+                    offlineArticles = articles,
                     isLoading = false
-                )
+                ) }
             }
         }
     }
@@ -49,19 +54,19 @@ class DownloadsViewModel(
      */
     fun downloadDocument(documentId: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                downloadingIds = _uiState.value.downloadingIds + documentId
-            )
+            _uiState.update { it.copy(
+                downloadingIds = it.downloadingIds + documentId
+            ) }
             try {
                 repository.downloadDocument(documentId)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     error = "Erreur lors du téléchargement : ${e.message}"
-                )
+                ) }
             } finally {
-                _uiState.value = _uiState.value.copy(
-                    downloadingIds = _uiState.value.downloadingIds - documentId
-                )
+                _uiState.update { it.copy(
+                    downloadingIds = it.downloadingIds - documentId
+                ) }
             }
         }
     }
@@ -74,9 +79,24 @@ class DownloadsViewModel(
             try {
                 repository.removeDownload(documentId)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     error = "Erreur lors de la suppression : ${e.message}"
-                )
+                ) }
+            }
+        }
+    }
+
+    /**
+     * Remove an individual article from offline storage.
+     */
+    fun removeArticleDownload(articleId: String) {
+        viewModelScope.launch {
+            try {
+                repository.removeArticleDownload(articleId)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(
+                    error = "Erreur lors de la suppression : ${e.message}"
+                ) }
             }
         }
     }

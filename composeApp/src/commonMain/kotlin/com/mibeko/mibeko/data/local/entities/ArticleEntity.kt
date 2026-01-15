@@ -21,5 +21,6 @@ data class ArticleEntity(
     val node_id: String,
     val number: String,
     val content: String?,
-    val is_favorite: Boolean
+    val is_favorite: Boolean,
+    val is_offline: Boolean = false
 )

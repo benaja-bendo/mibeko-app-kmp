@@ -121,7 +121,9 @@ class HomeScreen : Screen {
                                     PopularCodeCard(
                                         title = doc.title,
                                         onClick = { 
-                                            navController.navigate(MibekoScreen.DocumentDetail(doc.id))
+                                            if (doc.id.isNotBlank()) {
+                                                navController.navigate(MibekoScreen.DocumentDetail(doc.id))
+                                            }
                                         }
                                     )
                                 }
@@ -154,7 +156,11 @@ class HomeScreen : Screen {
                             title = doc.title,
                             date = "Récemment", 
                             onClick = {
-                                navController.navigate(MibekoScreen.DocumentDetail(doc.id))
+                                if (doc.id.isNotBlank()) {
+                                    navController.navigate(MibekoScreen.DocumentDetail(doc.id))
+                                } else {
+                                    viewModel.refreshNetworkStatus() // Just to trigger something or we could show a snackbar
+                                }
                             }
                         )
                     }
