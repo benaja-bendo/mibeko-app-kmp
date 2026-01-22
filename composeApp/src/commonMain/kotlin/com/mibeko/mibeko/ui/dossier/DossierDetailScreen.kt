@@ -135,6 +135,7 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                                             DossierTag.EN_COURS -> "En Cours"
                                             DossierTag.URGENT -> "Urgent"
                                             DossierTag.ARCHIVE -> "Archivé"
+                                            DossierTag.FAVORIS -> "Favoris"
                                         }
                                     )
                                     append(" • ")

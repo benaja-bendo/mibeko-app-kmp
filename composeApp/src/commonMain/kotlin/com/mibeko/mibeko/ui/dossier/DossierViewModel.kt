@@ -23,6 +23,33 @@ class DossierViewModel(
 
     init {
         loadDossiers()
+        ensureFavoritesExist()
+    }
+
+    /**
+     * Vérifie si un dossier "Favoris" existe, sinon le crée par défaut.
+     */
+    private fun ensureFavoritesExist() {
+        viewModelScope.launch {
+            repository.getAllDossiers().firstOrNull()?.let { dossiersWithCount ->
+                val dossiers = dossiersWithCount.map { it.dossier }
+                val exists = dossiers.any { 
+                    it.name.equals("Favoris", ignoreCase = true) || 
+                    it.name.equals("Favorites", ignoreCase = true) 
+                }
+                
+                if (!exists) {
+                    repository.createDossier(
+                        name = "Favoris",
+                        legalDomain = "Général",
+                        tag = DossierTag.FAVORIS,
+                        description = "Mes articles sauvegardés",
+                        color = "#FFD700" // Gold color
+                    )
+                    loadDossiers()
+                }
+            }
+        }
     }
 
     private fun loadDossiers() {

@@ -30,5 +30,6 @@ data class DossierEntity(
 enum class DossierTag {
     EN_COURS,
     URGENT,
-    ARCHIVE
+    ARCHIVE,
+    FAVORIS
 }

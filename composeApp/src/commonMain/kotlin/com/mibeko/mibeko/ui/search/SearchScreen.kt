@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,7 +17,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Cloud
@@ -24,6 +27,8 @@ import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,10 +44,14 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.ui.text.style.TextOverflow
 import com.mibeko.mibeko.ui.theme.*
 import cafe.adriel.voyager.core.screen.Screen
 import org.koin.compose.viewmodel.koinViewModel
+import kotlinx.coroutines.launch
 import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.components.HighlightedText
@@ -59,6 +68,13 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<SearchViewModel>()
         val uiState by viewModel.uiState.collectAsState()
+        val suggestions by viewModel.suggestions.collectAsState()
+        val recentSearches by viewModel.recentSearches.collectAsState()
+        
+        var searchText by remember { mutableStateOf(query ?: tag ?: "") }
+        var isActive by remember { mutableStateOf(false) }
+        val snackbarHostState = remember { SnackbarHostState() }
+        val scope = rememberCoroutineScope()
 
         LaunchedEffect(query, tag) {
             if (tag != null) {
@@ -70,33 +86,137 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
         }
 
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(
-                                "Résultats de recherche",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                if (tag != null) "Thématique : $tag" else "\"$query\"",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = if (isActive) 0.dp else 16.dp, vertical = if (isActive) 0.dp else 8.dp)
+                ) {
+                    SearchBar(
+                        query = searchText,
+                        onQueryChange = { 
+                            searchText = it
+                            viewModel.updateLiveQuery(it)
+                        },
+                        onSearch = {
+                            isActive = false
+                            viewModel.performSearch(it)
+                            viewModel.saveSearch(it)
+                        },
+                        active = isActive,
+                        onActiveChange = { isActive = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Rechercher un article, une loi...") },
+                        leadingIcon = {
+                            IconButton(onClick = { 
+                                if (isActive) isActive = false else navController.popBackStack() 
+                            }) {
+                                Icon(
+                                    if (isActive) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Search,
+                                    contentDescription = null
+                                )
+                            }
+                        },
+                        trailingIcon = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (searchText.isNotEmpty() && isActive) {
+                                    IconButton(onClick = { searchText = ""; viewModel.updateLiveQuery("") }) {
+                                        Icon(Icons.Default.Cancel, contentDescription = "Effacer")
+                                    }
+                                }
+                                
+                                // Indicateur de statut réseau intégré
+                                if (uiState.errorMessage != null) {
+                                    IconButton(onClick = {
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("Mode hors-ligne actif.")
+                                        }
+                                    }) {
+                                        Icon(
+                                            Icons.Filled.CloudOff,
+                                            contentDescription = "Hors-ligne",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                            }
                         }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Retour"
-                            )
+                    ) {
+                        // Overlay de suggestions et recherches récentes
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp)
+                        ) {
+                            if (searchText.isNotBlank() && suggestions.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        "Suggestions",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                }
+                                items(suggestions.take(5)) { suggestion ->
+                                    ListItem(
+                                        headlineContent = { Text("Article ${suggestion.number}") },
+                                        supportingContent = { Text(suggestion.breadcrumb) },
+                                        leadingContent = { 
+                                            Icon(
+                                                if (suggestion.isDownloaded) Icons.Filled.CheckCircle else Icons.Filled.Cloud,
+                                                contentDescription = null,
+                                                tint = if (suggestion.isDownloaded) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline
+                                            )
+                                        },
+                                        modifier = Modifier.clickable {
+                                            searchText = suggestion.number
+                                            isActive = false
+                                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(suggestion.id))
+                                        }
+                                    )
+                                }
+                            }
+
+                            if (recentSearches.isNotEmpty()) {
+                                item {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "Recherches récentes",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        TextButton(onClick = { viewModel.clearSearchHistory() }) {
+                                            Text("Effacer", fontSize = 12.sp)
+                                        }
+                                    }
+                                }
+                                items(recentSearches) { query ->
+                                    ListItem(
+                                        headlineContent = { Text(query) },
+                                        leadingContent = { Icon(Icons.Default.History, contentDescription = null) },
+                                        trailingContent = {
+                                            IconButton(onClick = { viewModel.removeFromHistory(query) }) {
+                                                Icon(Icons.Default.Close, contentDescription = "Supprimer")
+                                            }
+                                        },
+                                        modifier = Modifier.clickable {
+                                            searchText = query
+                                            isActive = false
+                                            viewModel.performSearch(query)
+                                        }
+                                    )
+                                }
+                            }
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                )
+                    }
+                }
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
@@ -105,13 +225,8 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                     .fillMaxSize()
                     .padding(top = padding.calculateTopPadding())
             ) {
-                // Network status indicator
-                NetworkStatusBanner(
-                    isFromNetwork = uiState.isFromNetwork,
-                    errorMessage = uiState.errorMessage,
-                    onRetry = { viewModel.retrySearch() }
-                )
-
+                // L'indicateur réseau est maintenant dans la SearchBar
+                
                 // Filter Chips
                 LazyRow(
                     modifier = Modifier
@@ -213,7 +328,7 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
 
                         if (uiState.results.isEmpty()) {
                             item {
-                                EmptyResultsState(query = query ?: tag ?: "")
+                                EmptyResultsState(query = searchText)
                             }
                         } else {
                             items(uiState.results) { article ->
@@ -221,7 +336,7 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                                     articleNumber = article.number,
                                     source = article.breadcrumb,
                                     snippet = article.content ?: "",
-                                    query = query ?: "",
+                                    query = searchText,
                                     isDownloaded = article.isDownloaded,
                                     isFavorite = article.isFavorite,
                                     onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id)) }
@@ -241,6 +356,8 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
  */
 @Composable
 private fun AiAnswerCard(answer: String) {
+    var isExpanded by remember { mutableStateOf(true) }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -258,6 +375,7 @@ private fun AiAnswerCard(answer: String) {
                             colors = listOf(MibekoBluePrimary.copy(alpha = 0.05f), Color.Transparent)
                         )
                     )
+                    .clickable { isExpanded = !isExpanded }
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 Row(
@@ -266,7 +384,7 @@ private fun AiAnswerCard(answer: String) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
+                        Surface( 
                             color = MibekoBluePrimary,
                             shape = CircleShape,
                             modifier = Modifier.size(32.dp)
@@ -296,120 +414,61 @@ private fun AiAnswerCard(answer: String) {
                         }
                     }
                     
-                    Row {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { /* Copy */ }, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.ContentCopy, null, tint = MibekoBluePrimary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                         }
                         IconButton(onClick = { /* Share */ }, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.Share, null, tint = MibekoBluePrimary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                         }
+                        IconButton(onClick = { isExpanded = !isExpanded }, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (isExpanded) "Réduire" else "Développer",
+                                tint = MibekoBluePrimary
+                            )
+                        }
                     }
                 }
             }
 
             // Answer Content
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = answer,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 24.sp
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Disclaimer with Icon
-                Surface(
-                    color = MibekoGold.copy(alpha = 0.05f),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+            AnimatedVisibility(visible = isExpanded) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = answer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        lineHeight = 24.sp
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Disclaimer with Icon
+                    Surface(
+                        color = MibekoGold.copy(alpha = 0.05f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MibekoGold,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Vérifiez toujours les sources officielles ci-dessous.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MibekoGoldDark,
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                        )
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MibekoGold,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Cette analyse est générée par IA. Veuillez vérifier avec les textes officiels ci-dessous.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MibekoGold.copy(alpha = 0.8f)
+                            )
+                        }
                     }
                 }
-            }
-        }
-    }
-}
-
-/**
- * Bannière indiquant l'état du réseau ou les erreurs de recherche.
- * Design plus discret et moderne.
- */
-@Composable
-private fun NetworkStatusBanner(
-    isFromNetwork: Boolean,
-    errorMessage: String?,
-    onRetry: () -> Unit
-) {
-    if (errorMessage != null) {
-        Surface(
-            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Filled.CloudOff,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Mode hors-ligne : $errorMessage",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.weight(1f)
-                )
-                TextButton(onClick = onRetry) {
-                    Text("RÉESSAYER", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
-                }
-            }
-        }
-    } else if (isFromNetwork) {
-        Surface(
-            color = MibekoBluePrimary.copy(alpha = 0.05f),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, MibekoBluePrimary.copy(alpha = 0.1f))
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Filled.Wifi,
-                    contentDescription = null,
-                    tint = MibekoBluePrimary,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Résultats synchronisés en temps réel",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MibekoBluePrimary,
-                    fontWeight = FontWeight.Medium
-                )
             }
         }
     }

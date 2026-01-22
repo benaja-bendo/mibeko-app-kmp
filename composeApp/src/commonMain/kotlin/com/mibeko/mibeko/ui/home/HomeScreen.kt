@@ -80,12 +80,11 @@ class HomeScreen : Screen {
                     HomeHeader()
                 }
                 
-                // Search Bar and Suggestions
+                // Search Trigger Button (navigates to SearchResults)
                 item {
-                    SearchSection(
-                        suggestions = uiState.aiSuggestions,
-                        onSearch = { query -> 
-                            navController.navigate(MibekoScreen.SearchResults(query = query))
+                    SearchTriggerButton(
+                        onClick = { 
+                            navController.navigate(MibekoScreen.SearchResults())
                         }
                     )
                 }
@@ -229,147 +228,67 @@ private fun HomeHeader() {
 }
 
 /**
- * Rangée de flux pour les éléments de suggestion.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun FlowRow(
-    modifier: Modifier = Modifier,
-    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
-    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
-    content: @Composable () -> Unit
-) {
-    androidx.compose.foundation.layout.FlowRow(
-        modifier = modifier,
-        horizontalArrangement = horizontalArrangement,
-        verticalArrangement = verticalArrangement
-    ) {
-        content()
-    }
-}
-
-/**
- * Section de recherche avec champ de saisie et puces de suggestion.
+ * Bouton déguisé en barre de recherche.
+ * Naviguer vers SearchResultsScreen au clic.
  */
 @Composable
-private fun SearchSection(
-    suggestions: List<String>,
-    onSearch: (String) -> Unit
-) {
-    var searchQuery by remember { mutableStateOf("") }
-    
-    Column(
+private fun SearchTriggerButton(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .offset(y = (-20).dp)
-            .padding(horizontal = 24.dp)
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 8.dp,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Posez votre question juridique (ex: \"Comment contester un licenciement ?\")...",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(24.dp))
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                ) {
-                    androidx.compose.foundation.text.BasicTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.weight(1f),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        decorationBox = { innerTextField ->
-                            if (searchQuery.isEmpty()) {
-                                Text(
-                                    "Licenciement sans cause réelle",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                )
-                            }
-                            innerTextField()
-                        }
-                    )
-                    
-                    Button(
-                        onClick = { if (searchQuery.isNotEmpty()) onSearch(searchQuery) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF2E7D32) // Green button
-                        ),
-                        shape = RoundedCornerShape(20.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            "Assistant IA ✨",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // Suggestion Chips
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            suggestions.take(3).forEach { suggestion ->
-                SuggestionChip(
-                    text = suggestion,
-                    onClick = { onSearch(suggestion) }
-                )
-            }
-        }
-    }
-}
-
-/**
- * Puce de suggestion pour la recherche.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SuggestionChip(text: String, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+            .padding(horizontal = 24.dp),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                Icons.Default.AutoAwesome,
+                Icons.Default.Search,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(14.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
             Text(
-                text = text,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                text = "Rechercher un article, une loi...",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            Surface(
+                color = MibekoBluePrimary,
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "IA",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White
+                    )
+                }
+            }
         }
     }
 }

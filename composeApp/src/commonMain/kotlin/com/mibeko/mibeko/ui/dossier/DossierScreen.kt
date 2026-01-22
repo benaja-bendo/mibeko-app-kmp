@@ -297,6 +297,11 @@ fun DossierTagChip(tag: DossierTag) {
             MaterialTheme.colorScheme.onSurfaceVariant,
             "Archivé"
         )
+        DossierTag.FAVORIS -> Triple(
+            MaterialTheme.colorScheme.tertiaryContainer,
+            MaterialTheme.colorScheme.onTertiaryContainer,
+            "Favoris"
+        )
     }
     
     Surface(
@@ -412,6 +417,7 @@ fun CreateDossierDialog(
                                         DossierTag.EN_COURS -> "En Cours"
                                         DossierTag.URGENT -> "Urgent"
                                         DossierTag.ARCHIVE -> "Archivé"
+                                        DossierTag.FAVORIS -> "Favoris"
                                     }
                                 )
                             }

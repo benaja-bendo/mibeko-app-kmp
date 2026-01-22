@@ -14,7 +14,6 @@ import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 import com.mibeko.mibeko.ui.home.HomeScreen
 import com.mibeko.mibeko.ui.favorites.FavoritesScreen
 import com.mibeko.mibeko.ui.settings.SettingsScreen
-import com.mibeko.mibeko.ui.search.ActiveSearchScreen
 import com.mibeko.mibeko.ui.search.SearchResultsScreen
 import com.mibeko.mibeko.ui.details.DocumentDetailScreen
 import com.mibeko.mibeko.ui.reader.ReaderScreen
@@ -80,10 +79,6 @@ fun App() {
                 composable<Screen.Home> { HomeScreen().Content() }
                 composable<Screen.Favorites> { FavoritesScreen().Content() }
                 composable<Screen.Settings> { SettingsScreen().Content() }
-                composable<Screen.ActiveSearch> { backStackEntry ->
-                    val route = backStackEntry.toRoute<Screen.ActiveSearch>()
-                    ActiveSearchScreen(tag = route.tag).Content()
-                }
                 composable<Screen.Dossiers> { DossierScreen().Content() }
                 composable<Screen.Library> { LibraryScreen().Content() }
                 composable<Screen.Downloads> { DownloadsScreen().Content() }
