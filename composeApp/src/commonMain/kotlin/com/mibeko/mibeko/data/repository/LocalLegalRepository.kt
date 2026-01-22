@@ -349,7 +349,7 @@ class LocalLegalRepository(
             val document = DocumentEntity(
                 id = article.codeId,
                 title = "Document", // We might not have the full title if from search
-                type_code = "unknown",
+                type_code = article.typeCode.ifEmpty { "unknown" },
                 last_updated = getCurrentTimeMillis(),
                 is_downloaded = false
             )
@@ -425,15 +425,38 @@ class LocalLegalRepository(
         val shouldUseNetwork = networkChecker.isNetworkAvailable() && 
                                !userPreferencesRepository.isOfflineModeEnabled()
         
-        return if (shouldUseNetwork) {
+        if (shouldUseNetwork) {
             try {
                 val response = apiService.fetchDocumentTypes()
-                response.data ?: emptyList()
+                if (response.success && response.data != null) {
+                    return response.data
+                }
             } catch (e: Exception) {
-                emptyList()
+                // Fallback to local
             }
-        } else {
-            emptyList()
+        }
+        
+        // Fallback or offline: Get unique types from local DB
+        return mibekoDao.getUniqueDocumentTypeCodes().map { code ->
+            com.mibeko.mibeko.data.remote.RemoteDocumentType(
+                code = code,
+                name = formatTypeCode(code)
+            )
+        }
+    }
+
+    private fun formatTypeCode(code: String): String {
+        return when (code) {
+            "CODE" -> "Codes"
+            "LOI" -> "Lois"
+            "DEC" -> "Décrets"
+            "ARR" -> "Arrêtés"
+            "CONST" -> "Constitution"
+            "LOI_ORG" -> "Lois Organiques"
+            "ORD" -> "Ordonnances"
+            "CIRC" -> "Circulaires"
+            "JUR" -> "Jurisprudence"
+            else -> code.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
         }
     }
 

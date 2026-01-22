@@ -30,6 +30,7 @@ import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen as NavScreen
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import kotlinx.coroutines.launch
 
 class DossierDetailScreen(private val dossierId: String) : Screen {
 
@@ -41,11 +42,23 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
         val uiState by viewModel.uiState.collectAsState()
         val showNoteDialog by viewModel.showNoteDialog.collectAsState()
         val showEditDialog by viewModel.showEditDialog.collectAsState()
+        val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+        val scope = rememberCoroutineScope()
+        val snackbarHostState = remember { SnackbarHostState() }
 
         val dossier = uiState.dossier
         val dossierColor = if (dossier != null) parseColor(dossier.color) else MaterialTheme.colorScheme.primary
 
+        fun shareDossierContent() {
+            val text = viewModel.generateTextExport()
+            clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(text))
+            scope.launch {
+                snackbarHostState.showSnackbar("Contenu copié dans le presse-papier")
+            }
+        }
+
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
                     title = { },
@@ -74,10 +87,14 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
             },
             bottomBar = {
                 DossierActionBar(
-                    onAddArticle = { /* TODO: Navigate to add article */ },
-                    onShare = { /* TODO: Share text */ },
+                    onAddArticle = { 
+                        scope.launch {
+                             snackbarHostState.showSnackbar("Pour ajouter un article, utilisez le bouton 'Ajouter au dossier' lors de la lecture d'un article.")
+                        }
+                    },
+                    onShare = { shareDossierContent() },
                     onEdit = { viewModel.showEditDialog() },
-                    onExportPdf = { /* TODO: Export PDF via API */ }
+                    onExportPdf = { shareDossierContent() } // Fallback to share for now
                 )
             },
             containerColor = MaterialTheme.colorScheme.background
@@ -88,29 +105,31 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                     .padding(top = padding.calculateTopPadding(), bottom = padding.calculateBottomPadding())
             ) {
                 // Header with dossier info
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(dossierColor)
-                        .padding(24.dp)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = dossierColor,
+                    shadowElevation = 4.dp,
+                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
                     ) {
                         // Folder icon
                         Box(
                             modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color.White.copy(alpha = 0.2f)),
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.25f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Filled.Folder,
                                 contentDescription = null,
                                 tint = Color.White,
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(36.dp)
                             )
                         }
                         
@@ -119,32 +138,42 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                         Text(
                             text = dossier?.name ?: "Chargement...",
                             color = Color.White,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         
-                        Text(
-                            text = buildString {
-                                append(dossier?.legal_domain ?: "")
-                                if (dossier != null) {
-                                    append(" • ")
-                                    append(
-                                        when (dossier.tag) {
-                                            DossierTag.EN_COURS -> "En Cours"
-                                            DossierTag.URGENT -> "Urgent"
-                                            DossierTag.ARCHIVE -> "Archivé"
-                                            DossierTag.FAVORIS -> "Favoris"
-                                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                             if (dossier != null) {
+                                Surface(
+                                    color = Color.White.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Text(
+                                        text = dossier.legal_domain,
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                     )
-                                    append(" • ")
-                                    append("${uiState.articleCount} articles")
                                 }
-                            },
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontSize = 14.sp
-                        )
+                                Surface(
+                                    color = Color.White.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Text(
+                                        text = "${uiState.articleCount} articles",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                             }
+                        }
                     }
                 }
                 

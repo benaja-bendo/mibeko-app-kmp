@@ -224,7 +224,6 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                     }
                 }
             },
-            bottomBar = { MibekoBottomBar(navController) },
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
             CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
@@ -251,21 +250,17 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                             onClick = { viewModel.updateFilter("Tout") }
                         )
                     }
-                    item {
-                        FilterChipItem(
-                            selected = uiState.currentFilter == "Codes",
-                            label = "Codes",
-                            count = uiState.counts["Codes"] ?: 0,
-                            onClick = { viewModel.updateFilter("Codes") }
-                        )
-                    }
-                    item {
-                        FilterChipItem(
-                            selected = uiState.currentFilter == "Lois",
-                            label = "Lois",
-                            count = uiState.counts["Lois"] ?: 0,
-                            onClick = { viewModel.updateFilter("Lois") }
-                        )
+                    
+                    items(uiState.documentTypes) { type ->
+                        val count = uiState.counts[type.code] ?: 0
+                        if (count > 0) {
+                            FilterChipItem(
+                                selected = uiState.currentFilter == type.code,
+                                label = type.name,
+                                count = count,
+                                onClick = { viewModel.updateFilter(type.code) }
+                            )
+                        }
                     }
                 }
 
@@ -331,6 +326,7 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                                     source = article.breadcrumb,
                                     snippet = article.content ?: "",
                                     query = searchText,
+                                    typeCode = article.typeCode,
                                     isDownloaded = article.isDownloaded,
                                     isFavorite = article.isFavorite,
                                     onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id)) }
@@ -342,6 +338,7 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
             }
         }
     }
+}
 }
 
 /**
@@ -527,6 +524,7 @@ private fun SearchResultCard(
     source: String,
     snippet: String,
     query: String,
+    typeCode: String,
     isDownloaded: Boolean,
     isFavorite: Boolean = false,
     onClick: () -> Unit
@@ -547,7 +545,7 @@ private fun SearchResultCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    val isCode = source.contains("Code", ignoreCase = true)
+                    val isCode = typeCode == "CODE" || typeCode == "LOI_ORG"
                     
                     // Type Badge
                     Surface(
@@ -555,7 +553,7 @@ private fun SearchResultCard(
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
-                            text = if (isCode) "CODE" else "LOI",
+                            text = typeCode,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = if (isCode) MibekoBluePrimary else MibekoGoldDark,
@@ -754,5 +752,4 @@ private fun FlowRow(
     ) {
         content()
     }
-}
 }

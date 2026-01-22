@@ -87,17 +87,26 @@ class DossierViewModel(
         }
     }
 
+    fun toggleViewMode() {
+        _uiState.update { it.copy(isGridView = !it.isGridView) }
+    }
+
     fun searchDossiers(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
-        if (query.isBlank()) {
-            loadDossiers()
-            return
-        }
         viewModelScope.launch {
-            repository.searchDossiers(query)
-                .collect { dossiers ->
-                    _uiState.update { it.copy(dossiers = dossiers) }
-                }
+            if (query.isBlank()) {
+                repository.getAllDossiers()
+                    .collect { dossiersWithCount ->
+                        _uiState.update {
+                            it.copy(dossiers = dossiersWithCount.map { dwc -> dwc.dossier })
+                        }
+                    }
+            } else {
+                repository.searchDossiers(query)
+                    .collect { dossiers ->
+                        _uiState.update { it.copy(dossiers = dossiers) }
+                    }
+            }
         }
     }
 
@@ -159,5 +168,6 @@ data class DossierListUiState(
     val dossiers: List<DossierEntity> = emptyList(),
     val error: String? = null,
     val searchQuery: String = "",
-    val selectedTag: DossierTag? = null
+    val selectedTag: DossierTag? = null,
+    val isGridView: Boolean = false
 )

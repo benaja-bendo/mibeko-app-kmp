@@ -22,6 +22,7 @@ fun com.mibeko.mibeko.data.local.dao.ArticleSearchResult.toArticleSpec(): Articl
         title = node_title,
         content = article.content,
         breadcrumb = node_title,
+        typeCode = type_code, // Added
         isFavorite = article.is_favorite,
         isDownloaded = doc_is_downloaded || article.is_offline
     )
@@ -32,6 +33,7 @@ fun ArticleEntity.toArticleSpec(
     codeId: String,
     title: String,
     breadcrumb: String,
+    typeCode: String = "", // Added
     isDocDownloaded: Boolean = false
 ): ArticleSpec {
     return ArticleSpec(
@@ -41,6 +43,7 @@ fun ArticleEntity.toArticleSpec(
         title = title,
         content = content,
         breadcrumb = breadcrumb,
+        typeCode = typeCode, // Added
         isFavorite = is_favorite,
         isDownloaded = isDocDownloaded || is_offline
     )
@@ -57,6 +60,7 @@ fun com.mibeko.mibeko.data.remote.RemoteSearchResult.toArticleSpec(): ArticleSpe
         title = node_title ?: "",
         content = content ?: "",
         breadcrumb = breadcrumb,
+        typeCode = document_type, // Map document_type from API to typeCode
         isFavorite = false // Remote results don't have favorite status
     )
 }

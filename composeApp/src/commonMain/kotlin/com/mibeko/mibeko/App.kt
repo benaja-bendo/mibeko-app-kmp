@@ -51,12 +51,13 @@ fun App() {
             Screen.Library::class.qualifiedName,
             Screen.Favorites::class.qualifiedName,
             Screen.Dossiers::class.qualifiedName,
-            Screen.Settings::class.qualifiedName
+            Screen.Settings::class.qualifiedName,
+            Screen.SearchResults::class.qualifiedName
         )
         
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
-        val showBottomBar = currentRoute in bottomBarScreens
+        val showBottomBar = bottomBarScreens.any { screen -> currentRoute?.contains(screen ?: "") == true }
 
         Scaffold(
             bottomBar = {

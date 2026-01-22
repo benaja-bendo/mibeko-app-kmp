@@ -8,6 +8,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,31 +42,59 @@ class DossierScreen : Screen {
         val uiState by viewModel.uiState.collectAsState()
         val showCreateDialog by viewModel.showCreateDialog.collectAsState()
         val editingDossier by viewModel.editingDossier.collectAsState()
+        var showSearch by remember { mutableStateOf(false) }
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text("Mes Dossiers", fontWeight = FontWeight.Bold) },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    actions = {
-                        IconButton(onClick = { /* TODO: Show search */ }) {
-                            Icon(
-                                Icons.Filled.Search,
-                                contentDescription = "Rechercher"
-                            )
+                // Search Bar integrated in Top Bar
+                if (uiState.searchQuery.isNotEmpty() || showSearch) {
+                    DockedSearchBar(
+                        query = uiState.searchQuery,
+                        onQueryChange = { viewModel.searchDossiers(it) },
+                        onSearch = { showSearch = false },
+                        active = false,
+                        onActiveChange = { },
+                        placeholder = { Text("Rechercher un dossier...") },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        trailingIcon = {
+                             if (uiState.searchQuery.isNotEmpty()) {
+                                 IconButton(onClick = { viewModel.searchDossiers("") }) {
+                                     Icon(Icons.Filled.Close, contentDescription = "Effacer")
+                                 }
+                             } else {
+                                 IconButton(onClick = { showSearch = false }) {
+                                     Icon(Icons.Filled.Close, contentDescription = "Fermer")
+                                 }
+                             }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) { }
+                } else {
+                    TopAppBar(
+                        title = { Text("Mes Dossiers", fontWeight = FontWeight.Bold) },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                            actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        actions = {
+                            IconButton(onClick = { showSearch = true }) {
+                                Icon(
+                                    Icons.Filled.Search,
+                                    contentDescription = "Rechercher"
+                                )
+                            }
+                            IconButton(onClick = { viewModel.toggleViewMode() }) {
+                                Icon(
+                                    if (uiState.isGridView) Icons.Filled.ViewList else Icons.Filled.GridView,
+                                    contentDescription = "Mode d'affichage"
+                                )
+                            }
                         }
-                        IconButton(onClick = { /* TODO: Show filter */ }) {
-                            Icon(
-                                Icons.Filled.FilterList,
-                                contentDescription = "Filtrer"
-                            )
-                        }
-                    }
-                )
+                    )
+                }
             },
             floatingActionButton = {
                 FloatingActionButton(
@@ -134,20 +165,41 @@ class DossierScreen : Screen {
                         }
                     }
                     else -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(uiState.dossiers) { dossier ->
-                                DossierCard(
-                                    dossier = dossier,
-                                    onClick = {
-                                        navController.navigate(NavScreen.DossierDetail(dossier.id))
-                                    },
-                                    onEdit = { viewModel.showEditDialog(dossier) },
-                                    onDelete = { viewModel.deleteDossier(dossier.id) }
-                                )
+                        if (uiState.isGridView) {
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 160.dp),
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(uiState.dossiers) { dossier ->
+                                    DossierGridCard(
+                                        dossier = dossier,
+                                        onClick = {
+                                            navController.navigate(NavScreen.DossierDetail(dossier.id))
+                                        },
+                                        onEdit = { viewModel.showEditDialog(dossier) },
+                                        onDelete = { viewModel.deleteDossier(dossier.id) }
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(uiState.dossiers) { dossier ->
+                                    DossierCard(
+                                        dossier = dossier,
+                                        onClick = {
+                                            navController.navigate(NavScreen.DossierDetail(dossier.id))
+                                        },
+                                        onEdit = { viewModel.showEditDialog(dossier) },
+                                        onDelete = { viewModel.deleteDossier(dossier.id) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -485,4 +537,97 @@ fun formatDate(timestamp: Long): String {
     if (diff < 604800000L) return "Il y a ${diff / 86400000L} jours"
     
     return "Modifié hier"
+}
+@Composable
+fun DossierGridCard(
+    dossier: DossierEntity,
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Folder Icon
+                Icon(
+                    Icons.Filled.Folder,
+                    contentDescription = null,
+                    tint = parseColor(dossier.color),
+                    modifier = Modifier.size(48.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = dossier.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+
+            // Menu Icon Top Right
+            Box(modifier = Modifier.align(Alignment.TopEnd)) {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.MoreVert,
+                        contentDescription = "Options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Modifier") },
+                        onClick = {
+                            showMenu = false
+                            onEdit()
+                        },
+                        leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Supprimer", color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showMenu = false
+                            onDelete()
+                        },
+                        leadingIcon = { 
+                            Icon(
+                                Icons.Filled.Delete, 
+                                contentDescription = null, 
+                                tint = MaterialTheme.colorScheme.error
+                            ) 
+                        }
+                    )
+                }
+            }
+            
+            // Tag Bottom Center
+            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                 DossierTagChip(tag = dossier.tag)
+            }
+        }
+    }
 }

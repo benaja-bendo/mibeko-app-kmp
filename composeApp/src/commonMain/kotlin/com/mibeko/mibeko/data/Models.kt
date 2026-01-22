@@ -16,6 +16,7 @@ data class ArticleSpec(
     val title: String,
     val content: String?,
     val breadcrumb: String,
+    val typeCode: String = "", // Added for filtering
     val isFavorite: Boolean = false,
     val isDownloaded: Boolean = false
 )

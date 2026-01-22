@@ -41,6 +41,9 @@ interface MibekoDao {
     @Query("SELECT id FROM documents WHERE is_downloaded = 1")
     suspend fun getDownloadedDocumentIds(): List<String>
 
+    @Query("SELECT DISTINCT type_code FROM documents")
+    suspend fun getUniqueDocumentTypeCodes(): List<String>
+
     @Query("UPDATE documents SET is_downloaded = :isDownloaded WHERE id = :documentId")
     suspend fun updateDocumentDownloadStatus(documentId: String, isDownloaded: Boolean)
 
@@ -55,7 +58,7 @@ interface MibekoDao {
 
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
@@ -65,7 +68,7 @@ interface MibekoDao {
 
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
@@ -75,7 +78,7 @@ interface MibekoDao {
 
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
@@ -114,7 +117,7 @@ interface MibekoDao {
 
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
@@ -124,7 +127,7 @@ interface MibekoDao {
 
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
@@ -134,6 +137,7 @@ interface MibekoDao {
     fun searchArticles(query: String): Flow<List<ArticleSearchResult>>
 
     // ========== DOSSIERS ==========
+
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDossier(dossier: DossierEntity)
@@ -196,7 +200,8 @@ data class ArticleSearchResult(
     @Embedded val article: ArticleEntity,
     val document_id: String,
     val node_title: String,
-    val doc_is_downloaded: Boolean
+    val doc_is_downloaded: Boolean,
+    val type_code: String // Added for filtering
 )
 
 data class DossierArticleWithDetails(

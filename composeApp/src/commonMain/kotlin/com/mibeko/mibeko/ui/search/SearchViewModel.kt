@@ -26,7 +26,8 @@ data class SearchUiState(
     val aiAnswer: String? = null,
     val errorMessage: String? = null,
     val isFromNetwork: Boolean = false,
-    val currentFilter: String = "Tout"
+    val currentFilter: String = "Tout",
+    val documentTypes: List<com.mibeko.mibeko.data.remote.RemoteDocumentType> = emptyList()
 )
 
 class SearchViewModel(
@@ -45,6 +46,17 @@ class SearchViewModel(
     
     private var allSearchResults: List<ArticleSpec> = emptyList()
     private var currentTag: String? = null
+    
+    init {
+        fetchDocumentTypes()
+    }
+
+    private fun fetchDocumentTypes() {
+        viewModelScope.launch {
+            val types = repository.getDocumentTypes()
+            _uiState.value = _uiState.value.copy(documentTypes = types)
+        }
+    }
     
     /**
      * Recent search history from local storage.
@@ -192,11 +204,17 @@ class SearchViewModel(
     }
     
     private fun calculateCounts(results: List<ArticleSpec>): Map<String, Int> {
-        return mapOf(
-            "Tout" to results.size,
-            "Codes" to results.count { it.title.contains("Code", ignoreCase = true) },
-            "Lois" to results.count { it.title.contains("Loi", ignoreCase = true) }
-        )
+        val counts = mutableMapOf<String, Int>()
+        counts["Tout"] = results.size
+        
+        // Count by typeCode
+        results.forEach { article ->
+            if (article.typeCode.isNotEmpty()) {
+                counts[article.typeCode] = (counts[article.typeCode] ?: 0) + 1
+            }
+        }
+        
+        return counts
     }
     
     /**
@@ -204,10 +222,9 @@ class SearchViewModel(
      */
     private fun applyFilter(results: List<ArticleSpec>, filter: String): List<ArticleSpec> {
         return when (filter) {
-            "Codes" -> results.filter { it.title.contains("Code", ignoreCase = true) }
-            "Lois" -> results.filter { it.title.contains("Loi", ignoreCase = true) }
+            "Tout" -> results
             "Downloaded" -> results.filter { it.isDownloaded }
-            else -> results
+            else -> results.filter { it.typeCode == filter }
         }
     }
     
