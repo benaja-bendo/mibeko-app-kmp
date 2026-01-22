@@ -47,6 +47,9 @@ interface MibekoDao {
     @Query("UPDATE articles SET is_offline = :isOffline WHERE id = :articleId")
     suspend fun updateArticleOfflineStatus(articleId: String, isOffline: Boolean)
 
+    @Query("UPDATE articles SET is_favorite = :isFavorite WHERE id = :articleId")
+    suspend fun updateArticleFavoriteStatus(articleId: String, isFavorite: Boolean)
+
     @Query("DELETE FROM articles WHERE node_id IN (SELECT id FROM nodes WHERE document_id = :documentId) AND is_favorite = 0 AND is_offline = 0")
     suspend fun deleteNonFavoriteArticlesFromDocument(documentId: String)
 

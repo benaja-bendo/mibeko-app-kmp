@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -21,6 +22,7 @@ import kotlinx.coroutines.launch
 data class SearchUiState(
     val isLoading: Boolean = false,
     val results: List<ArticleSpec> = emptyList(),
+    val counts: Map<String, Int> = emptyMap(),
     val aiAnswer: String? = null,
     val errorMessage: String? = null,
     val isFromNetwork: Boolean = false,
@@ -96,10 +98,12 @@ class SearchViewModel(
             when (val result = repository.searchHybrid(query = query)) {
                 is SearchResult.Success -> {
                     allSearchResults = result.articles
+                    val counts = calculateCounts(allSearchResults)
                     val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
                     _uiState.value = SearchUiState(
                         isLoading = false,
                         results = filteredResults,
+                        counts = counts,
                         aiAnswer = result.aiAnswer,
                         isFromNetwork = result.isFromNetwork,
                         currentFilter = _uiState.value.currentFilter
@@ -107,10 +111,12 @@ class SearchViewModel(
                 }
                 is SearchResult.Error -> {
                     allSearchResults = result.fallbackArticles
+                    val counts = calculateCounts(allSearchResults)
                     val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
                     _uiState.value = SearchUiState(
                         isLoading = false,
                         results = filteredResults,
+                        counts = counts,
                         errorMessage = result.message,
                         isFromNetwork = false,
                         currentFilter = _uiState.value.currentFilter
@@ -131,10 +137,12 @@ class SearchViewModel(
             when (val result = repository.searchHybrid(tag = tag)) {
                 is SearchResult.Success -> {
                     allSearchResults = result.articles
+                    val counts = calculateCounts(allSearchResults)
                     val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
                     _uiState.value = SearchUiState(
                         isLoading = false,
                         results = filteredResults,
+                        counts = counts,
                         aiAnswer = result.aiAnswer,
                         isFromNetwork = result.isFromNetwork,
                         currentFilter = _uiState.value.currentFilter
@@ -142,10 +150,12 @@ class SearchViewModel(
                 }
                 is SearchResult.Error -> {
                     allSearchResults = result.fallbackArticles
+                    val counts = calculateCounts(allSearchResults)
                     val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
                     _uiState.value = SearchUiState(
                         isLoading = false,
                         results = filteredResults,
+                        counts = counts,
                         errorMessage = result.message,
                         isFromNetwork = false,
                         currentFilter = _uiState.value.currentFilter
@@ -156,6 +166,37 @@ class SearchViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * Toggle favorite status for an article.
+     */
+    fun toggleFavorite(articleId: String) {
+        viewModelScope.launch {
+            repository.getArticleById(articleId).first()?.let { article ->
+                val newFavoriteStatus = !article.isFavorite
+                // We need a method in repository to toggle favorite
+                // Looking at LocalLegalRepository, it doesn't have a direct toggleFavorite
+                // But it has mibekoDao. Let's assume we use a direct DAO call or add to repository.
+                // For simplicity, let's update the local state first to be reactive
+                allSearchResults = allSearchResults.map {
+                    if (it.id == articleId) it.copy(isFavorite = newFavoriteStatus) else it
+                }
+                val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
+                _uiState.value = _uiState.value.copy(results = filteredResults)
+                
+                // Actual update in DB
+                repository.updateArticleFavoriteStatus(articleId, newFavoriteStatus)
+            }
+        }
+    }
+    
+    private fun calculateCounts(results: List<ArticleSpec>): Map<String, Int> {
+        return mapOf(
+            "Tout" to results.size,
+            "Codes" to results.count { it.title.contains("Code", ignoreCase = true) },
+            "Lois" to results.count { it.title.contains("Loi", ignoreCase = true) }
+        )
     }
     
     /**

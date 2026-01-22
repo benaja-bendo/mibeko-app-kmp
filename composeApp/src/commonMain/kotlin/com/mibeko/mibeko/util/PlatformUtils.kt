@@ -10,6 +10,16 @@ expect fun getDatabaseSize(): Long
 expect fun formatTimestampToDate(timestamp: Long): String
 
 /**
+ * Copies text to the system clipboard.
+ */
+expect fun copyToClipboard(text: String)
+
+/**
+ * Opens the system share sheet for the given text.
+ */
+expect fun shareText(text: String)
+
+/**
  * Formats a size in bytes to a human-readable string (KB, MB).
  */
 fun formatSize(bytes: Long): String {

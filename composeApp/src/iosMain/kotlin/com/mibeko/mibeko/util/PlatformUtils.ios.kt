@@ -1,6 +1,7 @@
 package com.mibeko.mibeko.util
 
 import kotlinx.cinterop.ExperimentalForeignApi
+import platform.UIKit.*
 import platform.Foundation.*
 
 @OptIn(ExperimentalForeignApi::class)
@@ -24,4 +25,17 @@ actual fun formatTimestampToDate(timestamp: Long): String {
         dateFormat = "dd/MM/yyyy HH:mm"
     }
     return formatter.stringFromDate(date)
+}
+
+actual fun copyToClipboard(text: String) {
+    UIPasteboard.generalPasteboard.string = text
+}
+
+actual fun shareText(text: String) {
+    val window = UIApplication.sharedApplication.keyWindow ?: UIApplication.sharedApplication.windows.firstOrNull() as? UIWindow
+    val rootViewController = window?.rootViewController
+    if (rootViewController != null) {
+        val activityViewController = UIActivityViewController(listOf(text), null)
+        rootViewController.presentViewController(activityViewController, true, null)
+    }
 }

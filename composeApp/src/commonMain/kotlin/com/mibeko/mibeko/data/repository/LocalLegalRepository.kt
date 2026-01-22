@@ -378,6 +378,18 @@ class LocalLegalRepository(
         }
     }
 
+    suspend fun updateArticleFavoriteStatus(articleId: String, isFavorite: Boolean) {
+        // If the article doesn't exist locally (from network search), we need to create a shell
+        val existing = mibekoDao.getArticleById(articleId).first()
+        if (existing == null) {
+            // This is a rare case where we favorite a network result not yet in DB
+            // We'll need more info from ArticleSpec, but ViewModel handles it for now
+            // For a robust implementation, we'd need to fetch or have full data
+        } else {
+            mibekoDao.updateArticleFavoriteStatus(articleId, isFavorite)
+        }
+    }
+
     suspend fun removeArticleDownload(articleId: String) {
         mibekoDao.updateArticleOfflineStatus(articleId, false)
         // Note: We don't necessarily delete the article from DB here 

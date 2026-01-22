@@ -1,6 +1,9 @@
 package com.mibeko.mibeko.util
 
 import android.content.Context
+import android.content.Intent
+import android.content.ClipboardManager
+import android.content.ClipData
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.text.SimpleDateFormat
@@ -27,4 +30,24 @@ actual fun formatTimestampToDate(timestamp: Long): String {
     if (timestamp == 0L) return "Jamais"
     val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
     return sdf.format(Date(timestamp))
+}
+
+actual fun copyToClipboard(text: String) {
+    val context = PlatformContextProvider.context
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("Mibeko AI", text)
+    clipboard.setPrimaryClip(clip)
+}
+
+actual fun shareText(text: String) {
+    val context = PlatformContextProvider.context
+    val sendIntent: Intent = Intent().apply {
+        action = Intent.ACTION_SEND
+        putExtra(Intent.EXTRA_TEXT, text)
+        type = "text/plain"
+    }
+    val shareIntent = Intent.createChooser(sendIntent, null).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(shareIntent)
 }

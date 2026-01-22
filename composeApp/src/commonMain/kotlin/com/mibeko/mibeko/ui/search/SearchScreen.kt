@@ -56,6 +56,12 @@ import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.components.HighlightedText
 import com.mibeko.mibeko.ui.components.SearchResultsShimmer
+import com.mibeko.mibeko.util.copyToClipboard
+import com.mibeko.mibeko.util.shareText
+
+val LocalSnackbarHostState = staticCompositionLocalOf<SnackbarHostState> {
+    error("No SnackbarHostState provided")
+}
 
 data class SearchResultsScreen(val query: String? = null, val tag: String? = null) : Screen {
     
@@ -218,13 +224,15 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                     }
                 }
             },
+            bottomBar = { MibekoBottomBar(navController) },
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = padding.calculateTopPadding())
-            ) {
+            CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
                 // L'indicateur réseau est maintenant dans la SearchBar
                 
                 // Filter Chips
@@ -239,7 +247,7 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                         FilterChipItem(
                             selected = uiState.currentFilter == "Tout",
                             label = "Tout",
-                            count = if (uiState.currentFilter == "Tout") uiState.results.size else null,
+                            count = uiState.counts["Tout"] ?: 0,
                             onClick = { viewModel.updateFilter("Tout") }
                         )
                     }
@@ -247,6 +255,7 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                         FilterChipItem(
                             selected = uiState.currentFilter == "Codes",
                             label = "Codes",
+                            count = uiState.counts["Codes"] ?: 0,
                             onClick = { viewModel.updateFilter("Codes") }
                         )
                     }
@@ -254,6 +263,7 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                         FilterChipItem(
                             selected = uiState.currentFilter == "Lois",
                             label = "Lois",
+                            count = uiState.counts["Lois"] ?: 0,
                             onClick = { viewModel.updateFilter("Lois") }
                         )
                     }
@@ -275,23 +285,6 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                         SearchResultsShimmer(
                             itemCount = 4,
                             modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
-                }
-
-                // Results count badge
-                if (!uiState.isLoading && uiState.results.isNotEmpty()) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = "${uiState.results.size} résultat${if (uiState.results.size > 1) "s" else ""}",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
                 }
@@ -333,6 +326,7 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                         } else {
                             items(uiState.results) { article ->
                                 SearchResultCard(
+                                    articleId = article.id,
                                     articleNumber = article.number,
                                     source = article.breadcrumb,
                                     snippet = article.content ?: "",
@@ -357,6 +351,8 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
 @Composable
 private fun AiAnswerCard(answer: String) {
     var isExpanded by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = LocalSnackbarHostState.current // Assuming we provide it or use Local
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -384,7 +380,7 @@ private fun AiAnswerCard(answer: String) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface( 
+                        Surface(
                             color = MibekoBluePrimary,
                             shape = CircleShape,
                             modifier = Modifier.size(32.dp)
@@ -415,10 +411,16 @@ private fun AiAnswerCard(answer: String) {
                     }
                     
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { /* Copy */ }, modifier = Modifier.size(32.dp)) {
+                        IconButton(onClick = { 
+                            copyToClipboard(answer)
+                            // We can't easily show snackbar here without access to scaffold state
+                            // but we can try to find it or just perform the action
+                        }, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.ContentCopy, null, tint = MibekoBluePrimary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                         }
-                        IconButton(onClick = { /* Share */ }, modifier = Modifier.size(32.dp)) {
+                        IconButton(onClick = { 
+                            shareText(answer)
+                        }, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.Share, null, tint = MibekoBluePrimary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                         }
                         IconButton(onClick = { isExpanded = !isExpanded }, modifier = Modifier.size(32.dp)) {
@@ -481,7 +483,7 @@ private fun AiAnswerCard(answer: String) {
 private fun FilterChipItem(
     selected: Boolean,
     label: String,
-    count: Int? = null,
+    count: Int,
     onClick: () -> Unit
 ) {
     FilterChip(
@@ -490,11 +492,19 @@ private fun FilterChipItem(
         label = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(label)
-                if (count != null && selected) {
-                    Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Surface(
+                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f) 
+                            else MaterialTheme.colorScheme.surfaceVariant,
+                    shape = CircleShape
+                ) {
                     Text(
-                        "($count)",
-                        style = MaterialTheme.typography.labelSmall
+                        text = count.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer 
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -512,6 +522,7 @@ private fun FilterChipItem(
  */
 @Composable
 private fun SearchResultCard(
+    articleId: String,
     articleNumber: String,
     source: String,
     snippet: String,
@@ -520,6 +531,7 @@ private fun SearchResultCard(
     isFavorite: Boolean = false,
     onClick: () -> Unit
 ) {
+    val viewModel = koinViewModel<SearchViewModel>()
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -574,12 +586,17 @@ private fun SearchResultCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Icon(
-                        if (isFavorite) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                        contentDescription = "Favori",
-                        tint = if (isFavorite) MibekoGold else MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    IconButton(
+                        onClick = { viewModel.toggleFavorite(articleId) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            if (isFavorite) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                            contentDescription = "Favori",
+                            tint = if (isFavorite) MibekoGold else MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 
@@ -737,4 +754,5 @@ private fun FlowRow(
     ) {
         content()
     }
+}
 }
