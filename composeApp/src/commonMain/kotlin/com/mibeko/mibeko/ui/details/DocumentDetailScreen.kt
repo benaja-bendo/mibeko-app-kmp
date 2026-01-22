@@ -51,8 +51,9 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
         val uiState by viewModel.uiState.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
         
-        val backgroundColor = Color(0xFFF9F6F0) // Parchment white
-        val textColor = Color(0xFF1A1A1A)
+        val backgroundColor = MaterialTheme.colorScheme.background
+        val textColor = MaterialTheme.colorScheme.onBackground
+        val surfaceColor = MaterialTheme.colorScheme.surface
 
         LaunchedEffect(documentId) {
             viewModel.loadStructure(documentId)
@@ -69,7 +70,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 Column {
-                    TopAppBar(
+                    CenterAlignedTopAppBar(
                         title = { 
                             Text(
                                 text = uiState.document?.title ?: "Détails", 
@@ -90,28 +91,43 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                                 Icon(Icons.Filled.Search, contentDescription = "Rechercher", tint = textColor)
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor)
+                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                            containerColor = surfaceColor,
+                            scrolledContainerColor = surfaceColor
+                        )
                     )
                     
-                    // Breadcrumb
+                    // Breadcrumb with subtle style
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(textColor.copy(alpha = 0.05f))
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .background(surfaceColor)
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Bibliothèque Juridique", style = MaterialTheme.typography.labelSmall, color = textColor.copy(alpha = 0.6f))
+                        Text(
+                            "Bibliothèque", 
+                            style = MaterialTheme.typography.labelSmall, 
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { navController.popBackStack() }
+                        )
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, modifier = Modifier.size(12.dp), tint = textColor.copy(alpha = 0.3f))
-                        Text(uiState.document?.title ?: "", style = MaterialTheme.typography.labelSmall, color = textColor, maxLines = 1)
+                        Text(
+                            uiState.document?.title ?: "", 
+                            style = MaterialTheme.typography.labelSmall, 
+                            color = textColor.copy(alpha = 0.6f), 
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
                     }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 }
             },
             bottomBar = {
                 Surface(
-                    color = backgroundColor,
+                    color = surfaceColor,
                     shadowElevation = 8.dp,
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, textColor.copy(alpha = 0.1f))
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
                     Row(
                         modifier = Modifier
@@ -123,9 +139,9 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                             onClick = { viewModel.toggleOffline() },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (uiState.document?.isDownloaded == true) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                containerColor = if (uiState.document?.isDownloaded == true) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary
                             ),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(12.dp),
                             enabled = !uiState.isDownloading
                         ) {
                             if (uiState.isDownloading) {
@@ -138,7 +154,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    if (uiState.document?.isDownloaded == true) "Disponible Hors-ligne" else "Mettre Hors-ligne",
+                                    if (uiState.document?.isDownloaded == true) "Hors-ligne" else "Télécharger",
                                     style = MaterialTheme.typography.labelLarge
                                 )
                             }
@@ -147,8 +163,8 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                         OutlinedButton(
                             onClick = { /* Share */ },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                         ) {
                             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
@@ -162,23 +178,46 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
             when {
                 uiState.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Chargement du document...", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
                 uiState.error != null && uiState.structure.isEmpty() -> {
                     Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Gavel, null, modifier = Modifier.size(64.dp), tint = textColor.copy(alpha = 0.2f))
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = uiState.error ?: "Une erreur est survenue",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = textColor.copy(alpha = 0.6f),
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 32.dp)
-                            )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                            Surface(
+                                modifier = Modifier.size(80.dp),
+                                shape = RoundedCornerShape(40.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
+                            ) {
+                                Icon(
+                                    Icons.Default.Gavel, 
+                                    null, 
+                                    modifier = Modifier.padding(20.dp), 
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                             Spacer(modifier = Modifier.height(24.dp))
-                            Button(onClick = { viewModel.loadStructure(documentId) }) {
+                            Text(
+                                text = "Oups !",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = uiState.error ?: "Une erreur est survenue lors de la récupération du document.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = textColor.copy(alpha = 0.6f),
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(32.dp))
+                            Button(
+                                onClick = { viewModel.loadStructure(documentId) },
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
                                 Text("Réessayer")
                             }
                         }
@@ -186,7 +225,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                 }
                 uiState.structure.isEmpty() -> {
                     Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                        Text("Aucun contenu disponible", color = textColor.copy(alpha = 0.5f))
+                        Text("Aucun contenu disponible pour ce document.", color = textColor.copy(alpha = 0.5f))
                     }
                 }
                 else -> {
@@ -195,53 +234,83 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
                         item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = surfaceColor
                             ) {
-                                Text(
-                                    text = uiState.document?.title?.uppercase() ?: "",
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = textColor,
-                                    textAlign = TextAlign.Center,
-                                    lineHeight = 28.sp
-                                )
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                HorizontalDivider(modifier = Modifier.width(40.dp), thickness = 2.dp, color = textColor.copy(alpha = 0.2f))
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                Text(
-                                    text = "RECHERCHER une loi...",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = textColor.copy(alpha = 0.4f),
-                                    fontWeight = FontWeight.Bold
-                                )
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                HorizontalDivider(modifier = Modifier.width(40.dp), thickness = 2.dp, color = textColor.copy(alpha = 0.2f))
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp, vertical = 32.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            text = uiState.document?.type ?: "DOC",
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    
+                                    Text(
+                                        text = uiState.document?.title ?: "",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = textColor,
+                                        textAlign = TextAlign.Center,
+                                        lineHeight = 28.sp
+                                    )
+                                    
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                    
+                                    // Internal search bar look-alike
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { /* Trigger search */ },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = backgroundColor,
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Default.Search, null, modifier = Modifier.size(20.dp), tint = textColor.copy(alpha = 0.4f))
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(
+                                                "Rechercher un article...",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = textColor.copy(alpha = 0.4f)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 
                         val sortedNodes = uiState.structure.keys.sortedBy { it.sort_order }
                         sortedNodes.forEach { node ->
                             item {
-                                Surface(
-                                    color = textColor.copy(alpha = 0.03f),
-                                    modifier = Modifier.fillMaxWidth()
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(backgroundColor)
+                                        .padding(horizontal = 24.dp, vertical = 16.dp)
                                 ) {
                                     Text(
                                         text = node.title,
-                                        style = MaterialTheme.typography.titleMedium,
+                                        style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = textColor,
-                                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                                        color = MaterialTheme.colorScheme.primary,
+                                        letterSpacing = 1.sp
                                     )
                                 }
                             }
@@ -265,35 +334,51 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
  */
 @Composable
 fun ArticleItem(article: ArticleEntity, textColor: Color, onClick: () -> Unit) {
-    Column(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .clickable(onClick = onClick),
+        color = Color.Transparent
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "Article ${article.number}",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = textColor,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, modifier = Modifier.size(16.dp), tint = textColor.copy(alpha = 0.3f))
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        text = "Art. ${article.number}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight, 
+                    null, 
+                    modifier = Modifier.size(16.dp), 
+                    tint = textColor.copy(alpha = 0.2f)
+                )
+            }
+            
+            if (!article.content.isNullOrBlank()) {
+                Text(
+                    text = article.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = textColor.copy(alpha = 0.7f),
+                    maxLines = 3,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 8.dp),
+                    lineHeight = 20.sp
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
         }
-        
-        if (!article.content.isNullOrBlank()) {
-            Text(
-                text = article.content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = textColor.copy(alpha = 0.7f),
-                maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        HorizontalDivider(color = textColor.copy(alpha = 0.05f))
     }
 }

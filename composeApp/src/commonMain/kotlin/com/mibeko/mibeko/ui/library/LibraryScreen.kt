@@ -67,7 +67,7 @@ class LibraryScreen : Screen {
         ) { padding ->
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(bottom = 24.dp)
+                contentPadding = PaddingValues(bottom = 32.dp)
             ) {
                 // 1. Hero Section (Constitution)
                 item {
@@ -80,68 +80,70 @@ class LibraryScreen : Screen {
                     )
                 }
 
-                // 2. Hiérarchie des Normes (Vertical List)
+                // 2. Hiérarchie des Normes
                 item {
-                    Column(modifier = Modifier.padding(top = 24.dp, start = 16.dp, end = 16.dp)) {
-                        Text(
-                            text = "Hiérarchie des Normes",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                        
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            shape = RoundedCornerShape(12.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    Column(modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
-                                if (uiState.documentTypes.isEmpty()) {
-                                    // Fallback if API fails
-                                    val fallbackTypes = listOf(
-                                        "Constitution" to Icons.Default.Balance,
-                                        "Traités Internationaux" to Icons.Default.Public,
-                                        "Lois Organiques" to Icons.Default.AccountBalance,
-                                        "Lois Ordinaires" to Icons.Default.Description,
-                                        "Ordonnances" to Icons.Default.Gavel,
-                                        "Décrets" to Icons.Default.Article,
-                                        "Arrêtés" to Icons.Default.Assignment
+                            Text(
+                                text = "Hiérarchie des Normes",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            
+                            Text(
+                                text = "Importance",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (uiState.documentTypes.isEmpty()) {
+                                // Fallback if API fails
+                                val fallbackTypes = listOf(
+                                    "Constitution" to Icons.Default.Balance,
+                                    "Traités Internationaux" to Icons.Default.Public,
+                                    "Lois Organiques" to Icons.Default.AccountBalance,
+                                    "Lois Ordinaires" to Icons.Default.Description,
+                                    "Ordonnances" to Icons.Default.Gavel,
+                                    "Décrets" to Icons.Default.Article,
+                                    "Arrêtés" to Icons.Default.Assignment
+                                )
+                                fallbackTypes.forEach { pair ->
+                                    HierarchyCard(
+                                        icon = pair.second,
+                                        title = pair.first,
+                                        count = uiState.stats.find { it.type_name.contains(pair.first.split(" ").last(), ignoreCase = true) }?.count ?: 0,
+                                        onClick = { 
+                                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentList(typeCode = pair.first, typeName = pair.first))
+                                        }
                                     )
-                                    fallbackTypes.forEachIndexed { index, pair ->
-                                        HierarchyItem(
-                                            icon = pair.second,
-                                            title = pair.first,
-                                            count = uiState.stats.find { it.type_name.contains(pair.first.split(" ").last(), ignoreCase = true) }?.count ?: 0,
-                                            onClick = { 
-                                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentList(typeCode = pair.first, typeName = pair.first))
-                                            }
-                                        )
-                                        if (index < fallbackTypes.size - 1) {
-                                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                                }
+                            } else {
+                                uiState.documentTypes.forEach { type ->
+                                    HierarchyCard(
+                                        icon = when {
+                                            type.name.contains("Constitution", true) -> Icons.Default.Balance
+                                            type.name.contains("Traité", true) -> Icons.Default.Public
+                                            type.name.contains("Organique", true) -> Icons.Default.AccountBalance
+                                            type.name.contains("Ordinaire", true) -> Icons.Default.Description
+                                            type.name.contains("Ordonnance", true) -> Icons.Default.Gavel
+                                            type.name.contains("Décret", true) -> Icons.Default.Article
+                                            else -> Icons.Default.Assignment
+                                        },
+                                        title = type.name,
+                                        count = uiState.stats.find { it.type_code == type.code }?.count ?: 0,
+                                        onClick = { 
+                                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentList(typeCode = type.code, typeName = type.name))
                                         }
-                                    }
-                                } else {
-                                    uiState.documentTypes.forEachIndexed { index, type ->
-                                        HierarchyItem(
-                                            icon = when {
-                                                type.name.contains("Constitution", true) -> Icons.Default.Balance
-                                                type.name.contains("Traité", true) -> Icons.Default.Public
-                                                type.name.contains("Organique", true) -> Icons.Default.AccountBalance
-                                                type.name.contains("Ordinaire", true) -> Icons.Default.Description
-                                                type.name.contains("Ordonnance", true) -> Icons.Default.Gavel
-                                                type.name.contains("Décret", true) -> Icons.Default.Article
-                                                else -> Icons.Default.Assignment
-                                            },
-                                            title = type.name,
-                                            count = uiState.stats.find { it.type_code == type.code }?.count ?: 0,
-                                            onClick = { 
-                                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentList(typeCode = type.code, typeName = type.name))
-                                            }
-                                        )
-                                        if (index < uiState.documentTypes.size - 1) {
-                                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                                        }
-                                    }
+                                    )
                                 }
                             }
                         }
@@ -157,97 +159,81 @@ class LibraryScreen : Screen {
  */
 @Composable
 private fun HeroCard(title: String, subtitle: String, onClick: () -> Unit) {
-    Card(
+    Surface(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
+            .height(200.dp)
             .padding(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        color = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(24.dp),
+        shadowElevation = 8.dp
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    Icons.Default.Balance,
-                    contentDescription = null,
-                    tint = Color(0xFFB8860B), // Gold
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Background decoration
+            Icon(
+                Icons.Default.Balance,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.1f),
+                modifier = Modifier
+                    .size(180.dp)
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 40.dp, y = 40.dp)
+            )
+            
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Surface(
+                    color = Color(0xFFB8860B).copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "LOI SUPRÊME",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFB8860B),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = Color.White
                 )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = Color.White.copy(alpha = 0.8f),
+                    lineHeight = 20.sp
                 )
-            }
-        }
-    }
-}
-
-/**
- * Carte pour afficher un code avec option de téléchargement.
- */
-@Composable
-private fun CodeCard(
-    code: LawCodeSpec,
-    isDownloading: Boolean,
-    onDownload: () -> Unit,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.width(160.dp).height(140.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp).fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = code.title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-            )
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (code.isDownloaded) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color(0xFF2E7D32))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Hors-ligne", style = MaterialTheme.typography.labelSmall, color = Color(0xFF2E7D32))
-                    }
-                } else {
-                    if (isDownloading) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { onDownload() }
-                        ) {
-                            Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Télécharger", style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Consulter",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }
@@ -255,30 +241,64 @@ private fun CodeCard(
 }
 
 /**
- * Élément de liste pour la hiérarchie des normes.
+ * Carte modernisée pour la hiérarchie des normes.
  */
 @Composable
-private fun HierarchyItem(
+private fun HierarchyCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     count: Int,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        shadowElevation = 1.dp
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Text(
-            text = "($count)",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+            ) {
+                Icon(
+                    icon, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "$count documents",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight, 
+                contentDescription = null, 
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }

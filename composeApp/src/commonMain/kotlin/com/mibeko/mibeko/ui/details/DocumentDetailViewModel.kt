@@ -50,7 +50,36 @@ class DocumentDetailViewModel(private val repository: LocalLegalRepository) : Vi
         _uiState.value = _uiState.value.copy(isLoading = true, error = null)
         
         viewModelScope.launch {
-            // Collect structure and document from local DB
+            // Launch remote fetch in background if needed
+            launch {
+                try {
+                    val localData = repository.getStructure(documentId).first()
+                    val localDoc = repository.getLawCodes().first().find { it.id == documentId }
+                    
+                    if (localData.isEmpty() || localDoc == null) {
+                        if (localDoc == null) {
+                            repository.fetchAndStoreDocument(documentId)
+                        }
+                        repository.fetchAndStoreDocumentStructure(documentId)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Only show error if we have no data at all
+                    if (_uiState.value.structure.isEmpty()) {
+                        _uiState.value = _uiState.value.copy(
+                            error = "Impossible de charger le document. Vérifiez votre connexion.",
+                            isLoading = false
+                        )
+                    }
+                } finally {
+                    // Final check to stop loading if it hasn't stopped yet
+                    if (_uiState.value.isLoading) {
+                        _uiState.value = _uiState.value.copy(isLoading = false)
+                    }
+                }
+            }
+
+            // Observe local changes (this will pick up data from the remote fetch too)
             combine(
                 repository.getStructure(documentId),
                 repository.getLawCodes()
@@ -62,45 +91,10 @@ class DocumentDetailViewModel(private val repository: LocalLegalRepository) : Vi
                 _document.value = doc
                 _uiState.value = _uiState.value.copy(
                     structure = localStructure,
-                    document = doc
+                    document = doc,
+                    // If we have data, we can stop the loading indicator even if the background fetch isn't finished
+                    isLoading = if (localStructure.isNotEmpty()) false else _uiState.value.isLoading
                 )
-                
-                // If local data is present, we are no longer loading
-                if (localStructure.isNotEmpty()) {
-                    _uiState.value = _uiState.value.copy(isLoading = false)
-                }
-            }
-        }
-
-        viewModelScope.launch {
-            try {
-                // Check if we have data locally first
-                val localData = repository.getStructure(documentId).first()
-                val localDoc = repository.getLawCodes().first().find { it.id == documentId }
-                
-                if (localData.isEmpty() || localDoc == null) {
-                    // Fetch document info if missing
-                    if (localDoc == null) {
-                        repository.fetchAndStoreDocument(documentId)
-                    }
-                    
-                    // Fetch structure if missing
-                    repository.fetchAndStoreDocumentStructure(documentId)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                // Only show error if we still have no data
-                if (_uiState.value.structure.isEmpty()) {
-                    _uiState.value = _uiState.value.copy(
-                        error = "Impossible de charger le document. Vérifiez votre connexion.",
-                        isLoading = false
-                    )
-                }
-            } finally {
-                // If we finished fetching (even with error), and we have data or error, stop loading
-                if (_uiState.value.structure.isNotEmpty() || _uiState.value.error != null) {
-                    _uiState.value = _uiState.value.copy(isLoading = false)
-                }
             }
         }
     }

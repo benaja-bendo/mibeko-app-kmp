@@ -140,7 +140,7 @@ class HomeScreen : Screen {
                     ) {
                         Column(modifier = Modifier.padding(top = 24.dp)) {
                             Text(
-                                text = "Ajouté Récemment",
+                                text = "Documents",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground,
