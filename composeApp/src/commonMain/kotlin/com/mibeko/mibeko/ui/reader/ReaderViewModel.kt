@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.data.repository.DossierRepository
 import kotlinx.coroutines.flow.asStateFlow
 
 data class ReaderUiState(
@@ -18,9 +19,11 @@ data class ReaderUiState(
     val error: String? = null
 )
 
+
 class ReaderViewModel(
     private val repository: LocalLegalRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val dossierRepository: DossierRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReaderUiState())
@@ -41,6 +44,31 @@ class ReaderViewModel(
         viewModelScope.launch {
             try {
                 repository.toggleArticleOffline(currentArticle, !currentArticle.isDownloaded)
+                // Reload article to update UI state
+                loadArticle(currentArticle.id)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Erreur: ${e.message}")
+            }
+        }
+    }
+
+    fun toggleFavorite() {
+        val currentArticle = _uiState.value.article ?: return
+        val newStatus = !currentArticle.isFavorite
+        
+        viewModelScope.launch {
+            try {
+                // Update local status
+                repository.updateArticleFavoriteStatus(currentArticle.id, newStatus)
+                
+                // Sync with Favorites Dossier
+                val favoritesDossier = dossierRepository.getOrCreateFavoritesDossier()
+                if (newStatus) {
+                    dossierRepository.addArticleToDossier(favoritesDossier.id, currentArticle.id)
+                } else {
+                    dossierRepository.removeArticleFromDossier(favoritesDossier.id, currentArticle.id)
+                }
+                
                 // Reload article to update UI state
                 loadArticle(currentArticle.id)
             } catch (e: Exception) {

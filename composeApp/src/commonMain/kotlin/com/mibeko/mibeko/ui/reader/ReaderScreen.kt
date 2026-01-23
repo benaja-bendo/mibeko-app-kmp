@@ -3,6 +3,7 @@ package com.mibeko.mibeko.ui.reader
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -49,6 +50,7 @@ data class ReaderScreen(val articleId: String) : Screen {
         
         // Reading theme state (Internal for MVP, could be in VM)
         var readerTheme by remember { mutableStateOf("paper") } // "white", "paper", "dark"
+        var showSettings by remember { mutableStateOf(false) }
 
         LaunchedEffect(articleId) {
             viewModel.loadArticle(articleId)
@@ -133,7 +135,7 @@ data class ReaderScreen(val articleId: String) : Screen {
                     CenterAlignedTopAppBar(
                         title = {
                             Text(
-                                currentArticle.number, 
+                                "Article ${currentArticle.number}", 
                                 fontWeight = FontWeight.Bold, 
                                 style = MaterialTheme.typography.titleMedium,
                                 color = textColor
@@ -145,95 +147,36 @@ data class ReaderScreen(val articleId: String) : Screen {
                             }
                         },
                         actions = {
-                            IconButton(onClick = { /* Open search */ }) { 
-                                Icon(Icons.Filled.Search, contentDescription = "Rechercher", tint = textColor)
+                            // Offline Toggle
+                            IconButton(onClick = { viewModel.toggleOffline() }) {
+                                Icon(
+                                    if (currentArticle.isDownloaded) Icons.Default.CloudDone else Icons.Default.CloudDownload,
+                                    contentDescription = "Hors-ligne",
+                                    tint = if (currentArticle.isDownloaded) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.6f)
+                                )
+                            }
+                            // Favorite Toggle
+                            IconButton(onClick = { viewModel.toggleFavorite() }) {
+                                Icon(
+                                    if (currentArticle.isFavorite) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                                    contentDescription = "Favori",
+                                    tint = if (currentArticle.isFavorite) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.6f)
+                                )
+                            }
+                             // Settings
+                            IconButton(onClick = { showSettings = true }) { 
+                                Icon(Icons.Default.FormatSize, contentDescription = "Paramètres de lecture", tint = textColor)
                             }
                         },
                         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                             containerColor = backgroundColor
                         )
                     )
-                    
-                    // Functional Breadcrumb
-                    BreadcrumbBar(
-                        breadcrumb = currentArticle.breadcrumb,
-                        textColor = textColor,
-                        onNavigate = { /* TODO: Implement back navigation to levels */ }
-                    )
                 }
             },
-            bottomBar = {
-                Column {
-                    // Reader Controls Bar (Aa, TT, theme, slider)
-                    ReaderControlsBar(
-                        backgroundColor = backgroundColor,
-                        textColor = textColor,
-                        currentTextSize = textSize,
-                        onTextSizeChange = { viewModel.setTextSize(it) },
-                        currentTheme = readerTheme,
-                        onThemeChange = { readerTheme = it }
-                    )
-                    
-                    // Main Action Bar
-                    Surface(
-                        color = backgroundColor,
-                        shadowElevation = 8.dp,
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, textColor.copy(alpha = 0.1f))
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Button(
-                                onClick = { /* Navigate previous */ },
-                                colors = ButtonDefaults.buttonColors(containerColor = textColor.copy(alpha = 0.1f)),
-                                contentPadding = PaddingValues(horizontal = 12.dp),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Précédent", color = textColor, style = MaterialTheme.typography.labelMedium)
-                            }
-                            
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { /* Source file */ }) {
-                                    Icon(Icons.Default.Description, contentDescription = "Source", tint = textColor)
-                                }
-                                IconButton(onClick = { /* Share */ }) {
-                                    Icon(Icons.Default.Share, contentDescription = "Partager", tint = textColor)
-                                }
-                                IconButton(onClick = { viewModel.toggleOffline() }) {
-                                    Icon(
-                                        if (currentArticle.isDownloaded) Icons.Default.CloudDone else Icons.Default.CloudDownload,
-                                        contentDescription = "Hors-ligne",
-                                        tint = if (currentArticle.isDownloaded) MaterialTheme.colorScheme.primary else textColor
-                                    )
-                                }
-                                IconButton(onClick = { /* Favorite */ }) {
-                                    Icon(
-                                        if (currentArticle.isFavorite) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                                        contentDescription = "Favori",
-                                        tint = if (currentArticle.isFavorite) MaterialTheme.colorScheme.primary else textColor
-                                    )
-                                }
-                            }
-                            
-                            Button(
-                                onClick = { /* Navigate next */ },
-                                colors = ButtonDefaults.buttonColors(containerColor = textColor.copy(alpha = 0.1f)),
-                                contentPadding = PaddingValues(horizontal = 12.dp),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text("Suivant", color = textColor, style = MaterialTheme.typography.labelMedium)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    }
-                }
+            floatingActionButton = {
+                 // Removed FAB if all actions are in top bar, or maybe a simple "Share" FAB?
+                 // Keeping it clean for now.
             },
             containerColor = backgroundColor
         ) { padding ->
@@ -280,176 +223,147 @@ data class ReaderScreen(val articleId: String) : Screen {
                 
                 Spacer(modifier = Modifier.height(100.dp))
             }
-        }
-    }
-}
 
-/**
- * Functional Breadcrumb Bar
- */
-@Composable
-private fun BreadcrumbBar(
-    breadcrumb: String,
-    textColor: Color,
-    onNavigate: (String) -> Unit
-) {
-    val levels = breadcrumb.split(">")
-    
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(textColor.copy(alpha = 0.05f))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        levels.forEachIndexed { index, level ->
-            Text(
-                text = level.trim(),
-                style = MaterialTheme.typography.labelSmall,
-                color = if (index == levels.lastIndex) textColor else textColor.copy(alpha = 0.6f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.clickable { onNavigate(level) }
-            )
-            if (index < levels.lastIndex) {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                    tint = textColor.copy(alpha = 0.3f)
-                )
+            if (showSettings) {
+                 ModalBottomSheet(
+                     onDismissRequest = { showSettings = false },
+                     containerColor = MaterialTheme.colorScheme.surface
+                 ) {
+                     ReaderSettingsSheet(
+                        currentTextSize = textSize,
+                        onTextSizeChange = { viewModel.setTextSize(it) },
+                        currentTheme = readerTheme,
+                        onThemeChange = { readerTheme = it },
+                        isDyslexiaEnabled = isDyslexiaFontEnabled,
+                        onDyslexiaChange = { viewModel.setDyslexiaFontEnabled(it) }
+                     )
+                 }
             }
         }
     }
 }
 
-/**
- * Reader Controls Bar (Aa, TT, theme, slider)
- */
 @Composable
-private fun ReaderControlsBar(
-    backgroundColor: Color,
-    textColor: Color,
+fun ReaderSettingsSheet(
     currentTextSize: UserPreferencesRepository.TextSize,
     onTextSizeChange: (UserPreferencesRepository.TextSize) -> Unit,
     currentTheme: String,
-    onThemeChange: (String) -> Unit
+    onThemeChange: (String) -> Unit,
+    isDyslexiaEnabled: Boolean,
+    onDyslexiaChange: (Boolean) -> Unit
 ) {
-    Surface(
-        color = backgroundColor,
-        modifier = Modifier.fillMaxWidth(),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, textColor.copy(alpha = 0.1f))
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Progress Slider (Simulated)
-                Slider(
-                    value = 0.3f,
-                    onValueChange = {},
-                    modifier = Modifier.weight(1f).height(24.dp),
-                    colors = SliderDefaults.colors(
-                        thumbColor = textColor.copy(alpha = 0.8f),
-                        activeTrackColor = textColor.copy(alpha = 0.5f),
-                        inactiveTrackColor = textColor.copy(alpha = 0.1f)
-                    )
-                )
-                
-                Spacer(modifier = Modifier.width(16.dp))
-                
-                // Text Size (TT)
-                IconButton(onClick = { 
-                    val nextSize = when(currentTextSize) {
-                        UserPreferencesRepository.TextSize.SMALL -> UserPreferencesRepository.TextSize.MEDIUM
-                        UserPreferencesRepository.TextSize.MEDIUM -> UserPreferencesRepository.TextSize.LARGE
-                        UserPreferencesRepository.TextSize.LARGE -> UserPreferencesRepository.TextSize.SMALL
-                    }
-                    onTextSizeChange(nextSize)
-                }) {
-                    Icon(Icons.Default.TextFields, contentDescription = "Taille", tint = textColor)
-                }
-                
-                // Theme (Aa)
-                IconButton(onClick = { 
-                    val nextTheme = when(currentTheme) {
-                        "white" -> "paper"
-                        "paper" -> "dark"
-                        else -> "white"
-                    }
-                    onThemeChange(nextTheme)
-                }) {
-                    Icon(Icons.Default.FormatSize, contentDescription = "Thème", tint = textColor)
-                }
-                
-                // Dyslexia switch (simplified)
-                Switch(
-                    checked = currentTheme == "paper",
-                    onCheckedChange = { onThemeChange(if(it) "paper" else "white") },
-                    colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
-                )
-            }
+        Text("Paramètres de lecture", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        
+        // Text Size
+        Column {
+             Text("Taille du texte", fontWeight = FontWeight.Medium)
+             Spacer(modifier = Modifier.height(8.dp))
+             Row(
+                 modifier = Modifier.fillMaxWidth(),
+                 horizontalArrangement = Arrangement.SpaceBetween,
+                 verticalAlignment = Alignment.CenterVertically
+             ) {
+                 Text("Petit", fontSize = 14.sp)
+                 androidx.compose.material3.Slider(
+                     value = when(currentTextSize) {
+                         UserPreferencesRepository.TextSize.SMALL -> 0f
+                         UserPreferencesRepository.TextSize.MEDIUM -> 0.5f
+                         UserPreferencesRepository.TextSize.LARGE -> 1f
+                     },
+                     onValueChange = { 
+                         val newSize = when {
+                             it < 0.25f -> UserPreferencesRepository.TextSize.SMALL
+                             it > 0.75f -> UserPreferencesRepository.TextSize.LARGE
+                             else -> UserPreferencesRepository.TextSize.MEDIUM
+                         }
+                         onTextSizeChange(newSize)
+                     },
+                     steps = 1,
+                     modifier = Modifier.weight(1f).padding(horizontal = 16.dp)
+                 )
+                 Text("Grand", fontSize = 20.sp)
+             }
         }
+        
+        // Theme
+        Column {
+            Text("Thème", fontWeight = FontWeight.Medium)
+             Spacer(modifier = Modifier.height(8.dp))
+             Row(
+                 horizontalArrangement = Arrangement.spacedBy(16.dp)
+             ) {
+                 ThemeOption(
+                     name = "Papier",
+                     color = Color(0xFFF4ECD8),
+                     isSelected = currentTheme == "paper",
+                     onClick = { onThemeChange("paper") }
+                 )
+                 ThemeOption(
+                     name = "Clair",
+                     color = Color.White,
+                     isSelected = currentTheme == "white",
+                     onClick = { onThemeChange("white") }
+                 )
+                 ThemeOption(
+                     name = "Sombre",
+                     color = Color(0xFF121212),
+                     selectionColor = Color.White,
+                     isSelected = currentTheme == "dark",
+                     onClick = { onThemeChange("dark") }
+                 )
+             }
+        }
+        
+        // Options
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Police Dyslexie")
+            Switch(
+                checked = isDyslexiaEnabled,
+                onCheckedChange = onDyslexiaChange
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
-/**
- * Bouton d'action pour le lecteur d'article (Précédent, Favori, Partager, Suivant).
- */
 @Composable
-private fun ReaderActionButton(
-    icon: ImageVector,
-    label: String,
-    isHighlighted: Boolean = false,
+fun ThemeOption(
+    name: String,
+    color: Color,
+    isSelected: Boolean,
+    selectionColor: Color = Color.Black,
     onClick: () -> Unit
 ) {
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isHighlighted) 
-            MaterialTheme.colorScheme.secondaryContainer
-        else 
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        animationSpec = tween(200)
-    )
-    
-    val iconColor by animateColorAsState(
-        targetValue = if (isHighlighted) 
-            MaterialTheme.colorScheme.secondary
-        else 
-            MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(200)
-    )
-    
     Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() }
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(onClick = onClick)
     ) {
-        Surface(
-            color = backgroundColor,
-            shape = CircleShape,
-            modifier = Modifier.size(44.dp)
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(color)
+                .then(
+                    if (isSelected) Modifier.background(color).border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    else Modifier.background(color).border(1.dp, Color.Gray, CircleShape)
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon, 
-                    contentDescription = label, 
-                    modifier = Modifier.size(22.dp), 
-                    tint = iconColor
-                )
+            if (isSelected) {
+                Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
         }
-        
         Spacer(modifier = Modifier.height(4.dp))
-        
-        Text(
-            text = label, 
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Text(name, fontSize = 12.sp)
     }
 }
 

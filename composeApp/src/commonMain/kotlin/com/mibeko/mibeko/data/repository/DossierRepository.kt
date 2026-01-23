@@ -41,6 +41,23 @@ class DossierRepository(private val dao: MibekoDao) {
         return dao.searchDossiers(query)
     }
 
+    suspend fun getOrCreateFavoritesDossier(): DossierEntity {
+        val favorisList = dao.getDossiersByTag(DossierTag.FAVORIS).first()
+        if (favorisList.isNotEmpty()) {
+            return favorisList.first()
+        }
+        
+        // Create it
+        val dossierId = createDossier(
+            name = "Mes Favoris",
+            legalDomain = "Général",
+            tag = DossierTag.FAVORIS,
+            description = "Collection automatique de vos articles favoris",
+            color = "#D32F2F" // Red
+        )
+        return dao.getDossierById(dossierId).first()!!
+    }
+
     @OptIn(ExperimentalUuidApi::class)
     suspend fun createDossier(
         name: String,

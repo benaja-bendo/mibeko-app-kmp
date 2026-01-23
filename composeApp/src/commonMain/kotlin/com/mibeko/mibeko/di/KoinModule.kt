@@ -61,7 +61,7 @@ val commonModule = module {
 
     viewModel { HomeViewModel(get(), get()) }
     viewModel { SearchViewModel(get(), get()) }
-    viewModel { ReaderViewModel(get(), get()) }
+    viewModel { ReaderViewModel(get(), get(), get()) }
     viewModel { DocumentDetailViewModel(get()) }
     viewModel { FavoritesViewModel(get()) }
     viewModel { SettingsViewModel(get(), get()) }
