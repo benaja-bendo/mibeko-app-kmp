@@ -86,6 +86,8 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                 )
             },
             bottomBar = {
+                val canEdit = dossier?.tag != DossierTag.FAVORIS
+
                 DossierActionBar(
                     onAddArticle = { 
                         scope.launch {
@@ -94,7 +96,7 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                     },
                     onShare = { shareDossierContent() },
                     onEdit = { viewModel.showEditDialog() },
-                    onExportPdf = { shareDossierContent() } // Fallback to share for now
+                    canEdit = canEdit
                 )
             },
             containerColor = MaterialTheme.colorScheme.background
@@ -400,7 +402,7 @@ fun DossierActionBar(
     onAddArticle: () -> Unit,
     onShare: () -> Unit,
     onEdit: () -> Unit,
-    onExportPdf: () -> Unit
+    canEdit: Boolean
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -413,25 +415,18 @@ fun DossierActionBar(
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             ActionButton(
-                icon = Icons.Filled.Add,
-                label = "Ajouter\nArticle",
-                onClick = onAddArticle
-            )
-            ActionButton(
                 icon = Icons.Filled.Share,
                 label = "Partager",
                 onClick = onShare
             )
-            ActionButton(
-                icon = Icons.Filled.Edit,
-                label = "Modifier",
-                onClick = onEdit
-            )
-            ActionButton(
-                icon = Icons.Filled.PictureAsPdf,
-                label = "Exporter\nPDF",
-                onClick = onExportPdf
-            )
+            
+            if (canEdit) {
+                ActionButton(
+                    icon = Icons.Filled.Edit,
+                    label = "Modifier",
+                    onClick = onEdit
+                )
+            }
         }
     }
 }
@@ -451,7 +446,7 @@ fun ActionButton(
                 .size(48.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center
         ) {
             Icon(
                 icon,

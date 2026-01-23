@@ -604,4 +604,7 @@ class LocalLegalRepository(
             }
         }
     }
+    fun getArticleExportUrl(articleId: String): String {
+        return apiService.getArticleExportUrl(articleId)
+    }
 }

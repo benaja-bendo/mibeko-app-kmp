@@ -6,15 +6,15 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:8000/api"
+      "url": "http://localhost:8000/api"
     }
   ],
   "paths": {
     "/v1/search": {
       "get": {
         "operationId": "v1.articleSearch.search_0",
-        "description": "Combines `ts_rank` (keyword search) and `cosine_distance` (semantic search).",
-        "summary": "Search articles (Hybrid: Vector + Full-Text)",
+        "description": "This endpoint performs a sophisticated hybrid search:\n1. **Full-Text Search**: Uses PostgreSQL `ts_rank` for precise keyword matching.\n2. **Semantic Search**: Uses `pgvector` and OpenAI embeddings to find conceptually related articles.\n3. **AI Answer**: If a query is provided, it uses the top results as context for a RAG (Retrieval-Augmented Generation) answer.",
+        "summary": "Search articles (Hybrid: Vector + Full-Text) and provide AI answer (RAG)",
         "tags": [
           "ArticleSearch"
         ],
@@ -22,14 +22,36 @@
           {
             "name": "q",
             "in": "query",
-            "required": true,
             "schema": {
-              "type": "string",
+              "type": [
+                "string",
+                "null"
+              ],
               "minLength": 2
             }
           },
           {
             "name": "document_id",
+            "in": "query",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "type",
             "in": "query",
             "schema": {
               "type": [
@@ -53,49 +75,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string",
-                      "enum": [
-                        "Résultats de recherche récupérés avec succès"
-                      ]
-                    },
-                    "data": {
-                      "type": "string"
-                    },
-                    "pagination": {
-                      "type": "object",
-                      "properties": {
-                        "total": {
-                          "type": "string"
-                        },
-                        "per_page": {
-                          "type": "string"
-                        },
-                        "current_page": {
-                          "type": "string"
-                        },
-                        "last_page": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "total",
-                        "per_page",
-                        "current_page",
-                        "last_page"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "message",
-                    "data",
-                    "pagination"
+                  "type": "integer",
+                  "enum": [
+                    200
                   ]
                 }
               }
@@ -110,8 +92,8 @@
     "/v1/articles/search": {
       "get": {
         "operationId": "v1.articleSearch.search_0",
-        "description": "Combines `ts_rank` (keyword search) and `cosine_distance` (semantic search).",
-        "summary": "Search articles (Hybrid: Vector + Full-Text)",
+        "description": "This endpoint performs a sophisticated hybrid search:\n1. **Full-Text Search**: Uses PostgreSQL `ts_rank` for precise keyword matching.\n2. **Semantic Search**: Uses `pgvector` and OpenAI embeddings to find conceptually related articles.\n3. **AI Answer**: If a query is provided, it uses the top results as context for a RAG (Retrieval-Augmented Generation) answer.",
+        "summary": "Search articles (Hybrid: Vector + Full-Text) and provide AI answer (RAG)",
         "tags": [
           "ArticleSearch"
         ],
@@ -119,14 +101,36 @@
           {
             "name": "q",
             "in": "query",
-            "required": true,
             "schema": {
-              "type": "string",
+              "type": [
+                "string",
+                "null"
+              ],
               "minLength": 2
             }
           },
           {
             "name": "document_id",
+            "in": "query",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "type",
             "in": "query",
             "schema": {
               "type": [
@@ -142,49 +146,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string",
-                      "enum": [
-                        "Résultats de recherche récupérés avec succès"
-                      ]
-                    },
-                    "data": {
-                      "type": "string"
-                    },
-                    "pagination": {
-                      "type": "object",
-                      "properties": {
-                        "total": {
-                          "type": "string"
-                        },
-                        "per_page": {
-                          "type": "string"
-                        },
-                        "current_page": {
-                          "type": "string"
-                        },
-                        "last_page": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "total",
-                        "per_page",
-                        "current_page",
-                        "last_page"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "message",
-                    "data",
-                    "pagination"
+                  "type": "integer",
+                  "enum": [
+                    200
                   ]
                 }
               }
@@ -329,45 +293,34 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string",
-                      "enum": [
-                        "Catalogue récupéré avec succès"
-                      ]
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "global_update_required": {
-                          "type": "boolean"
-                        },
-                        "last_essential_sync": {
-                          "type": "string",
-                          "description": "Dynamic logic to be added"
-                        },
-                        "resources": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/LegalDocumentCatalogResource"
-                          }
-                        }
-                      },
-                      "required": [
-                        "global_update_required",
-                        "last_essential_sync",
-                        "resources"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "message",
-                    "data"
+                  "type": "integer",
+                  "enum": [
+                    200
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/catalog/stats": {
+      "get": {
+        "operationId": "catalog.stats",
+        "description": "Returns counts of documents grouped by type (Codes, Laws, etc.).",
+        "summary": "Get statistics about available documents",
+        "tags": [
+          "Catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "enum": [
+                    200
                   ]
                 }
               }
@@ -411,6 +364,31 @@
                     "success",
                     "message",
                     "data"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/home": {
+      "get": {
+        "operationId": "home.index",
+        "description": "Returns a curated list of data for the mobile home screen:\n- **Popular Codes**: Priority legal documents.\n- **Recently Added**: Latest documents published.\n- **AI Suggestions**: Example questions to ask the AI search.",
+        "summary": "Get home page data",
+        "tags": [
+          "Home"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "enum": [
+                    200
                   ]
                 }
               }
@@ -465,7 +443,7 @@
     "/v1/legal-documents": {
       "get": {
         "operationId": "legal-documents.index",
-        "description": "Returns a paginated list of legal documents with their institutions and types.",
+        "description": "Returns a paginated list of legal documents with their institutions and types.\nSupports filtering and sorting via query parameters.",
         "summary": "List legal documents",
         "tags": [
           "LegalDocument"
@@ -581,7 +559,7 @@
     "/v1/legal-documents/{id}/download": {
       "get": {
         "operationId": "legalDocumentDownload.download",
-        "description": "Returns a flat list of structure nodes and articles for offline sync.",
+        "description": "Returns a flat list of structure nodes and articles for offline sync. \nThis is optimized for the mobile application's local database insertion.",
         "summary": "Download legal document data (Flat List)",
         "tags": [
           "LegalDocumentDownload"
@@ -591,6 +569,7 @@
             "name": "id",
             "in": "path",
             "required": true,
+            "description": "The UUID of the legal document.",
             "schema": {
               "type": "string"
             }
@@ -609,60 +588,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "message": {
-                      "type": "string",
-                      "enum": [
-                        "Téléchargement préparé avec succès"
-                      ]
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "resource_id": {
-                          "type": "string"
-                        },
-                        "node_id": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "array",
-                              "items": {}
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ]
-                        },
-                        "generated_at": {
-                          "type": "string"
-                        },
-                        "nodes": {
-                          "type": "string"
-                        },
-                        "articles": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "resource_id",
-                        "node_id",
-                        "generated_at",
-                        "nodes",
-                        "articles"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "success",
-                    "message",
-                    "data"
+                  "type": "integer",
+                  "enum": [
+                    200
                   ]
                 }
               }
@@ -674,7 +602,7 @@
     "/v1/legal-documents/{id}/export": {
       "get": {
         "operationId": "legalDocumentExport.export",
-        "description": "Generates a PDF version of the document with all its articles.",
+        "description": "Generates a high-quality PDF version of the complete document including all its articles and structure.",
         "summary": "Export a full legal document to PDF",
         "tags": [
           "LegalDocumentExport"
@@ -684,6 +612,7 @@
             "name": "id",
             "in": "path",
             "required": true,
+            "description": "The UUID of the legal document.",
             "schema": {
               "type": "string"
             }
@@ -695,7 +624,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "integer",
+                  "enum": [
+                    200
+                  ]
                 }
               }
             }
@@ -706,6 +638,7 @@
     "/v1/articles/{id}/export": {
       "get": {
         "operationId": "legalDocumentExport.exportArticle",
+        "description": "Generates a PDF version of a specific article with its metadata and parent document info.",
         "summary": "Export a single article to PDF",
         "tags": [
           "LegalDocumentExport"
@@ -715,6 +648,7 @@
             "name": "id",
             "in": "path",
             "required": true,
+            "description": "The UUID of the article.",
             "schema": {
               "type": "string"
             }
@@ -726,10 +660,46 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "integer",
+                  "enum": [
+                    200
+                  ]
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/media/files": {
+      "get": {
+        "operationId": "media.files",
+        "summary": "List files available in the S3 bucket (sources/ directory)",
+        "tags": [
+          "Media"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "files": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  },
+                  "required": [
+                    "files"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
           }
         }
       }
@@ -789,7 +759,7 @@
     "/v1/legal-documents/{documentId}/tree": {
       "get": {
         "operationId": "structureNode.tree",
-        "description": "Returns the structure tree for a specific document.",
+        "description": "Returns the structure tree for a specific document. This is useful for displaying \na table of contents or navigating through the document's divisions (Books, Titles, etc.).",
         "summary": "Get document hierarchy",
         "tags": [
           "StructureNode"
@@ -799,6 +769,7 @@
             "name": "documentId",
             "in": "path",
             "required": true,
+            "description": "The UUID of the legal document.",
             "schema": {
               "type": "string"
             }
@@ -806,14 +777,33 @@
         ],
         "responses": {
           "200": {
-            "description": "Array of `StructureNodeResource`",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/StructureNodeResource"
-                  }
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Structure récupérée avec succès"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StructureNodeResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ]
                 }
               }
             }
@@ -877,12 +867,16 @@
                         },
                         "total": {
                           "type": "integer"
+                        },
+                        "server_time": {
+                          "type": "string"
                         }
                       },
                       "required": [
                         "current_page",
                         "last_page",
-                        "total"
+                        "total",
+                        "server_time"
                       ]
                     }
                   },
@@ -903,31 +897,13 @@
   },
   "components": {
     "schemas": {
-      "ArticleResource": {
+      "ArticleBriefResource": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string"
           },
           "number": {
-            "type": "string"
-          },
-          "order": {
-            "type": "integer"
-          },
-          "content": {
-            "type": "string"
-          },
-          "document_id": {
-            "type": "string"
-          },
-          "document_title": {
-            "type": "string"
-          },
-          "document_type": {
-            "type": "string"
-          },
-          "node_title": {
             "anyOf": [
               {
                 "type": "string"
@@ -940,25 +916,43 @@
               }
             ]
           },
-          "breadcrumb": {
+          "order": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer",
+                "enum": [
+                  0
+                ]
+              }
+            ]
+          },
+          "content": {
             "type": "string"
           },
           "validation_status": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "validated"
+                ]
+              }
+            ]
           }
         },
         "required": [
           "id",
           "number",
           "order",
-          "document_id",
-          "document_title",
-          "document_type",
-          "node_title",
-          "breadcrumb",
           "validation_status"
         ],
-        "title": "ArticleResource"
+        "title": "ArticleBriefResource"
       },
       "ArticleSyncResource": {
         "type": "object",
@@ -1082,52 +1076,6 @@
         ],
         "title": "InstitutionResource"
       },
-      "LegalDocumentCatalogResource": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "type": {
-            "description": "Use correct column name",
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "string",
-                "enum": [
-                  "UNKNOWN"
-                ]
-              }
-            ]
-          },
-          "version_hash": {
-            "type": "string"
-          },
-          "last_updated": {
-            "type": "string"
-          },
-          "download_size_kb": {
-            "type": "integer",
-            "enum": [
-              0
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "title",
-          "type",
-          "version_hash",
-          "last_updated",
-          "download_size_kb"
-        ],
-        "title": "LegalDocumentCatalogResource"
-      },
       "LegalDocumentResource": {
         "type": "object",
         "properties": {
@@ -1197,6 +1145,49 @@
               "$ref": "#/components/schemas/DocumentRelationResource"
             }
           },
+          "media_files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "mime_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "size": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "created_at": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "path",
+                "mime_type",
+                "size",
+                "description",
+                "created_at"
+              ]
+            }
+          },
           "updated_at": {
             "type": "string"
           }
@@ -1238,7 +1229,7 @@
           "articles": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ArticleResource"
+              "$ref": "#/components/schemas/ArticleBriefResource"
             }
           }
         },
@@ -1290,6 +1281,13 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         },
         "required": [
@@ -1299,7 +1297,8 @@
           "email_verified_at",
           "created_at",
           "updated_at",
-          "two_factor_confirmed_at"
+          "two_factor_confirmed_at",
+          "deleted_at"
         ],
         "title": "User"
       }

@@ -3,6 +3,10 @@ package com.mibeko.mibeko.ui.dossier
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -48,29 +52,34 @@ class DossierScreen : Screen {
             topBar = {
                 // Search Bar integrated in Top Bar
                 if (uiState.searchQuery.isNotEmpty() || showSearch) {
-                    DockedSearchBar(
-                        query = uiState.searchQuery,
-                        onQueryChange = { viewModel.searchDossiers(it) },
-                        onSearch = { showSearch = false },
-                        active = false,
-                        onActiveChange = { },
-                        placeholder = { Text("Rechercher un dossier...") },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                        trailingIcon = {
-                             if (uiState.searchQuery.isNotEmpty()) {
-                                 IconButton(onClick = { viewModel.searchDossiers("") }) {
-                                     Icon(Icons.Filled.Close, contentDescription = "Effacer")
-                                 }
-                             } else {
-                                 IconButton(onClick = { showSearch = false }) {
-                                     Icon(Icons.Filled.Close, contentDescription = "Fermer")
-                                 }
-                             }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) { }
+                    Surface(
+                        modifier = Modifier.statusBarsPadding(),
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        DockedSearchBar(
+                            query = uiState.searchQuery,
+                            onQueryChange = { viewModel.searchDossiers(it) },
+                            onSearch = { showSearch = false },
+                            active = false,
+                            onActiveChange = { },
+                            placeholder = { Text("Rechercher un dossier...") },
+                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                            trailingIcon = {
+                                if (uiState.searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.searchDossiers("") }) {
+                                        Icon(Icons.Filled.Close, contentDescription = "Effacer")
+                                    }
+                                } else {
+                                    IconButton(onClick = { showSearch = false }) {
+                                        Icon(Icons.Filled.Close, contentDescription = "Fermer")
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) { }
+                    }
                 } else {
                     TopAppBar(
                         title = { Text("Mes Dossiers", fontWeight = FontWeight.Bold) },
@@ -370,7 +379,7 @@ fun DossierTagChip(tag: DossierTag) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CreateDossierDialog(
     dossier: DossierEntity?,
@@ -383,6 +392,7 @@ fun CreateDossierDialog(
     var description by remember { mutableStateOf(dossier?.description ?: "") }
     var selectedColor by remember { mutableStateOf(dossier?.color ?: "#1565C0") }
     var expandedDomain by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
     
     val legalDomains = listOf(
         "Droit de la Famille",
@@ -406,7 +416,9 @@ fun CreateDossierDialog(
         },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Name field
@@ -456,8 +468,10 @@ fun CreateDossierDialog(
                     fontWeight = FontWeight.Medium,
                     fontSize = 14.sp
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     DossierTag.entries.forEach { tag ->
                         FilterChip(

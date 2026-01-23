@@ -112,4 +112,15 @@ class ReaderViewModel(
         userPreferencesRepository.setDyslexiaFontEnabled(enabled)
         _isDyslexiaFontEnabled.value = enabled
     }
+
+    fun exportPdf(platformHandler: (() -> Unit)? = null): String {
+        val currentArticle = _uiState.value.article ?: return ""
+        val url = repository.getArticleExportUrl(currentArticle.id)
+        return url
+    }
+
+    fun getShareText(): String {
+        val currentArticle = _uiState.value.article ?: return ""
+        return "Consultez cet article de loi: ${currentArticle.title}\n\n${currentArticle.content?.take(200)}..."
+    }
 }

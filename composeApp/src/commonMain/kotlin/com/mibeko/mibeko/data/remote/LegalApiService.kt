@@ -99,6 +99,13 @@ class LegalApiService(
     /**
      * Fetch list of institutions.
      */
+    /**
+     * Get the export URL for a specific article.
+     */
+    fun getArticleExportUrl(articleId: String): String {
+        return "$baseUrl/v1/articles/$articleId/export"
+    }
+
     suspend fun fetchInstitutions(): ApiResponse<List<RemoteInstitution>> {
         return client.get("$baseUrl/v1/institutions").body()
     }

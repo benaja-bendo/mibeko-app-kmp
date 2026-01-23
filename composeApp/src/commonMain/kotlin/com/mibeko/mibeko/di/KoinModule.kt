@@ -60,7 +60,7 @@ val commonModule = module {
     single { DossierRepository(get()) }
 
     viewModel { HomeViewModel(get(), get()) }
-    viewModel { SearchViewModel(get(), get()) }
+    viewModel { SearchViewModel(get(), get(), get()) }
     viewModel { ReaderViewModel(get(), get(), get()) }
     viewModel { DocumentDetailViewModel(get()) }
     viewModel { FavoritesViewModel(get()) }

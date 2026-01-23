@@ -32,7 +32,8 @@ data class SearchUiState(
 
 class SearchViewModel(
     private val repository: LocalLegalRepository,
-    private val searchHistoryManager: SearchHistoryManager
+    private val searchHistoryManager: SearchHistoryManager,
+    private val dossierRepository: com.mibeko.mibeko.data.repository.DossierRepository
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -187,18 +188,29 @@ class SearchViewModel(
         viewModelScope.launch {
             repository.getArticleById(articleId).first()?.let { article ->
                 val newFavoriteStatus = !article.isFavorite
-                // We need a method in repository to toggle favorite
-                // Looking at LocalLegalRepository, it doesn't have a direct toggleFavorite
-                // But it has mibekoDao. Let's assume we use a direct DAO call or add to repository.
-                // For simplicity, let's update the local state first to be reactive
+                
+                // 1. Update UI Optimistically
                 allSearchResults = allSearchResults.map {
                     if (it.id == articleId) it.copy(isFavorite = newFavoriteStatus) else it
                 }
                 val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
                 _uiState.value = _uiState.value.copy(results = filteredResults)
                 
-                // Actual update in DB
-                repository.updateArticleFavoriteStatus(articleId, newFavoriteStatus)
+                // 2. Update DB
+                try {
+                    repository.updateArticleFavoriteStatus(articleId, newFavoriteStatus)
+                    
+                    // 3. Sync with Neighbors Dossier
+                    val favoritesDossier = dossierRepository.getOrCreateFavoritesDossier()
+                    if (newFavoriteStatus) {
+                        dossierRepository.addArticleToDossier(favoritesDossier.id, articleId)
+                    } else {
+                        dossierRepository.removeArticleFromDossier(favoritesDossier.id, articleId)
+                    }
+                } catch (e: Exception) {
+                    // Revert if failed (implement if needed, for now just logging/ignoring for UI speed)
+                    e.printStackTrace()
+                }
             }
         }
     }
