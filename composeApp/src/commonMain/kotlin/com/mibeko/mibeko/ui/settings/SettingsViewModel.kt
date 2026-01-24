@@ -39,11 +39,10 @@ data class SettingsUiState(
     val diskUsage: String = "0 B",
     val textSize: UserPreferencesRepository.TextSize = UserPreferencesRepository.TextSize.MEDIUM,
     val isDyslexiaFontEnabled: Boolean = false,
-    val isWifiOnlyDownloadEnabled: Boolean = true,
+
     val isLegalMonitoringEnabled: Boolean = true,
     val isDossierAlertsEnabled: Boolean = true,
-    val appVersion: String = "v1.0.0",
-    val dbVersion: String = "v27.12.25" // Demo version from sketch
+    val appVersion: String = "v1.0.0"
 )
 
 /**
@@ -77,7 +76,6 @@ class SettingsViewModel(
             lastUpdateDate = formatTimestampToDate(lastSync),
             textSize = userPreferencesRepository.getTextSize(),
             isDyslexiaFontEnabled = userPreferencesRepository.isDyslexiaFontEnabled(),
-            isWifiOnlyDownloadEnabled = userPreferencesRepository.isWifiOnlyDownloadEnabled(),
             isLegalMonitoringEnabled = userPreferencesRepository.isLegalMonitoringEnabled(),
             isDossierAlertsEnabled = userPreferencesRepository.isDossierAlertsEnabled()
         )
@@ -140,13 +138,7 @@ class SettingsViewModel(
         _uiState.value = _uiState.value.copy(isDyslexiaFontEnabled = enabled)
     }
 
-    /**
-     * Toggle Wi-Fi only download.
-     */
-    fun setWifiOnlyDownloadEnabled(enabled: Boolean) {
-        userPreferencesRepository.setWifiOnlyDownloadEnabled(enabled)
-        _uiState.value = _uiState.value.copy(isWifiOnlyDownloadEnabled = enabled)
-    }
+
 
     /**
      * Toggle legal monitoring.
@@ -193,29 +185,7 @@ class SettingsViewModel(
         }
     }
 
-    /**
-     * Check for database updates and sync if necessary.
-     */
-    fun checkForUpdates() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSyncing = true, syncError = null)
-            try {
-                legalRepository.sync()
-                userPreferencesRepository.setLastSyncTimestamp(getCurrentTimeMillis())
-                refreshDiskUsage()
-                _uiState.value = _uiState.value.copy(
-                    isSyncing = false,
-                    lastUpdateDate = formatTimestampToDate(userPreferencesRepository.getLastSyncTimestamp())
-                )
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _uiState.value = _uiState.value.copy(
-                    isSyncing = false,
-                    syncError = "Erreur de mise à jour: ${e.message}"
-                )
-            }
-        }
-    }
+
 
     fun clearSyncError() {
         _uiState.value = _uiState.value.copy(syncError = null)

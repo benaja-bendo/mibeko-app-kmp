@@ -148,6 +148,8 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                         Text("Version: ${uiState.appVersion}")
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("Mibeko est une plateforme juridique centralisant les textes de loi de la République du Congo.")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Base de données mise à jour le: ${uiState.lastUpdateDate}", style = MaterialTheme.typography.bodySmall)
                     }
                 },
                 confirmButton = {
@@ -222,8 +224,8 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // --- CONFORT DE LECTURE ---
-                SettingsGroup("CONFORT DE LECTURE") {
+                // --- APPARENCE ---
+                SettingsGroup("APPARENCE") {
                     SettingsItem(
                         title = "Thème", 
                         subtitle = when(uiState.currentTheme) {
@@ -246,28 +248,43 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                     )
                     SettingsSwitch(
                         title = "Police Dyslexie", 
-                        subtitle = if (uiState.isDyslexiaFontEnabled) "Oui" else "Non", 
+                        subtitle = if (uiState.isDyslexiaFontEnabled) "Activé" else "Désactivé", 
                         icon = Icons.Filled.Abc,
                         checked = uiState.isDyslexiaFontEnabled,
                         onCheckedChange = { viewModel.setDyslexiaFontEnabled(it) }
                     )
                 }
                 
-                // --- DONNÉES & HORS-LIGNE ---
-                SettingsGroup("DONNÉES & HORS-LIGNE") {
-                    SettingsItem(
-                        title = "Mise à jour base", 
-                        subtitle = if (uiState.isSyncing) "Mise à jour..." else uiState.dbVersion, 
-                        icon = Icons.Filled.CloudSync,
-                        onClick = { viewModel.checkForUpdates() }
-                    )
+                // --- NOTIFICATIONS ---
+                SettingsGroup("NOTIFICATIONS") {
                     SettingsSwitch(
-                        title = "Téléchargement Wi-Fi", 
-                        subtitle = if (uiState.isWifiOnlyDownloadEnabled) "Oui" else "Non", 
-                        icon = Icons.Filled.Wifi,
-                        checked = uiState.isWifiOnlyDownloadEnabled,
-                        onCheckedChange = { viewModel.setWifiOnlyDownloadEnabled(it) }
+                        title = "Autoriser les notifications", 
+                        subtitle = if (uiState.isNotificationsEnabled) "Activé" else "Désactivé", 
+                        icon = Icons.Filled.Notifications,
+                        checked = uiState.isNotificationsEnabled,
+                        onCheckedChange = { viewModel.setNotificationsEnabled(it) }
                     )
+                    
+                    if (uiState.isNotificationsEnabled) {
+                        SettingsSwitch(
+                            title = "Veille Juridique", 
+                            subtitle = "Recevoir les nouveautés juridiques", 
+                            icon = Icons.Filled.Gavel,
+                            checked = uiState.isLegalMonitoringEnabled,
+                            onCheckedChange = { viewModel.setLegalMonitoringEnabled(it) }
+                        )
+                        SettingsSwitch(
+                            title = "Alertes Dossiers", 
+                            subtitle = "Mises à jour de vos dossiers", 
+                            icon = Icons.Filled.FolderSpecial,
+                            checked = uiState.isDossierAlertsEnabled,
+                            onCheckedChange = { viewModel.setDossierAlertsEnabled(it) }
+                        )
+                    }
+                }
+                
+                // --- DONNÉES ---
+                SettingsGroup("DONNÉES") {
                     SettingsItem(
                         title = "Gérer le stockage", 
                         subtitle = uiState.diskUsage, 
@@ -276,27 +293,14 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                     )
                 }
                 
-                // --- NOTIFICATIONS ---
-                SettingsGroup("NOTIFICATIONS") {
-                    SettingsSwitch(
-                        title = "Veille Juridique", 
-                        subtitle = if (uiState.isLegalMonitoringEnabled) "Activé" else "Désactivé", 
-                        icon = Icons.Filled.NotificationsActive,
-                        checked = uiState.isLegalMonitoringEnabled,
-                        onCheckedChange = { viewModel.setLegalMonitoringEnabled(it) }
+                // --- À PROPOS ---
+                SettingsGroup("À PROPOS") {
+                    SettingsItem(
+                        title = "Conditions d'utilisation", 
+                        subtitle = "", 
+                        icon = Icons.Filled.Description,
+                        onClick = { showTerms = true }
                     )
-                    SettingsSwitch(
-                        title = "Alertes Dossiers", 
-                        subtitle = if (uiState.isDossierAlertsEnabled) "Activé" else "Désactivé", 
-                        icon = Icons.Filled.FolderSpecial,
-                        checked = uiState.isDossierAlertsEnabled,
-                        onCheckedChange = { viewModel.setDossierAlertsEnabled(it) }
-                    )
-                }
-                
-                // --- MIBEKO ---
-                SettingsGroup("MIBEKO") {
-                    SettingsItem("Aide & Support", "", Icons.Filled.HelpOutline)
                     SettingsItem(
                         title = "Confidentialité", 
                         subtitle = "", 
@@ -304,7 +308,7 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                         onClick = { showPrivacy = true }
                     )
                     SettingsItem(
-                        title = "À propos", 
+                        title = "Version de l'application", 
                         subtitle = uiState.appVersion, 
                         icon = Icons.Filled.Info,
                         onClick = { showAbout = true }
