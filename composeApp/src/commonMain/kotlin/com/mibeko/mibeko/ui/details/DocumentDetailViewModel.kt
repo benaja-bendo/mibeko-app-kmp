@@ -24,6 +24,8 @@ data class DocumentDetailUiState(
     val error: String? = null,
     val document: LawCodeSpec? = null,
     val structure: Map<NodeEntity, List<ArticleEntity>> = emptyMap(),
+    val filteredStructure: Map<NodeEntity, List<ArticleEntity>> = emptyMap(),
+    val searchQuery: String = "",
     val isDownloading: Boolean = false
 )
 
@@ -89,14 +91,67 @@ class DocumentDetailViewModel(private val repository: LocalLegalRepository) : Vi
             }.collect { (localStructure, doc) ->
                 _structure.value = localStructure
                 _document.value = doc
+                
+                val filtered = if (_uiState.value.searchQuery.isEmpty()) {
+                    localStructure
+                } else {
+                    filterStructure(localStructure, _uiState.value.searchQuery)
+                }
+
                 _uiState.value = _uiState.value.copy(
                     structure = localStructure,
+                    filteredStructure = filtered,
                     document = doc,
-                    // If we have data, we can stop the loading indicator even if the background fetch isn't finished
                     isLoading = if (localStructure.isNotEmpty()) false else _uiState.value.isLoading
                 )
             }
         }
+    }
+
+    /**
+     * Filtre la structure du document selon une requête.
+     */
+    fun onSearchQueryChange(query: String) {
+        _uiState.value = _uiState.value.copy(searchQuery = query)
+        val filtered = if (query.isEmpty()) {
+            _uiState.value.structure
+        } else {
+            filterStructure(_uiState.value.structure, query)
+        }
+        _uiState.value = _uiState.value.copy(filteredStructure = filtered)
+    }
+
+    private fun filterStructure(
+        structure: Map<NodeEntity, List<ArticleEntity>>,
+        query: String
+    ): Map<NodeEntity, List<ArticleEntity>> {
+        val result = mutableMapOf<NodeEntity, List<ArticleEntity>>()
+        structure.forEach { (node, articles) ->
+            val filteredArticles = articles.filter { 
+                it.number.contains(query, ignoreCase = true) || 
+                (it.content?.contains(query, ignoreCase = true) ?: false) 
+            }
+            if (filteredArticles.isNotEmpty()) {
+                result[node] = filteredArticles
+            }
+        }
+        return result
+    }
+
+    /**
+     * Retourne le texte à partager pour ce document.
+     */
+    fun getShareText(): String {
+        val doc = _uiState.value.document ?: return ""
+        return "Consultez '${doc.title}' sur Mibeko.\n\nType: ${doc.type}\nStatut: Officiel\n\nRetrouvez tous les textes de loi sur l'application Mibeko."
+    }
+
+    /**
+     * Retourne l'URL d'export PDF.
+     */
+    fun exportPdf(): String {
+        val docId = _uiState.value.document?.id ?: return ""
+        return repository.getDocumentExportUrl(docId)
     }
 
     /**

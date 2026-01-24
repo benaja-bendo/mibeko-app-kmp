@@ -321,6 +321,10 @@ class LocalLegalRepository(
         }
     }
 
+    fun getLawCodeById(id: String): Flow<com.mibeko.mibeko.data.LawCodeSpec?> {
+        return mibekoDao.getDocumentById(id).map { it?.toLawCodeSpec() }
+    }
+
     fun getDownloadedDocuments(): Flow<List<com.mibeko.mibeko.data.LawCodeSpec>> {
         return mibekoDao.getDownloadedDocuments().map { docs ->
             docs.map { it.toLawCodeSpec() }
@@ -606,5 +610,9 @@ class LocalLegalRepository(
     }
     fun getArticleExportUrl(articleId: String): String {
         return apiService.getArticleExportUrl(articleId)
+    }
+
+    fun getDocumentExportUrl(documentId: String): String {
+        return apiService.getDocumentExportUrl(documentId)
     }
 }

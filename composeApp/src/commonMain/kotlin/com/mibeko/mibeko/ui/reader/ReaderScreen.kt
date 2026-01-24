@@ -31,7 +31,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
+import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
+import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 
 data class ReaderScreen(val articleId: String) : Screen {
 
@@ -181,8 +182,8 @@ data class ReaderScreen(val articleId: String) : Screen {
                             }) {
                                 Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF", tint = textColor)
                             }
-
-                             // Settings
+                            
+                            // Settings
                             IconButton(onClick = { showSettings = true }) { 
                                 Icon(Icons.Default.FormatSize, contentDescription = "Paramètres de lecture", tint = textColor)
                             }
@@ -191,6 +192,21 @@ data class ReaderScreen(val articleId: String) : Screen {
                             containerColor = backgroundColor
                         )
                     )
+                    
+                    // Dynamic Breadcrumb for Reader
+                    val breadcrumbSegments = listOf(
+                        BreadcrumbSegment("Bibliothèque") { navController.popBackStack() },
+                        BreadcrumbSegment(uiState.documentType ?: "Norme") { navController.popBackStack() },
+                        BreadcrumbSegment(uiState.documentTitle ?: "Document") { navController.popBackStack() },
+                        BreadcrumbSegment("Art. ${currentArticle.number}") { }
+                    )
+                    
+                    MibekoBreadcrumb(
+                        segments = breadcrumbSegments,
+                        modifier = Modifier.background(backgroundColor)
+                    )
+                    
+                    HorizontalDivider(color = textColor.copy(alpha = 0.1f))
                 }
             },
             floatingActionButton = {

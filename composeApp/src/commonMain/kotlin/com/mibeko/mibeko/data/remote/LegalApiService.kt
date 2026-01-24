@@ -100,6 +100,13 @@ class LegalApiService(
      * Fetch list of institutions.
      */
     /**
+     * Get the export URL for a specific document.
+     */
+    fun getDocumentExportUrl(documentId: String): String {
+        return "$baseUrl/v1/legal-documents/$documentId/export"
+    }
+
+    /**
      * Get the export URL for a specific article.
      */
     fun getArticleExportUrl(articleId: String): String {

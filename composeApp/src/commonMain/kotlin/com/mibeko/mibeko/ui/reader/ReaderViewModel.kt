@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.asStateFlow
 data class ReaderUiState(
     val isLoading: Boolean = true,
     val article: ArticleSpec? = null,
+    val documentTitle: String? = null,
+    val documentType: String? = null,
     val error: String? = null
 )
 
@@ -83,11 +85,22 @@ class ReaderViewModel(
             try {
                 val articleResult = repository.getArticleById(id).firstOrNull()
                 _article.value = articleResult
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    article = articleResult,
-                    error = if (articleResult == null) "Article non trouvé. Veuillez télécharger ce document." else null
-                )
+                
+                if (articleResult != null) {
+                    val docResult = repository.getLawCodeById(articleResult.codeId).firstOrNull()
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        article = articleResult,
+                        documentTitle = docResult?.title,
+                        documentType = docResult?.type,
+                        error = null
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Article non trouvé. Veuillez télécharger ce document."
+                    )
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 _uiState.value = _uiState.value.copy(
