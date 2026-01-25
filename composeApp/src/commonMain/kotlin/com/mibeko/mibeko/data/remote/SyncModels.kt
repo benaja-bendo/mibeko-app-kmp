@@ -275,3 +275,21 @@ data class RemoteDownloadData(
     val nodes: List<RemoteNode> = emptyList(),
     val articles: List<RemoteArticle> = emptyList()
 )
+
+// =============================================================================
+// Export Models
+// =============================================================================
+
+@Serializable
+data class DossierExportRequest(
+    val title: String,
+    val description: String? = null,
+    val items: List<DossierExportItem>
+)
+
+@Serializable
+data class DossierExportItem(
+    val type: String,
+    val id: String,
+    val note: String? = null
+)

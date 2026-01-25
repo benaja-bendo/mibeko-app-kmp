@@ -14,7 +14,10 @@ import kotlin.uuid.Uuid
  * Repository pour la gestion des dossiers.
  * Fournit une abstraction au-dessus du DAO pour la logique métier.
  */
-class DossierRepository(private val dao: MibekoDao) {
+class DossierRepository(
+    private val dao: MibekoDao,
+    private val apiService: com.mibeko.mibeko.data.remote.LegalApiService
+) {
 
     // ========== DOSSIERS ==========
 
@@ -151,6 +154,7 @@ class DossierRepository(private val dao: MibekoDao) {
 
     /**
      * Génère le contenu texte du dossier pour le partage.
+     * @deprecated Use exportDossierPdf instead
      */
     suspend fun generateTextExport(dossierId: String): String {
         val builder = StringBuilder()
@@ -177,6 +181,28 @@ class DossierRepository(private val dao: MibekoDao) {
         }
         
         return builder.toString()
+    }
+
+    /**
+     * Call backend to generate PDF for the dossier.
+     */
+    suspend fun exportDossierPdf(dossierId: String): ByteArray {
+        val dossier = dao.getDossierById(dossierId).first() ?: throw Exception("Dossier non trouvé")
+        val articles = dao.getDossierArticles(dossierId).first()
+
+        val request = com.mibeko.mibeko.data.remote.DossierExportRequest(
+            title = dossier.name,
+            description = dossier.description,
+            items = articles.map {
+                com.mibeko.mibeko.data.remote.DossierExportItem(
+                    type = "article",
+                    id = it.article.id,
+                    note = it.personal_note
+                )
+            }
+        )
+
+        return apiService.exportDossierPdf(request)
     }
 }
 

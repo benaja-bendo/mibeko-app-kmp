@@ -3,6 +3,7 @@ package com.mibeko.mibeko.data.remote
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.http.*
 
 class LegalApiService(
     private val client: HttpClient,
@@ -115,5 +116,15 @@ class LegalApiService(
 
     suspend fun fetchInstitutions(): ApiResponse<List<RemoteInstitution>> {
         return client.get("$baseUrl/v1/institutions").body()
+    }
+
+    /**
+     * Export dossier as PDF.
+     */
+    suspend fun exportDossierPdf(request: DossierExportRequest): ByteArray {
+        return client.post("$baseUrl/v1/dossiers/export-pdf") {
+            header(io.ktor.http.HttpHeaders.ContentType, io.ktor.http.ContentType.Application.Json)
+            setBody(request)
+        }.body()
     }
 }

@@ -9,6 +9,16 @@ import com.mibeko.mibeko.data.repository.DossierRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+enum class DossierFilterType {
+    ALL, DOCUMENTS, ARTICLES
+}
+
+data class ClientDossierDocument(
+    val id: String,
+    val title: String,
+    val articleCount: Int
+)
+
 class DossierDetailViewModel(
     private val dossierId: String,
     private val repository: DossierRepository
@@ -22,10 +32,29 @@ class DossierDetailViewModel(
 
     private val _showEditDialog = MutableStateFlow(false)
     val showEditDialog: StateFlow<Boolean> = _showEditDialog.asStateFlow()
+    
+    // For specific document filtering
+    private val _selectedDocumentId = MutableStateFlow<String?>(null)
 
     init {
         loadDossier()
         loadArticles()
+    }
+    
+    fun setFilter(filter: DossierFilterType) {
+        _uiState.update { it.copy(filter = filter) }
+        if (filter != DossierFilterType.DOCUMENTS) {
+            _selectedDocumentId.value = null
+        }
+    }
+    
+    fun verifyFilter() {
+        // If we are viewing articles of a specific document, ensure we go back to Documents view when clearing
+        _selectedDocumentId.value = null
+    }
+    
+    fun selectDocument(documentId: String) {
+        _selectedDocumentId.value = documentId
     }
 
     private fun loadDossier() {
@@ -45,17 +74,45 @@ class DossierDetailViewModel(
     private fun loadArticles() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            repository.getDossierArticles(dossierId)
-                .catch { e ->
-                    _uiState.update { 
-                        it.copy(isLoading = false, error = e.message) 
+            // Using combine to react to document selection changes
+            combine(
+                repository.getDossierArticles(dossierId),
+                _selectedDocumentId
+            ) { articles, selectedDocId ->
+                val docs = articles
+                    .groupBy { it.document_id }
+                    .map { (id, list) ->
+                        ClientDossierDocument(
+                            id = id,
+                            title = list.first().document_title,
+                            articleCount = list.size
+                        )
                     }
+                
+                val filteredArticles = if (selectedDocId != null) {
+                    articles.filter { it.document_id == selectedDocId }
+                } else {
+                    articles
                 }
-                .collect { articles ->
-                    _uiState.update { 
-                        it.copy(isLoading = false, articles = articles, error = null) 
-                    }
+                
+                Triple(articles, docs, filteredArticles)
+            }
+            .catch { e ->
+                _uiState.update { 
+                    it.copy(isLoading = false, error = e.message) 
                 }
+            }
+            .collect { (allArticles, docs, filteredArticles) ->
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        articles = allArticles, // Keep all for "Articles" tab
+                        documents = docs,
+                        displayedArticles = filteredArticles, // For when a document is selected
+                        error = null
+                    ) 
+                }
+            }
         }
     }
 
@@ -101,19 +158,29 @@ class DossierDetailViewModel(
         }
     }
 
-    fun generateTextExport(): String {
-        var result = ""
+    fun exportPdf(onSuccess: (ByteArray) -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            result = repository.generateTextExport(dossierId)
+            _uiState.update { it.copy(isExporting = true) }
+            try {
+                val bytes = repository.exportDossierPdf(dossierId)
+                onSuccess(bytes)
+            } catch (e: Exception) {
+                onError(e.message ?: "Erreur lors de l'export")
+            } finally {
+                _uiState.update { it.copy(isExporting = false) }
+            }
         }
-        return result
     }
 }
 
 data class DossierDetailUiState(
     val isLoading: Boolean = false,
+    val isExporting: Boolean = false,
     val dossier: DossierEntity? = null,
     val articles: List<DossierArticleWithDetails> = emptyList(),
+    val documents: List<ClientDossierDocument> = emptyList(),
+    val displayedArticles: List<DossierArticleWithDetails> = emptyList(),
     val articleCount: Int = 0,
+    val filter: DossierFilterType = DossierFilterType.ALL,
     val error: String? = null
 )

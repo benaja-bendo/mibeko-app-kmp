@@ -186,10 +186,12 @@ interface MibekoDao {
     @Transaction
     @Query("""
         SELECT articles.*, nodes.document_id, nodes.title as node_title,
+               documents.title as document_title,
                dossier_articles.personal_note, dossier_articles.added_at
         FROM dossier_articles
         JOIN articles ON dossier_articles.article_id = articles.id
         JOIN nodes ON articles.node_id = nodes.id
+        JOIN documents ON nodes.document_id = documents.id
         WHERE dossier_articles.dossier_id = :dossierId
         ORDER BY dossier_articles.added_at DESC
     """)
@@ -210,6 +212,7 @@ data class ArticleSearchResult(
 data class DossierArticleWithDetails(
     @Embedded val article: ArticleEntity,
     val document_id: String,
+    val document_title: String,
     val node_title: String,
     val personal_note: String?,
     val added_at: Long

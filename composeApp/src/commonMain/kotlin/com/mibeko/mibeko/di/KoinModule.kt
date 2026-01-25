@@ -64,7 +64,7 @@ val commonModule = module {
 
     // Repositories
     single { LocalLegalRepository(get(), get(), get(), get()) }
-    single { DossierRepository(get()) }
+    single { DossierRepository(get(), get()) }
     single { NotificationRepository(get(), get<AppConfig>().baseUrl) }
 
     viewModel { HomeViewModel(get(), get()) }

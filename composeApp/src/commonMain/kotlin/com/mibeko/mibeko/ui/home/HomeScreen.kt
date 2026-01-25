@@ -317,57 +317,96 @@ private fun SearchTriggerButton(onClick: () -> Unit) {
  */
 @Composable
 private fun PopularCodeCard(title: String, onClick: () -> Unit) {
+    val cardColor = remember(title) {
+        when {
+            title.contains("Civil", ignoreCase = true) -> Color(0xFFC62828) // Deep Red
+            title.contains("Pénal", ignoreCase = true) -> Color(0xFF2E7D32) // Forest Green
+            title.contains("Famille", ignoreCase = true) -> Color(0xFFEF6C00) // Deep Orange
+            title.contains("Travail", ignoreCase = true) -> Color(0xFF4527A0) // Deep Purple
+            title.contains("Constitution", ignoreCase = true) -> Color(0xFF1565C0) // Deep Blue
+            else -> MibekoBluePrimary
+        }
+    }
+
     Surface(
         onClick = onClick,
-        modifier = Modifier.size(width = 160.dp, height = 110.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.primary,
-        shadowElevation = 4.dp
+        modifier = Modifier.size(width = 120.dp, height = 170.dp),
+        shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp, topStart = 4.dp, bottomStart = 4.dp), // Book shape
+        color = cardColor,
+        shadowElevation = 6.dp
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Subtle background decoration
+            // Book Spine Effect (Left Side)
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(12.dp)
+                    .align(Alignment.CenterStart)
+                    .background(Color.Black.copy(alpha = 0.2f))
+            )
+
+            // Texture/Pattern Overlay
             Icon(
                 Icons.Default.AccountBalance,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.1f),
+                tint = Color.White.copy(alpha = 0.15f),
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(100.dp)
                     .align(Alignment.BottomEnd)
-                    .offset(x = 20.dp, y = 20.dp)
+                    .offset(x = 30.dp, y = 30.dp)
             )
-            
+
             Column(
-                modifier = Modifier.padding(14.dp),
+                modifier = Modifier
+                    .padding(start = 16.dp, top = 16.dp, end = 12.dp, bottom = 12.dp)
+                    .fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
+                // Top Badge
+                Surface(
+                    color = Color.White.copy(alpha = 0.25f),
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.align(Alignment.Start)
+                ) {
+                    Text(
+                        text = "OFFICIEL",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 8.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                }
+
+                // Title
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
+                    text = title.replace("Code ", "").replace("de la", ""), // Shorten for cover
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold, // Extra bold for cover look
+                    maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
-                    lineHeight = 18.sp
+                    lineHeight = 20.sp,
+                    letterSpacing = 0.5.sp
                 )
-                
+
+                // Bottom Icon
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                    modifier = Modifier.align(Alignment.End)
                 ) {
-                    Icon(
-                        Icons.Default.CloudDownload,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(12.dp)
+                     Text(
+                        text = "Voir",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 10.sp
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Consulter",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        fontWeight = FontWeight.Medium
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
