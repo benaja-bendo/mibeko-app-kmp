@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,6 +57,7 @@ class DossierScreen : Screen {
                         modifier = Modifier.statusBarsPadding(),
                         color = MaterialTheme.colorScheme.surface
                     ) {
+                        @Suppress("DEPRECATION")
                         DockedSearchBar(
                             query = uiState.searchQuery,
                             onQueryChange = { viewModel.searchDossiers(it) },
@@ -97,7 +99,7 @@ class DossierScreen : Screen {
                             }
                             IconButton(onClick = { viewModel.toggleViewMode() }) {
                                 Icon(
-                                    if (uiState.isGridView) Icons.Filled.ViewList else Icons.Filled.GridView,
+                                    if (uiState.isGridView) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView,
                                     contentDescription = "Mode d'affichage"
                                 )
                             }

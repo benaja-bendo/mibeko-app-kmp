@@ -10,10 +10,20 @@ plugins {
     alias(libs.plugins.kotlinxSerialization)
     alias(libs.plugins.room)
     alias(libs.plugins.buildConfig)
+    alias(libs.plugins.googleServices)
 }
 
 kotlin {
     jvmToolchain(21)
+
+    targets.configureEach {
+        compilations.configureEach {
+            compileTaskProvider.get().compilerOptions {
+                freeCompilerArgs.add("-Xexpect-actual-classes")
+            }
+        }
+    }
+
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
@@ -38,6 +48,8 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.android)
             implementation(libs.koin.android)
+            implementation(project.dependencies.platform(libs.firebase.bom))
+            implementation(libs.firebase.messaging)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

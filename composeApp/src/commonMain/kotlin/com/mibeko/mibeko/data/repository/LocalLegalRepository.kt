@@ -17,7 +17,7 @@ import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Instant
+import kotlinx.datetime.Instant as DateTimeInstant
 import com.mibeko.mibeko.getCurrentTimeMillis
 
 /**
@@ -44,7 +44,7 @@ class LocalLegalRepository(
         val lastSync = userPreferencesRepository.getLastSyncTimestamp()
         if (lastSync > 0) {
             // Convert timestamp to ISO string for backend
-            val since = Instant.fromEpochMilliseconds(lastSync).toString()
+            val since = DateTimeInstant.fromEpochMilliseconds(lastSync).toString()
             try {
                 val serverTime = syncUpdates(since)
                 if (serverTime != null) {
@@ -187,9 +187,10 @@ class LocalLegalRepository(
         }
     }
 
-    private fun parseIsoDate(isoString: String): Long {
+    private fun parseIsoDate(isoString: String?): Long {
+        if (isoString == null) return 0L
         return try {
-            Instant.parse(isoString).toEpochMilliseconds()
+            DateTimeInstant.parse(isoString).toEpochMilliseconds()
         } catch (e: Exception) {
             0L
         }

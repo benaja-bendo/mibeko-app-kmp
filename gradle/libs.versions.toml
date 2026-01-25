@@ -9,15 +9,17 @@ androidx-core = "1.17.0"
 androidx-espresso = "3.7.0"
 androidx-lifecycle = "2.9.6"
 androidx-testExt = "1.3.0"
-composeMultiplatform = "1.9.3"
+composeMultiplatform = "1.10.0"
 junit = "4.13.2"
 kotlin = "2.3.0"
 ksp = "2.3.4"
 room = "2.8.4"
 sqlite = "2.6.2"
-ktor = "3.3.3"
+ktor = "3.4.0"
 kotlinx-serialization = "1.7.3"
-kotlinx-datetime = "0.6.1"
+kotlinx-datetime = "0.7.1"
+firebase-bom = "34.8.0"
+google-services = "4.4.4"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -63,6 +65,10 @@ multiplatform-settings = { module = "com.russhwolf:multiplatform-settings-no-arg
 multiplatform-settings-test = { module = "com.russhwolf:multiplatform-settings-test", version = "1.3.0" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 
+# Firebase
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
@@ -73,3 +79,4 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlinxSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 room = { id = "androidx.room", version.ref = "room" }
 buildConfig = { id = "com.github.gmazzo.buildconfig", version = "6.0.7" }
+googleServices = { id = "com.google.gms.google-services", version.ref = "google-services" }

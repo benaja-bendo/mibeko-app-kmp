@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ClipboardManager
 import android.content.ClipData
+import android.provider.Settings
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.text.SimpleDateFormat
@@ -25,11 +26,15 @@ actual fun getDatabaseSize(): Long {
         0L
     }
 }
-
 actual fun formatTimestampToDate(timestamp: Long): String {
     if (timestamp == 0L) return "Jamais"
     val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
     return sdf.format(Date(timestamp))
+}
+
+actual fun getDeviceId(): String {
+    val context = PlatformContextProvider.context
+    return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown_android"
 }
 
 actual fun copyToClipboard(text: String) {

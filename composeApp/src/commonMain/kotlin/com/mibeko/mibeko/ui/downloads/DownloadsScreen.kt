@@ -1,16 +1,20 @@
 package com.mibeko.mibeko.ui.downloads
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FileDownloadDone
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.data.ArticleSpec
 import com.mibeko.mibeko.data.LawCodeSpec
@@ -35,8 +40,13 @@ class DownloadsScreen : Screen {
         val viewModel = koinViewModel<DownloadsViewModel>()
         val uiState by viewModel.uiState.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
-        var selectedTabIndex by remember { mutableStateOf(0) }
+        val scope = rememberCoroutineScope()
+        
         val tabs = listOf("Documents", "Articles")
+        val pagerState = rememberPagerState { tabs.size }
+        
+        var isSearchActive by remember { mutableStateOf(false) }
+        var searchQuery by remember { mutableStateOf("") }
 
         LaunchedEffect(uiState.error) {
             uiState.error?.let {
@@ -45,21 +55,72 @@ class DownloadsScreen : Screen {
             }
         }
 
+        // Sync selected tab with pager
+        val selectedTabIndex = pagerState.currentPage
+
+        val filteredDocuments = remember(uiState.documents, searchQuery) {
+            if (searchQuery.isBlank()) uiState.documents
+            else uiState.documents.filter { it.title.contains(searchQuery, ignoreCase = true) }
+        }
+
+        val filteredArticles = remember(uiState.offlineArticles, searchQuery) {
+            val articles = uiState.offlineArticles.filter { it.isDownloaded }
+            if (searchQuery.isBlank()) articles
+            else articles.filter { 
+                it.number.contains(searchQuery, ignoreCase = true) || 
+                it.breadcrumb.contains(searchQuery, ignoreCase = true) 
+            }
+        }
+
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 Column {
                     TopAppBar(
-                        title = { Text("Gestionnaire Hors-ligne") },
+                        title = { 
+                            if (isSearchActive) {
+                                TextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    placeholder = { Text("Rechercher...") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        disabledContainerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent
+                                    ),
+                                    singleLine = true
+                                )
+                            } else {
+                                Text("Gestionnaire Hors-ligne") 
+                            }
+                        },
                         navigationIcon = {
-                            IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                            if (isSearchActive) {
+                                IconButton(onClick = { 
+                                    isSearchActive = false
+                                    searchQuery = ""
+                                }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Fermer")
+                                }
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = { navController.popBackStack() }) {
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                                    }
+                                    IconButton(onClick = { isSearchActive = true }) {
+                                        Icon(Icons.Default.Search, contentDescription = "Rechercher")
+                                    }
+                                }
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.surface
                         )
                     )
+                    @Suppress("DEPRECATION")
                     TabRow(
                         selectedTabIndex = selectedTabIndex,
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -68,7 +129,11 @@ class DownloadsScreen : Screen {
                         tabs.forEachIndexed { index, title ->
                             Tab(
                                 selected = selectedTabIndex == index,
-                                onClick = { selectedTabIndex = index },
+                                onClick = { 
+                                    scope.launch {
+                                        pagerState.animateScrollToPage(index)
+                                    }
+                                },
                                 text = { Text(title) }
                             )
                         }
@@ -82,10 +147,14 @@ class DownloadsScreen : Screen {
                     CircularProgressIndicator()
                 }
             } else {
-                Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-                    when (selectedTabIndex) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    verticalAlignment = Alignment.Top
+                ) { page ->
+                    when (page) {
                         0 -> DocumentList(
-                            documents = uiState.documents,
+                            documents = filteredDocuments,
                             downloadingIds = uiState.downloadingIds,
                             onDownload = { viewModel.downloadDocument(it) },
                             onRemove = { viewModel.removeDownload(it) },
@@ -93,7 +162,7 @@ class DownloadsScreen : Screen {
                             onNavigateToLibrary = { navController.navigate(NavScreen.Library) }
                         )
                         1 -> ArticleList(
-                            articles = uiState.offlineArticles,
+                            articles = filteredArticles,
                             onRemove = { viewModel.removeArticleDownload(it) },
                             onNavigate = { id -> navController.navigate(NavScreen.Reader(id)) },
                             onNavigateToLibrary = { navController.navigate(NavScreen.Library) }
@@ -115,7 +184,7 @@ private fun DocumentList(
     onNavigateToLibrary: () -> Unit
 ) {
     if (documents.isEmpty()) {
-        EmptyState("Aucun document téléchargé", onNavigateToLibrary)
+        EmptyState("Aucun document trouvé", onNavigateToLibrary)
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -123,7 +192,7 @@ private fun DocumentList(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item { InfoCard("Documents", "Téléchargez les codes complets pour y accéder sans connexion.") }
-            items(documents) { doc ->
+            items(documents, key = { it.id }) { doc ->
                 DownloadItemCard(
                     title = doc.title,
                     subtitle = if (doc.isDownloaded) "Disponible hors-ligne" else "En ligne uniquement",
@@ -144,9 +213,8 @@ private fun ArticleList(
     onNavigate: (String) -> Unit,
     onNavigateToLibrary: () -> Unit
 ) {
-    val downloadedArticles = articles.filter { it.isDownloaded }
-    if (downloadedArticles.isEmpty()) {
-        EmptyState("Aucun article hors-ligne", onNavigateToLibrary)
+    if (articles.isEmpty()) {
+        EmptyState("Aucun article trouvé", onNavigateToLibrary)
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -154,7 +222,7 @@ private fun ArticleList(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item { InfoCard("Articles", "Articles que vous avez mis hors-ligne individuellement.") }
-            items(downloadedArticles) { article ->
+            items(articles, key = { it.id }) { article ->
                 DownloadItemCard(
                     title = "Article ${article.number}",
                     subtitle = article.breadcrumb,

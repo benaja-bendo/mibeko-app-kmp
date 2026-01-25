@@ -31,3 +31,14 @@ data class ExplorerNode(
 enum class NodeType {
     CODE, BOOK, TITLE, CHAPTER, ARTICLE
 }
+
+@kotlinx.serialization.Serializable
+data class NotificationRemote(
+    val id: String,
+    val title: String,
+    val message: String,
+    val type: String,
+    val data: Map<String, String>? = null,
+    val read_at: String? = null,
+    val created_at: String
+)

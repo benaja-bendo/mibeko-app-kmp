@@ -10,6 +10,11 @@ expect fun getDatabaseSize(): Long
 expect fun formatTimestampToDate(timestamp: Long): String
 
 /**
+ * Récupère un identifiant unique pour l'appareil.
+ */
+expect fun getDeviceId(): String
+
+/**
  * Copies text to the system clipboard.
  */
 expect fun copyToClipboard(text: String)

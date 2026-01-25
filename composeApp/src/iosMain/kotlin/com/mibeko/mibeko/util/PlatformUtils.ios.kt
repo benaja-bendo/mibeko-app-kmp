@@ -27,6 +27,10 @@ actual fun formatTimestampToDate(timestamp: Long): String {
     return formatter.stringFromDate(date)
 }
 
+actual fun getDeviceId(): String {
+    return UIDevice.currentDevice.identifierForVendor?.UUIDString ?: "unknown_ios"
+}
+
 actual fun copyToClipboard(text: String) {
     UIPasteboard.generalPasteboard.string = text
 }

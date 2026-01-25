@@ -7,6 +7,8 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import com.mibeko.mibeko.di.commonModule
 
+import com.mibeko.mibeko.BuildConfig
+
 class MibekoApp : Application() {
     companion object {
         lateinit var INSTANCE: MibekoApp
@@ -22,7 +24,7 @@ class MibekoApp : Application() {
             modules(commonModule, module {
                 single<com.mibeko.mibeko.di.AppConfig> {
                     object : com.mibeko.mibeko.di.AppConfig {
-                        override val baseUrl = ApiConstants.BASE_URL
+                        override val baseUrl = BuildConfig.BASE_URL
                     }
                 }
             })

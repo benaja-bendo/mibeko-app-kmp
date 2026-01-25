@@ -5,9 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
+import com.mibeko.mibeko.data.repository.NotificationRepository
+import com.mibeko.mibeko.util.NotificationManager
 import com.mibeko.mibeko.util.formatSize
 import com.mibeko.mibeko.util.formatTimestampToDate
 import com.mibeko.mibeko.util.getDatabaseSize
+import com.mibeko.mibeko.util.getDeviceId
+import com.mibeko.mibeko.getPlatform
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.mibeko.mibeko.getCurrentTimeMillis
@@ -51,7 +55,9 @@ data class SettingsUiState(
  */
 class SettingsViewModel(
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val legalRepository: LocalLegalRepository
+    private val legalRepository: LocalLegalRepository,
+    private val notificationManager: NotificationManager,
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -160,8 +166,40 @@ class SettingsViewModel(
      * Toggle notifications.
      */
     fun setNotificationsEnabled(enabled: Boolean) {
-        userPreferencesRepository.setNotificationsEnabled(enabled)
-        _uiState.value = _uiState.value.copy(isNotificationsEnabled = enabled)
+        if (enabled) {
+            notificationManager.requestPermission { granted ->
+                if (granted) {
+                    userPreferencesRepository.setNotificationsEnabled(true)
+                    _uiState.value = _uiState.value.copy(isNotificationsEnabled = true)
+
+                    // Register device on backend
+                    viewModelScope.launch {
+                        notificationManager.getPushToken { token ->
+                            if (token != null) {
+                                viewModelScope.launch {
+                                    val platformName = getPlatform().name.lowercase()
+                                    val backendPlatform = if (platformName.contains("android")) "android" else "ios"
+                                    
+                                    notificationRepository.registerDevice(
+                                        deviceId = getDeviceId(),
+                                        pushToken = token,
+                                        platform = backendPlatform
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            userPreferencesRepository.setNotificationsEnabled(false)
+            _uiState.value = _uiState.value.copy(isNotificationsEnabled = false)
+
+            // Unregister device on backend
+            viewModelScope.launch {
+                notificationRepository.unregisterDevice(getDeviceId())
+            }
+        }
     }
 
     /**

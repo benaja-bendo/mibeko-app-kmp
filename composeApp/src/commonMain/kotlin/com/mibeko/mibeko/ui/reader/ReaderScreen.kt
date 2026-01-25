@@ -188,7 +188,7 @@ data class ReaderScreen(val articleId: String) : Screen {
                                 Icon(Icons.Default.FormatSize, contentDescription = "Paramètres de lecture", tint = textColor)
                             }
                         },
-                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = backgroundColor
                         )
                     )

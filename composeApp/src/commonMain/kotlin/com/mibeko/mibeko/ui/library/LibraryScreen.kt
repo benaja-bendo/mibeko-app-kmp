@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -60,7 +62,7 @@ class LibraryScreen : Screen {
                             fontWeight = FontWeight.Black
                         ) 
                     },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background,
                         scrolledContainerColor = MaterialTheme.colorScheme.background
                     )
@@ -119,8 +121,8 @@ class LibraryScreen : Screen {
                                     "Lois Organiques" to Icons.Default.AccountBalance,
                                     "Lois Ordinaires" to Icons.Default.Description,
                                     "Ordonnances" to Icons.Default.Gavel,
-                                    "Décrets" to Icons.Default.Article,
-                                    "Arrêtés" to Icons.Default.Assignment
+                                    "Décrets" to Icons.AutoMirrored.Filled.Article,
+                                    "Arrêtés" to Icons.AutoMirrored.Filled.Assignment
                                 )
                                 fallbackTypes.forEach { pair ->
                                     HierarchyCard(
@@ -141,8 +143,8 @@ class LibraryScreen : Screen {
                                             type.name.contains("Organique", true) -> Icons.Default.AccountBalance
                                             type.name.contains("Ordinaire", true) -> Icons.Default.Description
                                             type.name.contains("Ordonnance", true) -> Icons.Default.Gavel
-                                            type.name.contains("Décret", true) -> Icons.Default.Article
-                                            else -> Icons.Default.Assignment
+                                            type.name.contains("Décret", true) -> Icons.AutoMirrored.Filled.Article
+                                            else -> Icons.AutoMirrored.Filled.Assignment
                                         },
                                         title = type.name,
                                         count = uiState.stats.find { it.type_code == type.code }?.count ?: 0,

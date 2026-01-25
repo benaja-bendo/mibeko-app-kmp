@@ -77,7 +77,11 @@ class HomeScreen : Screen {
             ) {
                 // Blue Header with Logo
                 item {
-                    HomeHeader()
+                    HomeHeader(
+                        onNotificationsClick = {
+                            navController.navigate(MibekoScreen.Notifications)
+                        }
+                    )
                 }
                 
                 // Search Trigger Button (navigates to SearchResults)
@@ -182,7 +186,7 @@ class HomeScreen : Screen {
  * En-tête avec dégradé bleu institutionnel, logo Mibeko et titre.
  */
 @Composable
-private fun HomeHeader() {
+private fun HomeHeader(onNotificationsClick: () -> Unit = {}) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -195,6 +199,20 @@ private fun HomeHeader() {
             .padding(vertical = 32.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Notification Icon (Top Right)
+        IconButton(
+            onClick = onNotificationsClick,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = 16.dp, top = 0.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Notifications,
+                contentDescription = "Notifications",
+                tint = Color.White
+            )
+        }
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

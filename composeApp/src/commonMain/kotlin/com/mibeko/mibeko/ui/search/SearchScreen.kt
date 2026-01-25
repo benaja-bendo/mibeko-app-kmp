@@ -100,6 +100,7 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                         .statusBarsPadding()
                         .padding(horizontal = if (isActive) 0.dp else 16.dp, vertical = if (isActive) 0.dp else 8.dp)
                 ) {
+                    @Suppress("DEPRECATION")
                     SearchBar(
                         query = searchText,
                         onQueryChange = { 

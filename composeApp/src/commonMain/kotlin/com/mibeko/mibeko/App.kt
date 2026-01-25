@@ -22,13 +22,12 @@ import com.mibeko.mibeko.ui.dossier.DossierScreen
 import com.mibeko.mibeko.ui.dossier.DossierDetailScreen
 import com.mibeko.mibeko.ui.library.LibraryScreen
 import com.mibeko.mibeko.ui.downloads.DownloadsScreen
+import com.mibeko.mibeko.ui.notifications.NotificationsScreen
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.theme.MibekoTheme
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 
 @Composable
-@Preview
 fun App() {
     val userPreferencesRepository = koinInject<UserPreferencesRepository>()
     
@@ -83,6 +82,7 @@ fun App() {
                 composable<Screen.Dossiers> { DossierScreen().Content() }
                 composable<Screen.Library> { LibraryScreen().Content() }
                 composable<Screen.Downloads> { DownloadsScreen().Content() }
+                composable<Screen.Notifications> { NotificationsScreen().Content() }
                 
                 composable<Screen.SearchResults> { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.SearchResults>()

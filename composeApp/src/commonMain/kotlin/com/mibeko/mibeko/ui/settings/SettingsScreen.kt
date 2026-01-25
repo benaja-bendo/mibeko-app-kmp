@@ -209,8 +209,10 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
             topBar = {
                 CenterAlignedTopAppBar(
                     title = { Text("Réglages", fontWeight = FontWeight.Bold) },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
             },
@@ -316,19 +318,6 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                TextButton(
-                    onClick = { /* Handle logout */ },
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) {
-                    Text(
-                        "Se déconnecter",
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
                     text = "© 2026 Mibeko - République du Congo",

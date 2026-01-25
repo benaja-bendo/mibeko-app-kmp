@@ -55,7 +55,6 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
         val snackbarHostState = remember { SnackbarHostState() }
         
         val dossier = uiState.document
-        val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
         val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
         val scope = rememberCoroutineScope()
         
@@ -101,7 +100,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                                 )
                             }
                         },
-                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.surface,
                             scrolledContainerColor = MaterialTheme.colorScheme.surface
                         )

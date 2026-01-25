@@ -47,6 +47,9 @@ sealed class Screen {
     data object Downloads : Screen()
     
     @Serializable
+    data object Notifications : Screen()
+    
+    @Serializable
     data class DossierDetail(val dossierId: String) : Screen()
     
     @Serializable

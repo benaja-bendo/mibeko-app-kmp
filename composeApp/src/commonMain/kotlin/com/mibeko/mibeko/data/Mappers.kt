@@ -57,7 +57,7 @@ fun com.mibeko.mibeko.data.remote.RemoteSearchResult.toArticleSpec(): ArticleSpe
         id = id,
         codeId = document_id,
         number = number,
-        title = node_title ?: "",
+        title = node_title,
         content = content ?: "",
         breadcrumb = breadcrumb,
         typeCode = document_type, // Map document_type from API to typeCode
