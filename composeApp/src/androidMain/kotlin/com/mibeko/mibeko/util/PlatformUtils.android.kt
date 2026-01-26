@@ -44,15 +44,4 @@ actual fun copyToClipboard(text: String) {
     clipboard.setPrimaryClip(clip)
 }
 
-actual fun shareText(text: String) {
-    val context = PlatformContextProvider.context
-    val sendIntent: Intent = Intent().apply {
-        action = Intent.ACTION_SEND
-        putExtra(Intent.EXTRA_TEXT, text)
-        type = "text/plain"
-    }
-    val shareIntent = Intent.createChooser(sendIntent, null).apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-    context.startActivity(shareIntent)
-}
+

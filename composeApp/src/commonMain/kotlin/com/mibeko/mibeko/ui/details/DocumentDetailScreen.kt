@@ -193,8 +193,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                         
                         OutlinedButton(
                             onClick = { 
-                                val shareText = viewModel.getShareText()
-                                com.mibeko.mibeko.util.shareText(shareText)
+                                viewModel.shareDocument()
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -208,12 +207,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                         // PDF Export Button
                         IconButton(
                             onClick = { 
-                                val url = viewModel.exportPdf()
-                                if (url.isNotEmpty()) {
-                                    uriHandler.openUri(url)
-                                } else {
-                                    scope.launch { snackbarHostState.showSnackbar("URL d'export non disponible") }
-                                }
+                                viewModel.shareDocument()
                             },
                             modifier = Modifier
                                 .size(48.dp)
@@ -221,7 +215,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                         ) {
                             Icon(
                                 Icons.Filled.PictureAsPdf, 
-                                contentDescription = "PDF", 
+                                contentDescription = "Partager PDF", 
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }

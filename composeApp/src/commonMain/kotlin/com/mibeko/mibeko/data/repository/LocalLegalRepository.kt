@@ -616,4 +616,8 @@ class LocalLegalRepository(
     fun getDocumentExportUrl(documentId: String): String {
         return apiService.getDocumentExportUrl(documentId)
     }
+
+    suspend fun downloadFile(url: String): ByteArray {
+        return apiService.downloadFile(url)
+    }
 }

@@ -29,7 +29,10 @@ data class DocumentDetailUiState(
     val isDownloading: Boolean = false
 )
 
-class DocumentDetailViewModel(private val repository: LocalLegalRepository) : ViewModel() {
+class DocumentDetailViewModel(
+    private val repository: LocalLegalRepository,
+    private val contentSharer: com.mibeko.mibeko.util.ContentSharer
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DocumentDetailUiState())
     val uiState: StateFlow<DocumentDetailUiState> = _uiState.asStateFlow()
@@ -138,12 +141,20 @@ class DocumentDetailViewModel(private val repository: LocalLegalRepository) : Vi
         return result
     }
 
-    /**
-     * Retourne le texte à partager pour ce document.
-     */
-    fun getShareText(): String {
-        val doc = _uiState.value.document ?: return ""
-        return "Consultez '${doc.title}' sur Mibeko.\n\nType: ${doc.type}\nStatut: Officiel\n\nRetrouvez tous les textes de loi sur l'application Mibeko."
+    fun shareDocument() {
+        val doc = _uiState.value.document ?: return
+        val url = repository.getDocumentExportUrl(doc.id)
+        
+        viewModelScope.launch {
+            try {
+                // Professional Legaltech: Share the actual PDF file
+                val bytes = repository.downloadFile(url)
+                val fileName = "${doc.title.replace(" ", "_")}.pdf"
+                contentSharer.shareFile(bytes, fileName, "application/pdf")
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Erreur lors du partage : ${e.message}")
+            }
+        }
     }
 
     /**

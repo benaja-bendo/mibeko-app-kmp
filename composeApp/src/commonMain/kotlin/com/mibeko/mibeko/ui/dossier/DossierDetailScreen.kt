@@ -53,22 +53,7 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
         val dossier = uiState.dossier
         val dossierColor = if (dossier != null) parseColor(dossier.color) else MaterialTheme.colorScheme.primary
 
-        fun shareDossierContent() {
-            viewModel.exportPdf(
-                onSuccess = { bytes ->
-                    scope.launch {
-                        // TODO: Implement actual file saving and sharing via platform channel
-                        // Platform.sharePdf(bytes, "${dossier?.name ?: "dossier"}.pdf")
-                        snackbarHostState.showSnackbar("PDF généré (${bytes.size} bytes). Sauvegarde non implémentée.")
-                    }
-                },
-                onError = { error ->
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Erreur: $error")
-                    }
-                }
-            )
-        }
+
 
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -88,21 +73,7 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                         containerColor = dossierColor
                     ),
                     actions = {
-                        if (uiState.isExporting) {
-                            CircularProgressIndicator(
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(24.dp).padding(end = 16.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            IconButton(onClick = { /* TODO: More options */ }) {
-                                Icon(
-                                    Icons.Filled.MoreVert,
-                                    contentDescription = "Options",
-                                    tint = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-                        }
+                        // Removed extra options for now
                     }
                 )
             },
@@ -115,10 +86,9 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                              snackbarHostState.showSnackbar("Pour ajouter un article, utilisez le bouton 'Ajouter au dossier' lors de la lecture d'un article.")
                         }
                     },
-                    onShare = { shareDossierContent() },
+                    onShare = { viewModel.shareDossier() },
                     onEdit = { viewModel.showEditDialog() },
-                    canEdit = canEdit,
-                    isExporting = uiState.isExporting
+                    canEdit = canEdit
                 )
             },
             containerColor = MaterialTheme.colorScheme.background
@@ -131,16 +101,6 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                 // Header with dossier info
                 DossierHeader(dossier, dossierColor, uiState.articleCount)
                 
-                // Filter Tabs
-                DossierFilterTabs(
-                    currentFilter = uiState.filter,
-                    onFilterSelected = { viewModel.setFilter(it) },
-                    selectedDocument = uiState.documents.find { it.id == viewModel.run { 
-                        // Using reflection or accessor would be better, but for now we reset on view change in VM
-                        null 
-                    }}?.title // Placeholder for selected doc title if needed
-                )
-                
                 // Content Area
                 Box(modifier = Modifier.weight(1f)) {
                     if (uiState.isLoading) {
@@ -150,82 +110,15 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
                         ) {
                             CircularProgressIndicator()
                         }
-                    } else if (uiState.documents.isEmpty() && uiState.articles.isEmpty()) {
+                    } else if (uiState.articles.isEmpty()) {
                         EmptyDossierState()
                     } else {
-                        when (uiState.filter) {
-                            DossierFilterType.DOCUMENTS -> {
-                                if (uiState.displayedArticles.isNotEmpty() && uiState.filter == DossierFilterType.DOCUMENTS) {
-                                    // This state (doc selected) usually moves us to a specific view, 
-                                    // but if we are in Documents mode and have a selection logic in VM:
-                                    // Actually VM logic clears selection on filter change.
-                                    // Documents View:
-                                    DocumentsGrid(
-                                        documents = uiState.documents,
-                                        onDocumentClick = { docId ->
-                                             viewModel.selectDocument(docId)
-                                             viewModel.setFilter(DossierFilterType.ALL) // Switch to list view effectively filtered
-                                        }
-                                    )
-                                } else {
-                                    DocumentsGrid(
-                                        documents = uiState.documents,
-                                        onDocumentClick = { docId ->
-                                             viewModel.selectDocument(docId)
-                                             // We stay in view but show only that doc's articles? 
-                                             // Design choice: Switching to "Articles" view filtered by doc is better.
-                                             // Or "All" view.
-                                        }
-                                    )
-                                }
-                            }
-                            DossierFilterType.ARTICLES -> {
-                                ArticlesList(
-                                    articles = uiState.articles,
-                                    navController = navController,
-                                    onEditNote = { viewModel.showNoteDialog(it) },
-                                    onRemove = { viewModel.removeArticle(it.article.id) }
-                                )
-                            }
-                            DossierFilterType.ALL -> {
-                                if (uiState.displayedArticles.isNotEmpty()) {
-                                    // Filtered by specific document
-                                    Column {
-                                        Surface(
-                                            color = MaterialTheme.colorScheme.secondaryContainer,
-                                            modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                            shape = RoundedCornerShape(8.dp),
-                                            onClick = { viewModel.verifyFilter() }
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(8.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(Icons.Default.FilterList, null, modifier = Modifier.size(16.dp))
-                                                Spacer(Modifier.width(8.dp))
-                                                Text("Filtre actif : ${uiState.displayedArticles.firstOrNull()?.document_title ?: "Document"}")
-                                                Spacer(Modifier.weight(1f))
-                                                Icon(Icons.Default.Close, null, modifier = Modifier.size(16.dp))
-                                            }
-                                        }
-                                        ArticlesList(
-                                            articles = uiState.displayedArticles,
-                                            navController = navController,
-                                            onEditNote = { viewModel.showNoteDialog(it) },
-                                            onRemove = { viewModel.removeArticle(it.article.id) }
-                                        )
-                                    }
-                                } else {
-                                    // Show all articles
-                                    ArticlesList(
-                                        articles = uiState.articles,
-                                        navController = navController,
-                                        onEditNote = { viewModel.showNoteDialog(it) },
-                                        onRemove = { viewModel.removeArticle(it.article.id) }
-                                    )
-                                }
-                            }
-                        }
+                        ArticlesList(
+                            articles = uiState.articles,
+                            navController = navController,
+                            onEditNote = { viewModel.showNoteDialog(it) },
+                            onRemove = { viewModel.removeArticle(it.article.id) }
+                        )
                     }
                 }
             }
@@ -328,80 +221,7 @@ fun DossierHeader(dossier: DossierEntity?, color: Color, count: Int) {
     }
 }
 
-@Composable
-fun DossierFilterTabs(
-    currentFilter: DossierFilterType,
-    onFilterSelected: (DossierFilterType) -> Unit,
-    selectedDocument: String? = null
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        FilterChip(
-            selected = currentFilter == DossierFilterType.ALL,
-            onClick = { onFilterSelected(DossierFilterType.ALL) },
-            label = { Text("Tout") },
-            leadingIcon = { Icon(Icons.Default.Dashboard, null, Modifier.size(16.dp)) }
-        )
-        FilterChip(
-            selected = currentFilter == DossierFilterType.DOCUMENTS,
-            onClick = { onFilterSelected(DossierFilterType.DOCUMENTS) },
-            label = { Text("Documents") },
-            leadingIcon = { Icon(Icons.Default.LibraryBooks, null, Modifier.size(16.dp)) }
-        )
-        FilterChip(
-            selected = currentFilter == DossierFilterType.ARTICLES,
-            onClick = { onFilterSelected(DossierFilterType.ARTICLES) },
-            label = { Text("Articles") },
-            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Article, null, Modifier.size(16.dp)) }
-        )
-    }
-}
 
-@Composable
-fun DocumentsGrid(
-    documents: List<ClientDossierDocument>,
-    onDocumentClick: (String) -> Unit
-) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        items(documents) { doc ->
-            Card(
-                onClick = { onDocumentClick(doc.id) },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(Icons.Default.Book, null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        doc.title,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        fontSize = 14.sp
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "${doc.articleCount} articles",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun ArticlesList(
@@ -562,8 +382,7 @@ fun DossierActionBar(
     onAddArticle: () -> Unit,
     onShare: () -> Unit,
     onEdit: () -> Unit,
-    canEdit: Boolean,
-    isExporting: Boolean
+    canEdit: Boolean
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -575,22 +394,18 @@ fun DossierActionBar(
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            if (isExporting) {
-                Text("Export en cours...", modifier = Modifier.align(Alignment.CenterVertically))
-            } else {
+            ActionButton(
+                icon = Icons.Filled.Share,
+                label = "Partager",
+                onClick = onShare
+            )
+
+            if (canEdit) {
                 ActionButton(
-                    icon = Icons.Filled.Share,
-                    label = "Partager",
-                    onClick = onShare
+                    icon = Icons.Filled.Edit,
+                    label = "Modifier",
+                    onClick = onEdit
                 )
-                
-                if (canEdit) {
-                    ActionButton(
-                        icon = Icons.Filled.Edit,
-                        label = "Modifier",
-                        onClick = onEdit
-                    )
-                }
             }
         }
     }

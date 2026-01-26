@@ -57,7 +57,6 @@ import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.components.HighlightedText
 import com.mibeko.mibeko.ui.components.SearchResultsShimmer
 import com.mibeko.mibeko.util.copyToClipboard
-import com.mibeko.mibeko.util.shareText
 
 val LocalSnackbarHostState = staticCompositionLocalOf<SnackbarHostState> {
     error("No SnackbarHostState provided")
@@ -294,7 +293,7 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
                         // AI Answer section
                         uiState.aiAnswer?.let { answer ->
                             item {
-                                AiAnswerCard(answer = answer)
+                                AiAnswerCard(answer = answer, viewModel = viewModel)
                             }
                             
                             item {
@@ -347,7 +346,7 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
  * Design premium avec dégradé subtil et actions rapides.
  */
 @Composable
-private fun AiAnswerCard(answer: String) {
+private fun AiAnswerCard(answer: String, viewModel: SearchViewModel) {
     var isExpanded by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = LocalSnackbarHostState.current // Assuming we provide it or use Local
@@ -417,7 +416,7 @@ private fun AiAnswerCard(answer: String) {
                             Icon(Icons.Default.ContentCopy, null, tint = MibekoBluePrimary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                         }
                         IconButton(onClick = { 
-                            shareText(answer)
+                            viewModel.shareAiAnswer(answer)
                         }, modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Default.Share, null, tint = MibekoBluePrimary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                         }

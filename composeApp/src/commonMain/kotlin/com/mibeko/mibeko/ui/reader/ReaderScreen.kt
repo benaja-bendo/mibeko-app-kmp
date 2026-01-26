@@ -166,22 +166,18 @@ data class ReaderScreen(val articleId: String) : Screen {
                             }
                             // Share
                             IconButton(onClick = { 
-                                val text = viewModel.getShareText()
-                                com.mibeko.mibeko.util.shareText(text)
+                                viewModel.shareArticle()
                             }) {
                                 Icon(Icons.Default.Share, contentDescription = "Partager", tint = textColor)
                             }
                             
                             // PDF Export
-                            val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
                             IconButton(onClick = { 
-                                val url = viewModel.exportPdf()
-                                if (url.isNotEmpty()) {
-                                    uriHandler.openUri(url)
-                                }
+                                viewModel.shareArticle()
                             }) {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF", tint = textColor)
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = "Partager PDF", tint = textColor)
                             }
+
                             
                             // Settings
                             IconButton(onClick = { showSettings = true }) { 

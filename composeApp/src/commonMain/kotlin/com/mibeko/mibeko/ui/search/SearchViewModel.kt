@@ -33,7 +33,8 @@ data class SearchUiState(
 class SearchViewModel(
     private val repository: LocalLegalRepository,
     private val searchHistoryManager: SearchHistoryManager,
-    private val dossierRepository: com.mibeko.mibeko.data.repository.DossierRepository
+    private val dossierRepository: com.mibeko.mibeko.data.repository.DossierRepository,
+    private val contentSharer: com.mibeko.mibeko.util.ContentSharer
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -279,5 +280,10 @@ class SearchViewModel(
         viewModelScope.launch {
             searchHistoryManager.clearHistory()
         }
+    }
+
+    fun shareAiAnswer(answer: String) {
+        val title = "Analyse AI Mibeko"
+        contentSharer.shareText(answer, title)
     }
 }

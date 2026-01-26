@@ -98,9 +98,6 @@ class LegalApiService(
     }
 
     /**
-     * Fetch list of institutions.
-     */
-    /**
      * Get the export URL for a specific document.
      */
     fun getDocumentExportUrl(documentId: String): String {
@@ -125,6 +122,13 @@ class LegalApiService(
         return client.post("$baseUrl/v1/dossiers/export-pdf") {
             header(io.ktor.http.HttpHeaders.ContentType, io.ktor.http.ContentType.Application.Json)
             setBody(request)
-        }.body()
+        }.body<ByteArray>()
+    }
+
+    /**
+     * Download a file from a URL.
+     */
+    suspend fun downloadFile(url: String): ByteArray {
+        return client.get(url).body<ByteArray>()
     }
 }

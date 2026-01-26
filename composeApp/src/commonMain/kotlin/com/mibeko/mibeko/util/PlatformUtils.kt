@@ -19,10 +19,7 @@ expect fun getDeviceId(): String
  */
 expect fun copyToClipboard(text: String)
 
-/**
- * Opens the system share sheet for the given text.
- */
-expect fun shareText(text: String)
+// shareText removed to use ContentSharer service instead
 
 /**
  * Formats a size in bytes to a human-readable string (KB, MB).

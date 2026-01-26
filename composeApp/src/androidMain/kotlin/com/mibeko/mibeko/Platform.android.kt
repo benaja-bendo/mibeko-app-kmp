@@ -9,3 +9,6 @@ class AndroidPlatform : Platform {
 actual fun getPlatform(): Platform = AndroidPlatform()
 
 actual fun getCurrentTimeMillis(): Long = System.currentTimeMillis()
+
+actual fun getContentSharer(): com.mibeko.mibeko.util.ContentSharer = 
+    com.mibeko.mibeko.util.AndroidContentSharer(MibekoApp.INSTANCE)

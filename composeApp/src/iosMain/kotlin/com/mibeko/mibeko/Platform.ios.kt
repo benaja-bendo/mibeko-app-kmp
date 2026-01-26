@@ -13,3 +13,6 @@ actual fun getPlatform(): Platform = IOSPlatform()
 actual fun getCurrentTimeMillis(): Long {
     return (NSDate().timeIntervalSince1970 * 1000).toLong()
 }
+
+actual fun getContentSharer(): com.mibeko.mibeko.util.ContentSharer = 
+    com.mibeko.mibeko.util.IosContentSharer()

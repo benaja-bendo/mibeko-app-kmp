@@ -25,7 +25,8 @@ data class ReaderUiState(
 class ReaderViewModel(
     private val repository: LocalLegalRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val dossierRepository: DossierRepository
+    private val dossierRepository: DossierRepository,
+    private val contentSharer: com.mibeko.mibeko.util.ContentSharer
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReaderUiState())
@@ -126,14 +127,23 @@ class ReaderViewModel(
         _isDyslexiaFontEnabled.value = enabled
     }
 
-    fun exportPdf(platformHandler: (() -> Unit)? = null): String {
+    fun exportPdf(): String {
         val currentArticle = _uiState.value.article ?: return ""
-        val url = repository.getArticleExportUrl(currentArticle.id)
-        return url
+        return repository.getArticleExportUrl(currentArticle.id)
     }
 
-    fun getShareText(): String {
-        val currentArticle = _uiState.value.article ?: return ""
-        return "Consultez cet article de loi: ${currentArticle.title}\n\n${currentArticle.content?.take(200)}..."
+    fun shareArticle() {
+        val currentArticle = _uiState.value.article ?: return
+        val url = repository.getArticleExportUrl(currentArticle.id)
+        
+        viewModelScope.launch {
+            try {
+                val bytes = repository.downloadFile(url)
+                val fileName = "Article_${currentArticle.number}.pdf"
+                contentSharer.shareFile(bytes, fileName, "application/pdf")
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Erreur lors du partage : ${e.message}")
+            }
+        }
     }
 }

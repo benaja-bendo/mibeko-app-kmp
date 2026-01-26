@@ -62,21 +62,24 @@ val commonModule = module {
     // Notification Manager (platform-specific implementation)
     single<NotificationManager> { getNotificationManager() }
 
+    // Content Sharer (platform-specific implementation)
+    single<com.mibeko.mibeko.util.ContentSharer> { com.mibeko.mibeko.getContentSharer() }
+
     // Repositories
     single { LocalLegalRepository(get(), get(), get(), get()) }
     single { DossierRepository(get(), get()) }
     single { NotificationRepository(get(), get<AppConfig>().baseUrl) }
 
     viewModel { HomeViewModel(get(), get()) }
-    viewModel { SearchViewModel(get(), get(), get()) }
-    viewModel { ReaderViewModel(get(), get(), get()) }
-    viewModel { DocumentDetailViewModel(get()) }
+    viewModel { SearchViewModel(get(), get(), get(), get()) }
+    viewModel { ReaderViewModel(get(), get(), get(), get()) }
+    viewModel { DocumentDetailViewModel(get(), get()) }
     viewModel { FavoritesViewModel(get()) }
     viewModel { SettingsViewModel(get(), get(), get(), get()) }
     viewModel { LibraryViewModel(get()) }
     viewModel { DownloadsViewModel(get()) }
     viewModel { NotificationsViewModel(get()) }
     viewModel { DossierViewModel(get()) }
-    viewModel { params -> DossierDetailViewModel(params.get(), get()) }
+    viewModel { params -> DossierDetailViewModel(params.get(), get(), get()) }
 }
 
