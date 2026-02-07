@@ -8,7 +8,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.*
+import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
+import androidx.navigation.NavDeepLink
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 import com.mibeko.mibeko.ui.home.HomeScreen
@@ -89,12 +91,22 @@ fun App() {
                     SearchResultsScreen(query = route.query, tag = route.tag).Content() 
                 }
                 
-                composable<Screen.DocumentDetail> { backStackEntry ->
+                composable<Screen.DocumentDetail>(
+                    deepLinks = listOf(
+                        navDeepLink { uriPattern = "https://mibeko.cg/document/{documentId}" },
+                        navDeepLink { uriPattern = "mibeko://document/{documentId}" }
+                    )
+                ) { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.DocumentDetail>()
                     DocumentDetailScreen(route.documentId).Content()
                 }
                 
-                composable<Screen.Reader> { backStackEntry ->
+                composable<Screen.Reader>(
+                    deepLinks = listOf(
+                        navDeepLink { uriPattern = "https://mibeko.cg/article/{articleId}" },
+                        navDeepLink { uriPattern = "mibeko://article/{articleId}" }
+                    )
+                ) { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.Reader>()
                     ReaderScreen(route.articleId).Content()
                 }

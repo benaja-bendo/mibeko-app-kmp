@@ -33,6 +33,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.graphics.Color
 import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
+import com.mibeko.mibeko.ui.components.ShareOptionsSheet
 
 data class ReaderScreen(val articleId: String) : Screen {
 
@@ -48,10 +49,26 @@ data class ReaderScreen(val articleId: String) : Screen {
         val article by viewModel.article.collectAsState()
         val textSize by viewModel.textSize.collectAsState()
         val isDyslexiaFontEnabled by viewModel.isDyslexiaFontEnabled.collectAsState()
+        val isSharing by viewModel.isSharing.collectAsState()
+        val snackbarMessage by viewModel.snackbarMessage.collectAsState()
+        
+        val snackbarHostState = remember { SnackbarHostState() }
         
         // Reading theme state (Internal for MVP, could be in VM)
         var readerTheme by remember { mutableStateOf("paper") } // "white", "paper", "dark"
         var showSettings by remember { mutableStateOf(false) }
+        var showShareSheet by remember { mutableStateOf(false) }
+
+        // Show snackbar when message changes
+        LaunchedEffect(snackbarMessage) {
+            snackbarMessage?.let {
+                snackbarHostState.showSnackbar(
+                    message = it,
+                    duration = SnackbarDuration.Short
+                )
+                viewModel.clearSnackbar()
+            }
+        }
 
         LaunchedEffect(articleId) {
             viewModel.loadArticle(articleId)
@@ -132,15 +149,19 @@ data class ReaderScreen(val articleId: String) : Screen {
 
         Scaffold(
             topBar = {
-                Column {
+                Column(
+                    modifier = Modifier.background(backgroundColor)
+                ) {
                     CenterAlignedTopAppBar(
                         title = {
-                            Text(
-                                "Article ${currentArticle.number}", 
-                                fontWeight = FontWeight.Bold, 
-                                style = MaterialTheme.typography.titleMedium,
-                                color = textColor
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    "Article ${currentArticle.number}", 
+                                    fontWeight = FontWeight.Bold, 
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = textColor
+                                )
+                            }
                         },
                         navigationIcon = {
                             IconButton(onClick = { navController.popBackStack() }) {
@@ -164,20 +185,21 @@ data class ReaderScreen(val articleId: String) : Screen {
                                     tint = if (currentArticle.isFavorite) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.6f)
                                 )
                             }
-                            // Share
-                            IconButton(onClick = { 
-                                viewModel.shareArticle()
-                            }) {
-                                Icon(Icons.Default.Share, contentDescription = "Partager", tint = textColor)
+                            // Share - Single button that opens share options sheet
+                            IconButton(
+                                onClick = { showShareSheet = true },
+                                enabled = !isSharing
+                            ) {
+                                if (isSharing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    Icon(Icons.Default.Share, contentDescription = "Partager", tint = textColor)
+                                }
                             }
-                            
-                            // PDF Export
-                            IconButton(onClick = { 
-                                viewModel.shareArticle()
-                            }) {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = "Partager PDF", tint = textColor)
-                            }
-
                             
                             // Settings
                             IconButton(onClick = { showSettings = true }) { 
@@ -185,29 +207,53 @@ data class ReaderScreen(val articleId: String) : Screen {
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = backgroundColor
+                            containerColor = Color.Transparent
                         )
                     )
                     
-                    // Dynamic Breadcrumb for Reader
-                    val breadcrumbSegments = listOf(
-                        BreadcrumbSegment("Bibliothèque") { navController.popBackStack() },
-                        BreadcrumbSegment(uiState.documentType ?: "Norme") { navController.popBackStack() },
-                        BreadcrumbSegment(uiState.documentTitle ?: "Document") { navController.popBackStack() },
-                        BreadcrumbSegment("Art. ${currentArticle.number}") { }
-                    )
+                    // Simplified breadcrumb with document info
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Document type badge
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = when(readerTheme) {
+                                "dark" -> Color(0xFF2D2D2D)
+                                else -> textColor.copy(alpha = 0.08f)
+                            }
+                        ) {
+                            Text(
+                                text = uiState.documentType?.uppercase() ?: "LOI",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor.copy(alpha = 0.7f)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        // Document title
+                        Text(
+                            text = uiState.documentTitle ?: "Document",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = textColor.copy(alpha = 0.6f),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                     
-                    MibekoBreadcrumb(
-                        segments = breadcrumbSegments,
-                        modifier = Modifier.background(backgroundColor)
-                    )
-                    
-                    HorizontalDivider(color = textColor.copy(alpha = 0.1f))
+                    HorizontalDivider(color = textColor.copy(alpha = 0.08f))
                 }
             },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             floatingActionButton = {
-                 // Removed FAB if all actions are in top bar, or maybe a simple "Share" FAB?
-                 // Keeping it clean for now.
+                 // Removed FAB if all actions are in top bar
             },
             containerColor = backgroundColor
         ) { padding ->
@@ -269,6 +315,39 @@ data class ReaderScreen(val articleId: String) : Screen {
                         onDyslexiaChange = { viewModel.setDyslexiaFontEnabled(it) }
                      )
                  }
+            }
+
+            if (showShareSheet) {
+                ModalBottomSheet(
+                    onDismissRequest = { showShareSheet = false },
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                ShareOptionsSheet(
+                    title = "Partager l'article",
+                    subtitle = "Article ${currentArticle.number} - ${uiState.documentTitle}",
+                    onSharePdf = { 
+                        viewModel.shareAsPdf()
+                        showShareSheet = false
+                    },
+                    onShareText = { 
+                        viewModel.shareAsText()
+                        showShareSheet = false
+                    },
+                    onShareLink = { 
+                        viewModel.shareAsLink()
+                        showShareSheet = false
+                    },
+                    onCopy = { 
+                        viewModel.copyArticleText()
+                        showShareSheet = false
+                    },
+                    onCopyLink = {
+                        viewModel.copyArticleLink()
+                        showShareSheet = false
+                    },
+                    isLoading = isSharing
+                )
+                }
             }
         }
     }
@@ -397,4 +476,3 @@ fun ThemeOption(
         Text(name, fontSize = 12.sp)
     }
 }
-

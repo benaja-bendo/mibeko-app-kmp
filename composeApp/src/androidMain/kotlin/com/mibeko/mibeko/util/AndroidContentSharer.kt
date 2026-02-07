@@ -1,11 +1,10 @@
 package com.mibeko.mibeko.util
 
-import android.content.ContentValues
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
+import android.widget.Toast
 
 class AndroidContentSharer(private val context: Context) : ContentSharer {
     
@@ -27,10 +26,12 @@ class AndroidContentSharer(private val context: Context) : ContentSharer {
         val cachePath = java.io.File(context.cacheDir, "shares")
         cachePath.mkdirs()
         
-        // Clean up old files to save space
-        cachePath.listFiles()?.forEach { 
-             // Optional: delete files older than X, or just clear all
-             // For now, let's keep it simple: overwrite if same name, or just let them pile up slightly
+        // Clean up old files (older than 1 hour) to save space
+        val oneHourAgo = System.currentTimeMillis() - (60 * 60 * 1000)
+        cachePath.listFiles()?.forEach { file ->
+            if (file.lastModified() < oneHourAgo) {
+                file.delete()
+            }
         }
         
         val file = java.io.File(cachePath, fileName)
@@ -53,7 +54,7 @@ class AndroidContentSharer(private val context: Context) : ContentSharer {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 
                 // Compatibility for some apps
-                clipData = android.content.ClipData.newRawUri("", uri)
+                clipData = ClipData.newRawUri("", uri)
             }
             
             val chooser = Intent.createChooser(shareIntent, "Partager le fichier").apply {
@@ -65,7 +66,36 @@ class AndroidContentSharer(private val context: Context) : ContentSharer {
             
         } catch (e: Exception) {
             e.printStackTrace()
-            android.widget.Toast.makeText(context, "Erreur de partage: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Erreur de partage: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
+
+    override fun copyToClipboard(text: String) {
+        try {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("Mibeko", text)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(context, "Copié dans le presse-papiers", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Erreur: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun shareUrl(url: String, title: String?) {
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, url)
+            title?.let { 
+                putExtra(Intent.EXTRA_SUBJECT, it) 
+                putExtra(Intent.EXTRA_TITLE, it)
+            }
+            type = "text/plain"
+        }
+        val shareIntent = Intent.createChooser(sendIntent, title ?: "Partager le lien").apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(shareIntent)
+    }
 }
+

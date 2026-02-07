@@ -141,20 +141,64 @@ class DocumentDetailViewModel(
         return result
     }
 
-    fun shareDocument() {
+    fun shareDocumentAsText() {
+        val doc = _uiState.value.document ?: return
+        val text = buildString {
+            appendLine(doc.title)
+            appendLine(doc.type ?: "Document Juridique")
+            appendLine()
+            appendLine("Retrouvez ce document complet sur Mibeko.")
+            appendLine()
+            appendLine("---")
+            appendLine("Partagé via Mibeko - Le Droit numérique")
+        }
+        contentSharer.shareText(text, doc.title)
+        _uiState.value = _uiState.value.copy(error = "Préparation du partage...")
+    }
+
+    fun shareDocumentAsLink() {
+        val doc = _uiState.value.document ?: return
+        
+        val message = buildString {
+            appendLine("📚 ${doc.title}")
+            appendLine(doc.type ?: "Document Juridique")
+            appendLine()
+            appendLine("Consultez ce document sur Mibeko :")
+            appendLine("https://mibeko.cg/document/${doc.id}")
+        }
+        
+        contentSharer.shareText(message, "${doc.title} - Mibeko")
+        _uiState.value = _uiState.value.copy(error = "Ouverture du lien de partage...")
+    }
+
+    fun copyDocumentLink() {
+        val doc = _uiState.value.document ?: return
+        val url = "https://mibeko.cg/document/${doc.id}"
+        contentSharer.copyToClipboard(url)
+        _uiState.value = _uiState.value.copy(error = "✓ Lien copié dans le presse-papiers")
+    }
+
+    fun shareDocumentAsPdf() {
         val doc = _uiState.value.document ?: return
         val url = repository.getDocumentExportUrl(doc.id)
         
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isDownloading = true)
             try {
-                // Professional Legaltech: Share the actual PDF file
                 val bytes = repository.downloadFile(url)
                 val fileName = "${doc.title.replace(" ", "_")}.pdf"
                 contentSharer.shareFile(bytes, fileName, "application/pdf")
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = "Erreur lors du partage : ${e.message}")
+                _uiState.value = _uiState.value.copy(error = "Erreur lors du partage PDF: ${e.message}")
+            } finally {
+                _uiState.value = _uiState.value.copy(isDownloading = false)
             }
         }
+    }
+
+    // Keep legacy method for compatibility
+    fun shareDocument() {
+        shareDocumentAsPdf()
     }
 
     /**

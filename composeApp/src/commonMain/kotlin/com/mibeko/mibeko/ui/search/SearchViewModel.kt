@@ -285,5 +285,6 @@ class SearchViewModel(
     fun shareAiAnswer(answer: String) {
         val title = "Analyse AI Mibeko"
         contentSharer.shareText(answer, title)
+        _uiState.value = _uiState.value.copy(errorMessage = "Partage de l'analyse AI...")
     }
 }

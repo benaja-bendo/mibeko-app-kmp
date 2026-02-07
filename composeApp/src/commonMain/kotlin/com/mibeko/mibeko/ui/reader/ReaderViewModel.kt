@@ -42,6 +42,16 @@ class ReaderViewModel(
     private val _isDyslexiaFontEnabled = MutableStateFlow(userPreferencesRepository.isDyslexiaFontEnabled())
     val isDyslexiaFontEnabled: StateFlow<Boolean> = _isDyslexiaFontEnabled.asStateFlow()
 
+    private val _isSharing = MutableStateFlow(false)
+    val isSharing: StateFlow<Boolean> = _isSharing.asStateFlow()
+
+    private val _snackbarMessage = MutableStateFlow<String?>(null)
+    val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
+
+    fun clearSnackbar() {
+        _snackbarMessage.value = null
+    }
+
     fun toggleOffline() {
         val currentArticle = _uiState.value.article ?: return
         viewModelScope.launch {
@@ -132,18 +142,73 @@ class ReaderViewModel(
         return repository.getArticleExportUrl(currentArticle.id)
     }
 
-    fun shareArticle() {
+    fun shareAsText() {
+        val currentArticle = _uiState.value.article ?: return
+        val documentTitle = _uiState.value.documentTitle ?: "Document"
+        val text = buildString {
+            appendLine("Article ${currentArticle.number}")
+            appendLine(documentTitle)
+            appendLine()
+            append(currentArticle.content ?: "")
+            appendLine()
+            appendLine("---")
+            appendLine("Partagé via Mibeko - Le Droit numérique")
+        }
+        contentSharer.shareText(text, "Article ${currentArticle.number}")
+        _snackbarMessage.value = "Préparation du partage..."
+    }
+
+    fun shareAsLink() {
+        val currentArticle = _uiState.value.article ?: return
+        val documentTitle = _uiState.value.documentTitle ?: "Document"
+        
+        // Create a rich message with context and the link
+        val message = buildString {
+            appendLine("📚 Article ${currentArticle.number}")
+            appendLine(documentTitle)
+            appendLine()
+            appendLine("Découvrez cet article sur Mibeko :")
+            appendLine("https://mibeko.cg/article/${currentArticle.id}")
+        }
+        
+        contentSharer.shareText(message, "Article ${currentArticle.number} - Mibeko")
+        _snackbarMessage.value = "Ouverture du lien de partage..."
+    }
+
+    fun copyArticleText() {
+        val currentArticle = _uiState.value.article ?: return
+        val text = "Article ${currentArticle.number}\n\n${currentArticle.content ?: ""}"
+        contentSharer.copyToClipboard(text)
+        _snackbarMessage.value = "✓ Texte de l'article copié"
+    }
+
+    fun copyArticleLink() {
+        val currentArticle = _uiState.value.article ?: return
+        val url = "https://mibeko.cg/article/${currentArticle.id}"
+        contentSharer.copyToClipboard(url)
+        _snackbarMessage.value = "✓ Lien de l'article copié"
+    }
+
+    fun shareAsPdf() {
         val currentArticle = _uiState.value.article ?: return
         val url = repository.getArticleExportUrl(currentArticle.id)
         
         viewModelScope.launch {
+            _isSharing.value = true
             try {
                 val bytes = repository.downloadFile(url)
                 val fileName = "Article_${currentArticle.number}.pdf"
                 contentSharer.shareFile(bytes, fileName, "application/pdf")
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = "Erreur lors du partage : ${e.message}")
+                _uiState.value = _uiState.value.copy(error = "Erreur lors du partage PDF: ${e.message}")
+            } finally {
+                _isSharing.value = false
             }
         }
+    }
+
+    // Legacy method for backward compatibility
+    fun shareArticle() {
+        shareAsPdf()
     }
 }

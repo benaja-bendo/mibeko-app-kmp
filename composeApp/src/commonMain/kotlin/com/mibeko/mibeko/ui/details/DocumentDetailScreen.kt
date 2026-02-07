@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 
 import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
+import com.mibeko.mibeko.ui.components.ShareOptionsSheet
 
 import cafe.adriel.voyager.core.screen.Screen
 import org.koin.compose.viewmodel.koinViewModel
@@ -59,6 +60,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
         val scope = rememberCoroutineScope()
         
         var isSearchActive by remember { mutableStateOf(false) }
+        var showShareSheet by remember { mutableStateOf(false) }
 
         LaunchedEffect(documentId) {
             viewModel.loadStructure(documentId)
@@ -193,31 +195,20 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                         
                         OutlinedButton(
                             onClick = { 
-                                viewModel.shareDocument()
+                                showShareSheet = true
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            enabled = !uiState.isDownloading
                         ) {
-                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Partager", style = MaterialTheme.typography.labelLarge)
-                        }
-
-                        // PDF Export Button
-                        IconButton(
-                            onClick = { 
-                                viewModel.shareDocument()
-                            },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                        ) {
-                            Icon(
-                                Icons.Filled.PictureAsPdf, 
-                                contentDescription = "Partager PDF", 
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            if (uiState.isDownloading) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Partager", style = MaterialTheme.typography.labelLarge)
+                            }
                         }
                     }
                 }
@@ -364,6 +355,39 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
                         }
                     }
                 }
+            }
+        }
+
+        if (showShareSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showShareSheet = false },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                ShareOptionsSheet(
+                    title = "Partager le document",
+                    subtitle = uiState.document?.title ?: "Document juridique",
+                    onSharePdf = { 
+                        viewModel.shareDocumentAsPdf()
+                        showShareSheet = false
+                    },
+                    onShareText = { 
+                        viewModel.shareDocumentAsText()
+                        showShareSheet = false
+                    },
+                    onShareLink = { 
+                        viewModel.shareDocumentAsLink()
+                        showShareSheet = false
+                    },
+                    onCopy = { 
+                        viewModel.shareDocumentAsText() // For documents, copying text might be too much, but sharing as text is better
+                        showShareSheet = false
+                    },
+                    onCopyLink = {
+                        viewModel.copyDocumentLink()
+                        showShareSheet = false
+                    },
+                    isLoading = uiState.isDownloading
+                )
             }
         }
     }
