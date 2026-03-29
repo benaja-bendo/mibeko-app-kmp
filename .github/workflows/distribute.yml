@@ -1,0 +1,61 @@
+name: Distribute to Firebase
+
+on:
+  workflow_dispatch: # Permet de déclencher le déploiement manuellement
+    inputs:
+      release_notes:
+        description: 'Notes de version'
+        required: true
+        default: 'Nouvelle version de test'
+
+jobs:
+  distribute:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    # Optionnel: Décoder le keystore pour signer l'application en mode Release
+    # Vous devez ajouter ces secrets dans GitHub: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+    - name: Decode Keystore
+      env:
+        ENCODED_STRING: ${{ secrets.KEYSTORE_BASE64 }}
+      run: |
+        if [ -n "$ENCODED_STRING" ]; then
+          echo $ENCODED_STRING | base64 -di > keystore.jks
+        fi
+
+    # Optionnel: Mettre en place les credentials Google Services
+    # Utile si vous utilisez un Service Account Firebase au lieu de FIREBASE_TOKEN
+    - name: Decode Google Services
+      env:
+        GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      run: |
+        if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+          echo $GOOGLE_SERVICES_JSON | base64 -di > composeApp/google-services.json
+        fi
+
+    - name: Build and Distribute App to Firebase
+      env:
+        # Variables pour la signature de l'application
+        KEYSTORE_FILE: ../keystore.jks # Chemin relatif depuis composeApp
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        # Identifiants Firebase pour l'upload CI/CD
+        FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+      run: |
+        ./gradlew :composeApp:appDistributionUploadRelease \
+          -PappDistribution-releaseNotes="${{ github.event.inputs.release_notes }}"
