@@ -27,3 +27,6 @@
 -keepclassmembers class com.mibeko.mibeko.data.** {
     <fields>;
 }
+
+# Navigation / Screens (Prevent obfuscation to keep qualifiedName matching route)
+-keep class com.mibeko.mibeko.ui.navigation.** { *; }
