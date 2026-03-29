@@ -149,12 +149,11 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BASE_URL", "\"http://10.77.72.34:8000/api\"")
+            // BASE_URL is now provided by gmazzo buildConfig plugin
         }
         getByName("release") {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            buildConfigField("String", "BASE_URL", "\"https://app.mibeko.benaja-bendo.fr/api\"")
             
             // On s'assure que la configuration de signature est utilisée si elle a été configurée
             val keystoreFile = rootProject.file("keystore.properties")
@@ -190,4 +189,15 @@ room {
 
 buildConfig {
     packageName("com.mibeko.mibeko.common")
+    
+    val isRelease = project.gradle.startParameter.taskNames.any { 
+        it.contains("Release", ignoreCase = true) 
+    }
+    val baseUrl = if (isRelease) {
+        "https://app.mibeko.benaja-bendo.fr/api"
+    } else {
+        "http://192.168.0.78:8000/api"
+    }
+    
+    buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
 }
