@@ -21,3 +21,4 @@ node_modules/
 /build_log.txt
 keystore.properties
 *.jks
+/composeApp/release/

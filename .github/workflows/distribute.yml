@@ -49,7 +49,7 @@ jobs:
     - name: Build and Distribute App to Firebase
       env:
         # Variables pour la signature de l'application
-        KEYSTORE_FILE: ../keystore.jks # Chemin relatif depuis composeApp
+        KEYSTORE_FILE: ../keystore.jks
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -57,5 +57,5 @@ jobs:
         FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
       run: |
-        ./gradlew :composeApp:appDistributionUploadRelease \
+        ./gradlew :composeApp:assembleRelease :composeApp:appDistributionUploadRelease \
           -PappDistribution-releaseNotes="${{ github.event.inputs.release_notes }}"
