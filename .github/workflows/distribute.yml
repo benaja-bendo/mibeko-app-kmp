@@ -1,7 +1,7 @@
 name: Distribute to Firebase
 
 on:
-  workflow_dispatch: # Permet de déclencher le déploiement manuellement
+  workflow_dispatch: # déclencher le déploiement manuellement
     inputs:
       release_notes:
         description: 'Notes de version'

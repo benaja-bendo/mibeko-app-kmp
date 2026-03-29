@@ -22,3 +22,4 @@ node_modules/
 keystore.properties
 *.jks
 /composeApp/release/
+/gradle/gradle-daemon-jvm.properties
