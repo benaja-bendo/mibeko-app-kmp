@@ -53,6 +53,7 @@ kotlin {
             implementation(libs.koin.android)
             implementation(project.dependencies.platform(libs.firebase.bom))
             implementation(libs.firebase.messaging)
+            implementation(libs.firebase.analytics)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -164,9 +165,14 @@ android {
             // Configuration Firebase App Distribution
             configure<com.google.firebase.appdistribution.gradle.AppDistributionExtension> {
                 artifactType = "APK"
-                releaseNotes = "Nouvelle version depuis KMP et CI/CD !"
-                // Remplacez par vos testeurs ou groupes (ex: groups = "qa-team")
-                testers = "testeur1@email.com" 
+                
+                // Utilise la propriété passée par la CI ou la version courante
+                val ciReleaseNotes = project.findProperty("appDistribution-releaseNotes") as? String
+                val currentVersion = defaultConfig.versionName
+                releaseNotes = ciReleaseNotes ?: "Version $currentVersion"
+                
+                groups = "Utilisateur lambda"
+                testers = "benaja.bendo02@gmail.com" 
             }
         }
     }

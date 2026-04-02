@@ -57,5 +57,5 @@ jobs:
         FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
       run: |
-        ./gradlew :composeApp:assembleRelease :composeApp:appDistributionUploadRelease \
+        ./gradlew :composeApp:assembleRelease appDistributionUploadRelease \
           -PappDistribution-releaseNotes="${{ github.event.inputs.release_notes }}"
