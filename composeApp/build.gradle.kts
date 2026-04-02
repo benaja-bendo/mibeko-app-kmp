@@ -171,8 +171,7 @@ android {
                 val currentVersion = defaultConfig.versionName
                 releaseNotes = ciReleaseNotes ?: "Version $currentVersion"
                 
-                groups = "Utilisateur lambda"
-                testers = "benaja.bendo02@gmail.com" 
+                groups = "utilisateur-lambda"
             }
         }
     }
