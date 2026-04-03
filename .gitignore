@@ -23,3 +23,8 @@ keystore.properties
 *.jks
 /composeApp/release/
 /gradle/gradle-daemon-jvm.properties
+
+# Google Services secrets
+google-services.json
+GoogleService-Info.plist
+
