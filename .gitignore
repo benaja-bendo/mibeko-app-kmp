@@ -27,4 +27,5 @@ keystore.properties
 # Google Services secrets
 google-services.json
 GoogleService-Info.plist
+./composeApp/google-services.json
 
