@@ -10,6 +10,12 @@ sealed class Screen {
     data object Splash : Screen()
 
     @Serializable
+    data object Login : Screen()
+
+    @Serializable
+    data object ProfileSetup : Screen()
+
+    @Serializable
     data object Disclaimer : Screen()
     
     @Serializable

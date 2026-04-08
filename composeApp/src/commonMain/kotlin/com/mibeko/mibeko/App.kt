@@ -25,6 +25,8 @@ import com.mibeko.mibeko.ui.dossier.DossierDetailScreen
 import com.mibeko.mibeko.ui.library.LibraryScreen
 import com.mibeko.mibeko.ui.downloads.DownloadsScreen
 import com.mibeko.mibeko.ui.notifications.NotificationsScreen
+import com.mibeko.mibeko.ui.auth.LoginScreen
+import com.mibeko.mibeko.ui.auth.ProfileSetupScreen
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.theme.MibekoTheme
 import org.koin.compose.koinInject
@@ -76,6 +78,8 @@ fun App() {
                     .padding(bottom = innerPadding.calculateBottomPadding())
             ) {
                 composable<Screen.Splash> { SplashScreen().Content() }
+                composable<Screen.Login> { LoginScreen().Content() }
+                composable<Screen.ProfileSetup> { ProfileSetupScreen().Content() }
                 composable<Screen.Disclaimer> { com.mibeko.mibeko.ui.onboarding.DisclaimerScreen().Content() }
                 composable<Screen.Onboarding> { com.mibeko.mibeko.ui.onboarding.OnboardingScreen().Content() }
                 composable<Screen.Home> { HomeScreen().Content() }

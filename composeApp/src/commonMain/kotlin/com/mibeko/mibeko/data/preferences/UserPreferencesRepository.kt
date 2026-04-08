@@ -25,7 +25,10 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
         private const val KEY_DYSLEXIA_FONT = "dyslexia_font_enabled"
         private const val KEY_WIFI_ONLY_DOWNLOAD = "wifi_only_download"
         private const val KEY_LEGAL_MONITORING = "legal_monitoring_enabled"
-        private const val KEY_DOSSIER_ALERTS = "dossier_alerts_enabled"
+        private const val KEY_DOSSIER_ALERTS_ENABLED = "dossier_alerts_enabled"
+        private const val KEY_AUTH_TOKEN = "auth_token"
+        private const val KEY_USER_EMAIL = "user_email"
+        private const val KEY_USER_NAME = "user_name"
     }
 
     /**
@@ -127,14 +130,14 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
      * Checks if dossier alerts are enabled.
      */
     fun isDossierAlertsEnabled(): Boolean {
-        return settings.getBoolean(KEY_DOSSIER_ALERTS, true)
+        return settings.getBoolean(KEY_DOSSIER_ALERTS_ENABLED, true)
     }
 
     /**
      * Sets dossier alerts preference.
      */
     fun setDossierAlertsEnabled(enabled: Boolean) {
-        settings.putBoolean(KEY_DOSSIER_ALERTS, enabled)
+        settings.putBoolean(KEY_DOSSIER_ALERTS_ENABLED, enabled)
     }
 
     /**
@@ -203,6 +206,62 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
      */
     fun resetOnboarding() {
         settings.remove(KEY_ONBOARDING_COMPLETED)
+    }
+
+    /**
+     * Gets the stored authentication token.
+     */
+    fun getAuthToken(): String? {
+        return settings.getStringOrNull(KEY_AUTH_TOKEN)
+    }
+
+    /**
+     * Sets the authentication token.
+     */
+    fun setAuthToken(token: String?) {
+        if (token == null) {
+            settings.remove(KEY_AUTH_TOKEN)
+        } else {
+            settings.putString(KEY_AUTH_TOKEN, token)
+        }
+    }
+
+    /**
+     * Sets the user info.
+     */
+    fun setUserInfo(name: String, email: String) {
+        settings.putString(KEY_USER_NAME, name)
+        settings.putString(KEY_USER_EMAIL, email)
+    }
+
+    /**
+     * Gets the user name.
+     */
+    fun getUserName(): String? {
+        return settings.getStringOrNull(KEY_USER_NAME)
+    }
+
+    /**
+     * Gets the user email.
+     */
+    fun getUserEmail(): String? {
+        return settings.getStringOrNull(KEY_USER_EMAIL)
+    }
+
+    /**
+     * Checks if the user is logged in.
+     */
+    fun isLoggedIn(): Boolean {
+        return getAuthToken() != null
+    }
+
+    /**
+     * Logs out the user by clearing the auth token.
+     */
+    fun logout() {
+        settings.remove(KEY_AUTH_TOKEN)
+        settings.remove(KEY_USER_NAME)
+        settings.remove(KEY_USER_EMAIL)
     }
 
     /**
