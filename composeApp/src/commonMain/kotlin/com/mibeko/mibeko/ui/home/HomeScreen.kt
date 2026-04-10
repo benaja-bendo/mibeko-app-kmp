@@ -101,86 +101,61 @@ fun HomeScreen() {
                 
                 // Zone 1: Journal Officiel (Horizontal List)
                 item {
-                    AnimatedVisibility(
-                        visible = !uiState.isLoading && uiState.popularCodes.isNotEmpty(),
-                        enter = fadeIn() + slideInVertically { 30 }
-                    ) {
-                        Column(modifier = Modifier.padding(top = 24.dp)) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Journal Officiel",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                TextButton(onClick = { /* TODO: Navigate to full list */ }) {
-                                    Text(
-                                        text = "Voir plus",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MibekoBluePrimary,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-                            
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(uiState.popularCodes) { doc ->
-                                    JournalOfficielCard(
-                                        title = doc.title,
-                                        date = "Publié récemment", // Ideally from doc
-                                        excerpt = "Décrets portant nomination des membres du Conseil Supérieur de la Magistrature et autre...", // Mock excerpt
-                                        onClick = { 
-                                            if (doc.id.isNotBlank()) {
-                                                navController.navigate(Screen.DocumentDetail(doc.id))
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Zone 2: Recently Added (Vertical List)
-                item {
-                    AnimatedVisibility(
-                        visible = !uiState.isLoading && uiState.recentlyAdded.isNotEmpty(),
-                        enter = fadeIn() + slideInVertically { 40 }
-                    ) {
-                        Column(modifier = Modifier.padding(top = 24.dp)) {
-                            Text(
-                                text = "Documents",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-                        }
-                    }
-                }
-
-                if (!uiState.isLoading) {
-                    items(uiState.recentlyAdded) { doc ->
-                        RecentDocumentItem(
-                            title = doc.title,
-                            date = "Récemment", 
-                            onClick = {
-                                if (doc.id.isNotBlank()) {
-                                    navController.navigate(Screen.DocumentDetail(doc.id))
-                                } else {
-                                    viewModel.refreshNetworkStatus() // Just to trigger something or we could show a snackbar
-                                }
-                            }
+                    val mockJournaux = listOf(
+                        Triple(
+                            "Journal Officiel n° 12 - 2026",
+                            "Publié le 15 Janvier 2026",
+                            "Décrets portant nomination des membres du Conseil Supérieur de la Magistrature et autre..."
+                        ),
+                        Triple(
+                            "Journal Officiel n° 11 - 2026",
+                            "Publié le 08 Janvier 2026",
+                            "Loi relative à la protection des données personnelles et à la cybersécurité..."
+                        ),
+                        Triple(
+                            "Journal Officiel n° 10 - 2025",
+                            "Publié le 28 Décembre 2025",
+                            "Ordonnance portant modification du code de procédure pénale et dispositions diverses..."
                         )
+                    )
+
+                    Column(modifier = Modifier.padding(top = 16.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Journal Officiel",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            TextButton(onClick = { /* TODO: Navigate to full list */ }) {
+                                Text(
+                                    text = "Voir plus",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MibekoBluePrimary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                        
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(mockJournaux) { (title, date, excerpt) ->
+                                JournalOfficielCard(
+                                    title = title,
+                                    date = date,
+                                    excerpt = excerpt,
+                                    onClick = { /* TODO: Navigate to detail */ }
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -400,27 +375,28 @@ private fun AiChatInputCard(onSend: (String) -> Unit) {
 private fun JournalOfficielCard(title: String, date: String, excerpt: String, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.width(260.dp),
-        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.width(280.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+        shadowElevation = 0.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
             Row(verticalAlignment = Alignment.Top) {
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MibekoBluePrimary.copy(alpha = 0.05f),
-                    modifier = Modifier.size(40.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                    modifier = Modifier.size(48.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.background(MibekoBluePrimary.copy(alpha = 0.05f))) {
                         Icon(
                             imageVector = Icons.Default.Description,
                             contentDescription = null,
                             tint = MibekoBluePrimary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
@@ -434,12 +410,13 @@ private fun JournalOfficielCard(title: String, date: String, excerpt: String, on
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 20.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = date,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -449,15 +426,16 @@ private fun JournalOfficielCard(title: String, date: String, excerpt: String, on
             
             Text(
                 text = excerpt,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 20.sp
             )
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
             
             Spacer(modifier = Modifier.height(12.dp))
             
@@ -481,81 +459,4 @@ private fun JournalOfficielCard(title: String, date: String, excerpt: String, on
             }
         }
     }
-}
-
-/**
- * Élément de liste pour un document récent.
- */
-@Composable
-private fun RecentDocumentItem(title: String, date: String, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = MibekoBluePrimary.copy(alpha = 0.1f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Description,
-                        contentDescription = null,
-                        tint = MibekoBluePrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Schedule,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = date,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-
-
-/**
- * Blue gradient header with Mibeko logo and title
- */
 }
