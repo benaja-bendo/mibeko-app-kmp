@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import org.koin.compose.viewmodel.koinViewModel
@@ -27,11 +26,9 @@ import org.koin.compose.viewmodel.koinViewModel
  * Écran listant les documents d'un type spécifique (Lois, Décrets, etc.)
  * avec fil d'Ariane pour la navigation hiérarchique.
  */
-data class DocumentListScreen(val typeCode: String, val typeName: String) : Screen {
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DocumentListScreen(typeCode: String, typeName: String) {
         val navController = LocalNavController.current
         val viewModel = koinViewModel<LibraryViewModel>()
         val uiState by viewModel.uiState.collectAsState()
@@ -159,7 +156,7 @@ data class DocumentListScreen(val typeCode: String, val typeName: String) : Scre
             }
         }
     }
-}
+ 
 
 @Composable
 private fun DocumentListItem(
@@ -246,4 +243,6 @@ private fun DocumentListItem(
             )
         }
     }
+
+
 }

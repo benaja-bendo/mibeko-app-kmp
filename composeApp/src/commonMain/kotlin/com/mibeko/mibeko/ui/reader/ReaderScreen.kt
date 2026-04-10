@@ -25,7 +25,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -35,14 +34,9 @@ import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
 
-data class ReaderScreen(val articleId: String) : Screen {
-
-    /**
-     * Contenu principal de l'écran de lecture d'un article.
-     */
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReaderScreen(articleId: String) {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<ReaderViewModel>()
         val uiState by viewModel.uiState.collectAsState()
@@ -351,7 +345,7 @@ data class ReaderScreen(val articleId: String) : Screen {
             }
         }
     }
-}
+ 
 
 @Composable
 fun ReaderSettingsSheet(
@@ -475,4 +469,6 @@ fun ThemeOption(
         Spacer(modifier = Modifier.height(4.dp))
         Text(name, fontSize = 12.sp)
     }
+
+
 }

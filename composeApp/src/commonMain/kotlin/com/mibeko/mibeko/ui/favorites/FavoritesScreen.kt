@@ -20,15 +20,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 
-import cafe.adriel.voyager.core.screen.Screen
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 
-class FavoritesScreen : Screen {
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FavoritesScreen() {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<FavoritesViewModel>()
         val favorites by viewModel.favoriteArticles.collectAsState()
@@ -89,7 +86,7 @@ class FavoritesScreen : Screen {
             }
         }
     }
-}
+ 
 
 @Composable
 fun FavoriteItemCard(number: String, breadcrumb: String) {
@@ -120,4 +117,6 @@ fun FavoriteItemCard(number: String, breadcrumb: String) {
             }
         }
     }
+
+
 }

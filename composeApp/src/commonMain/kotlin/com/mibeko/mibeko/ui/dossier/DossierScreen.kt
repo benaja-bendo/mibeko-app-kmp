@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.data.local.entities.DossierEntity
 import com.mibeko.mibeko.data.local.entities.DossierTag
 import com.mibeko.mibeko.ui.navigation.LocalNavController
@@ -34,14 +33,9 @@ import com.mibeko.mibeko.ui.navigation.Screen as NavScreen
 import com.mibeko.mibeko.getCurrentTimeMillis
 import org.koin.compose.viewmodel.koinViewModel
 
-class DossierScreen : Screen {
-
-    /**
-     * Contenu principal de l'écran des dossiers.
-     */
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DossierScreen() {
         val navController = LocalNavController.current
         val viewModel = koinViewModel<DossierViewModel>()
         val uiState by viewModel.uiState.collectAsState()
@@ -233,7 +227,7 @@ class DossierScreen : Screen {
             )
         }
     }
-}
+ 
 
 @Composable
 fun DossierCard(
@@ -646,4 +640,6 @@ fun DossierGridCard(
             }
         }
     }
+
+
 }

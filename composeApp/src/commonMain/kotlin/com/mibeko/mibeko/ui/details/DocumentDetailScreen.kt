@@ -4,8 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import com.mibeko.mibeko.data.local.entities.ArticleEntity
-import com.mibeko.mibeko.ui.components.SyncStatusIndicator
-import com.mibeko.mibeko.ui.components.SyncState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,7 +25,6 @@ import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
 
-import cafe.adriel.voyager.core.screen.Screen
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.reader.ReaderScreen
 
@@ -41,14 +38,9 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.launch
 
-data class DocumentDetailScreen(val documentId: String) : Screen {
-
-    /**
-     * Contenu principal de l'écran de détail d'un document.
-     */
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DocumentDetailScreen(documentId: String) {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<DocumentDetailViewModel>()
         
@@ -391,7 +383,7 @@ data class DocumentDetailScreen(val documentId: String) : Screen {
             }
         }
     }
-}
+ 
 
 /**
  * Élément de liste affichant un article dans la table des matières.
@@ -451,4 +443,6 @@ fun ArticleItem(article: ArticleEntity, textColor: Color, onClick: () -> Unit) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
         }
     }
+
+
 }

@@ -77,22 +77,22 @@ fun App() {
                     .fillMaxSize()
                     .padding(bottom = innerPadding.calculateBottomPadding())
             ) {
-                composable<Screen.Splash> { SplashScreen().Content() }
-                composable<Screen.Login> { LoginScreen().Content() }
-                composable<Screen.ProfileSetup> { ProfileSetupScreen().Content() }
-                composable<Screen.Disclaimer> { com.mibeko.mibeko.ui.onboarding.DisclaimerScreen().Content() }
-                composable<Screen.Onboarding> { com.mibeko.mibeko.ui.onboarding.OnboardingScreen().Content() }
-                composable<Screen.Home> { HomeScreen().Content() }
-                composable<Screen.Favorites> { FavoritesScreen().Content() }
-                composable<Screen.Settings> { SettingsScreen().Content() }
-                composable<Screen.Dossiers> { DossierScreen().Content() }
-                composable<Screen.Library> { LibraryScreen().Content() }
-                composable<Screen.Downloads> { DownloadsScreen().Content() }
-                composable<Screen.Notifications> { NotificationsScreen().Content() }
+                composable<Screen.Splash> { SplashScreen() }
+                composable<Screen.Login> { LoginScreen() }
+                composable<Screen.ProfileSetup> { ProfileSetupScreen() }
+                composable<Screen.Disclaimer> { com.mibeko.mibeko.ui.onboarding.DisclaimerScreen() }
+                composable<Screen.Onboarding> { com.mibeko.mibeko.ui.onboarding.OnboardingScreen() }
+                composable<Screen.Home> { HomeScreen() }
+                composable<Screen.Favorites> { FavoritesScreen() }
+                composable<Screen.Settings> { SettingsScreen() }
+                composable<Screen.Dossiers> { DossierScreen() }
+                composable<Screen.Library> { LibraryScreen() }
+                composable<Screen.Downloads> { DownloadsScreen() }
+                composable<Screen.Notifications> { NotificationsScreen() }
                 
                 composable<Screen.SearchResults> { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.SearchResults>()
-                    SearchResultsScreen(query = route.query, tag = route.tag).Content() 
+                    SearchResultsScreen(query = route.query, tag = route.tag) 
                 }
                 
                 composable<Screen.DocumentDetail>(
@@ -102,7 +102,7 @@ fun App() {
                     )
                 ) { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.DocumentDetail>()
-                    DocumentDetailScreen(route.documentId).Content()
+                    DocumentDetailScreen(route.documentId)
                 }
                 
                 composable<Screen.Reader>(
@@ -112,17 +112,17 @@ fun App() {
                     )
                 ) { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.Reader>()
-                    ReaderScreen(route.articleId).Content()
+                    ReaderScreen(route.articleId)
                 }
                 
                 composable<Screen.DossierDetail> { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.DossierDetail>()
-                    DossierDetailScreen(route.dossierId).Content()
+                    DossierDetailScreen(route.dossierId)
                 }
                 
                 composable<Screen.DocumentList> { backStackEntry ->
                     val route = backStackEntry.toRoute<Screen.DocumentList>()
-                    com.mibeko.mibeko.ui.library.DocumentListScreen(route.typeCode, route.typeName).Content()
+                    com.mibeko.mibeko.ui.library.DocumentListScreen(route.typeCode, route.typeName)
                 }
             }
         }

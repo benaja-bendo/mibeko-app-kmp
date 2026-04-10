@@ -25,26 +25,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.screen.Screen
 import kotlinx.coroutines.delay
 import mibeko.composeapp.generated.resources.Res
 import mibeko.composeapp.generated.resources.logo
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.navigation.LocalNavController
-import com.mibeko.mibeko.ui.navigation.Screen as MibekoScreen
+import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.ui.components.NetworkStatusBanner
 import com.mibeko.mibeko.ui.theme.MibekoGold
 import com.mibeko.mibeko.ui.theme.MibekoBluePrimary
 import com.mibeko.mibeko.ui.theme.MibekoBlueDark
 
-class HomeScreen : Screen {
-
-    /**
-     * Contenu principal de la page d'accueil.
-     */
-    @Composable
-    override fun Content() {
+@Composable
+fun HomeScreen() {
         val navController = LocalNavController.current
         val viewModel = koinViewModel<HomeViewModel>()
         
@@ -79,7 +73,7 @@ class HomeScreen : Screen {
                 item {
                     HomeHeader(
                         onNotificationsClick = {
-                            navController.navigate(MibekoScreen.Notifications)
+                            navController.navigate(Screen.Notifications)
                         }
                     )
                 }
@@ -88,7 +82,7 @@ class HomeScreen : Screen {
                 item {
                     SearchTriggerButton(
                         onClick = { 
-                            navController.navigate(MibekoScreen.SearchResults())
+                            navController.navigate(Screen.SearchResults())
                         }
                     )
                 }
@@ -125,7 +119,7 @@ class HomeScreen : Screen {
                                         title = doc.title,
                                         onClick = { 
                                             if (doc.id.isNotBlank()) {
-                                                navController.navigate(MibekoScreen.DocumentDetail(doc.id))
+                                                navController.navigate(Screen.DocumentDetail(doc.id))
                                             }
                                         }
                                     )
@@ -160,7 +154,7 @@ class HomeScreen : Screen {
                             date = "Récemment", 
                             onClick = {
                                 if (doc.id.isNotBlank()) {
-                                    navController.navigate(MibekoScreen.DocumentDetail(doc.id))
+                                    navController.navigate(Screen.DocumentDetail(doc.id))
                                 } else {
                                     viewModel.refreshNetworkStatus() // Just to trigger something or we could show a snackbar
                                 }
@@ -180,7 +174,7 @@ class HomeScreen : Screen {
             }
         }
     }
-}
+ 
 
 /**
  * En-tête avec dégradé bleu institutionnel, logo Mibeko et titre.
@@ -484,8 +478,9 @@ private fun RecentDocumentItem(title: String, date: String, onClick: () -> Unit)
             )
         }
     }
-}
+
 
 /**
  * Blue gradient header with Mibeko logo and title
  */
+}

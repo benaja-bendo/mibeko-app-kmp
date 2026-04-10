@@ -19,7 +19,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.home.HomeScreen
 import com.mibeko.mibeko.ui.onboarding.OnboardingScreen
@@ -34,10 +33,8 @@ import org.koin.compose.koinInject
  * Displays animated Mibeko logo and baseline, then navigates to
  * Onboarding (first use) or Home (returning users).
  */
-class SplashScreen : Screen {
-
-    @Composable
-    override fun Content() {
+@Composable
+fun SplashScreen() {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val userPreferences: UserPreferencesRepository = koinInject()
 
@@ -126,4 +123,4 @@ class SplashScreen : Screen {
             }
         }
     }
-}
+

@@ -24,18 +24,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.data.ArticleSpec
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen as NavScreen
 import org.koin.compose.viewmodel.koinViewModel
 
-class DownloadsScreen : Screen {
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DownloadsScreen() {
         val navController = LocalNavController.current
         val viewModel = koinViewModel<DownloadsViewModel>()
         val uiState by viewModel.uiState.collectAsState()
@@ -172,7 +169,7 @@ class DownloadsScreen : Screen {
             }
         }
     }
-}
+ 
 
 @Composable
 private fun DocumentList(
@@ -339,4 +336,6 @@ private fun DownloadItemCard(
             }
         }
     }
+
+
 }

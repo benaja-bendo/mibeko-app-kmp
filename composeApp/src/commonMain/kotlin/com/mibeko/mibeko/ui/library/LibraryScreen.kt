@@ -23,7 +23,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import org.koin.compose.viewmodel.koinViewModel
@@ -31,14 +30,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.filled.Search
 
-class LibraryScreen : Screen {
-
-    /**
-     * Contenu principal de la bibliothèque juridique.
-     */
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LibraryScreen() {
         val navController = LocalNavController.current
         val viewModel = koinViewModel<LibraryViewModel>()
         val uiState by viewModel.uiState.collectAsState()
@@ -160,7 +154,7 @@ class LibraryScreen : Screen {
             }
         }
     }
-}
+ 
 
 /**
  * Carte de héros pour mettre en avant un document (ex: Constitution).
@@ -329,4 +323,6 @@ private fun HierarchyCard(
             }
         }
     }
+
+
 }

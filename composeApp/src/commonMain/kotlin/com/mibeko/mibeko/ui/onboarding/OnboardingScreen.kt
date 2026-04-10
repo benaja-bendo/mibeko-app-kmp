@@ -26,9 +26,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.home.HomeScreen
+import com.mibeko.mibeko.ui.navigation.Screen
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -45,28 +45,26 @@ data class OnboardingPage(
  * Onboarding Screen - Shown only on first app launch.
  * Presents 3 slides explaining the app's value proposition.
  */
-class OnboardingScreen : Screen {
-
-    private val pages = listOf(
-        OnboardingPage(
-            icon = Icons.Filled.CloudOff,
-            title = "Tout le droit congolais",
-            description = "Accessible hors-ligne, même sans connexion internet. Téléchargez une fois, consultez partout."
-        ),
-        OnboardingPage(
-            icon = Icons.Filled.Search,
-            title = "Recherche intelligente",
-            description = "Trouvez rapidement par numéro d'article ou par thématique. La loi n'a jamais été aussi accessible."
-        ),
-        OnboardingPage(
-            icon = Icons.Filled.Folder,
-            title = "Organisez vos dossiers",
-            description = "Sauvegardez vos articles favoris et organisez vos recherches juridiques efficacement."
-        )
+private val pages = listOf(
+    OnboardingPage(
+        icon = Icons.Filled.CloudOff,
+        title = "Tout le droit congolais",
+        description = "Accessible hors-ligne, même sans connexion internet. Téléchargez une fois, consultez partout."
+    ),
+    OnboardingPage(
+        icon = Icons.Filled.Search,
+        title = "Recherche intelligente",
+        description = "Trouvez rapidement par numéro d'article ou par thématique. La loi n'a jamais été aussi accessible."
+    ),
+    OnboardingPage(
+        icon = Icons.Filled.Folder,
+        title = "Organisez vos dossiers",
+        description = "Sauvegardez vos articles favoris et organisez vos recherches juridiques efficacement."
     )
+)
 
-    @Composable
-    override fun Content() {
+@Composable
+fun OnboardingScreen() {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val userPreferences: UserPreferencesRepository = koinInject()
         val scope = rememberCoroutineScope()
@@ -258,4 +256,3 @@ class OnboardingScreen : Screen {
                 )
         )
     }
-}

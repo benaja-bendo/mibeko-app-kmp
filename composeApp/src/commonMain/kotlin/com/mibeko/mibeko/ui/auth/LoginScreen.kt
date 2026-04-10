@@ -11,26 +11,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.ui.navigation.LocalNavController
-import com.mibeko.mibeko.ui.navigation.Screen as MibekoScreen
+import com.mibeko.mibeko.ui.navigation.Screen
 import org.jetbrains.compose.resources.painterResource
 import mibeko.composeapp.generated.resources.Res
 import mibeko.composeapp.generated.resources.logo
 import org.koin.compose.viewmodel.koinViewModel
 
-class LoginScreen : Screen {
-
-    @Composable
-    override fun Content() {
+@Composable
+fun LoginScreen() {
         val navController = LocalNavController.current
         val viewModel: LoginViewModel = koinViewModel()
         val loginState by viewModel.loginState.collectAsState()
 
         LaunchedEffect(loginState) {
             if (loginState is LoginState.Success) {
-                navController.navigate(MibekoScreen.ProfileSetup) {
-                    popUpTo(MibekoScreen.Login) { inclusive = true }
+                navController.navigate(Screen.ProfileSetup) {
+                    popUpTo(Screen.Login) { inclusive = true }
                 }
             }
         }
@@ -121,4 +118,4 @@ class LoginScreen : Screen {
             }
         }
     }
-}
+

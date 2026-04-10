@@ -26,7 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.data.local.dao.DossierArticleWithDetails
 import com.mibeko.mibeko.data.local.entities.DossierEntity
 import com.mibeko.mibeko.data.local.entities.DossierTag
@@ -37,12 +36,10 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import kotlinx.coroutines.launch
 
-class DossierDetailScreen(private val dossierId: String) : Screen {
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
-        val navController = LocalNavController.current
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DossierDetailScreen(dossierId: String) {
+    val navController = LocalNavController.current
         val viewModel = koinViewModel<DossierDetailViewModel> { parametersOf(dossierId) }
         val uiState by viewModel.uiState.collectAsState()
         val showNoteDialog by viewModel.showNoteDialog.collectAsState()
@@ -144,7 +141,6 @@ class DossierDetailScreen(private val dossierId: String) : Screen {
             )
         }
     }
-}
 
 @Composable
 fun DossierHeader(dossier: DossierEntity?, color: Color, count: Int) {
@@ -508,3 +504,4 @@ fun EmptyDossierState() {
         }
     }
 }
+    

@@ -25,11 +25,9 @@ import com.mibeko.mibeko.ui.theme.MibekoBluePrimary
 import com.mibeko.mibeko.ui.theme.MibekoGold
 import org.koin.compose.viewmodel.koinViewModel
 
-class NotificationsScreen : cafe.adriel.voyager.core.screen.Screen {
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NotificationsScreen() {
         val navController = LocalNavController.current
         val viewModel = koinViewModel<NotificationsViewModel>()
         val uiState by viewModel.uiState.collectAsState()
@@ -226,4 +224,3 @@ class NotificationsScreen : cafe.adriel.voyager.core.screen.Screen {
             )
         }
     }
-}

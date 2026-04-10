@@ -33,10 +33,6 @@ sealed class Screen {
     @Serializable
     data object Onboarding : Screen()
     
-    @Deprecated("Utilisez SearchResults avec query=null pour activer la barre de recherche in-place")
-    @Serializable
-    data class ActiveSearch(val initialQuery: String? = null, val tag: String? = null) : Screen()
-    
     @Serializable
     data class DocumentDetail(val documentId: String) : Screen()
     

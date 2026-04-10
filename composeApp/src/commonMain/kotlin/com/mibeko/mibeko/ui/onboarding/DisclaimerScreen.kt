@@ -17,15 +17,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import org.koin.compose.koinInject
 
-class DisclaimerScreen : Screen {
-
-    @Composable
-    override fun Content() {
+@Composable
+fun DisclaimerScreen() {
         val navController = LocalNavController.current
         val userPreferences: UserPreferencesRepository = koinInject()
         
@@ -162,4 +159,4 @@ class DisclaimerScreen : Screen {
             }
         }
     }
-}
+

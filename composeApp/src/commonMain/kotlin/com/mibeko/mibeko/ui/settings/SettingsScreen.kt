@@ -24,14 +24,12 @@ import androidx.compose.foundation.clickable
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import org.koin.compose.viewmodel.koinViewModel
 
-class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
-
-    /**
-     * Contenu principal de l'écran des réglages.
-     */
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
+/**
+ * Contenu principal de l'écran des réglages.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen() {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<SettingsViewModel>()
         val uiState by viewModel.uiState.collectAsState()
@@ -330,7 +328,7 @@ class SettingsScreen : cafe.adriel.voyager.core.screen.Screen {
             }
         }
     }
-}
+ 
 
 
 /**
@@ -501,10 +499,12 @@ fun DownloadableDocumentItem(
                     .padding(top = 8.dp),
             )
         }
-    }
+    
     
     HorizontalDivider(
         modifier = Modifier.padding(start = 56.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     )
+
+}
 }

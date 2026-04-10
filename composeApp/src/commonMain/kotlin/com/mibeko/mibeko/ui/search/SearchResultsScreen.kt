@@ -49,7 +49,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.ui.text.style.TextOverflow
 import com.mibeko.mibeko.ui.theme.*
-import cafe.adriel.voyager.core.screen.Screen
 import org.koin.compose.viewmodel.koinViewModel
 import kotlinx.coroutines.launch
 import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
@@ -62,14 +61,12 @@ val LocalSnackbarHostState = staticCompositionLocalOf<SnackbarHostState> {
     error("No SnackbarHostState provided")
 }
 
-data class SearchResultsScreen(val query: String? = null, val tag: String? = null) : Screen {
-    
-    /**
-     * Contenu principal de la page de résultats de recherche.
-     */
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
+/**
+ * Contenu principal de la page de résultats de recherche.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchResultsScreen(query: String? = null, tag: String? = null) {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<SearchViewModel>()
         val uiState by viewModel.uiState.collectAsState()
@@ -338,7 +335,6 @@ data class SearchResultsScreen(val query: String? = null, val tag: String? = nul
             }
         }
     }
-}
 }
 
 /**

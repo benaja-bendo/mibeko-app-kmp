@@ -12,17 +12,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import cafe.adriel.voyager.core.screen.Screen
 import com.mibeko.mibeko.ui.navigation.LocalNavController
-import com.mibeko.mibeko.ui.navigation.Screen as MibekoScreen
+import com.mibeko.mibeko.ui.navigation.Screen
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.material3.ExperimentalMaterial3Api
 
-class ProfileSetupScreen : Screen {
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    override fun Content() {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileSetupScreen() {
         val navController = LocalNavController.current
         val viewModel: ProfileSetupViewModel = koinViewModel()
         val setupState by viewModel.setupState.collectAsState()
@@ -33,8 +30,8 @@ class ProfileSetupScreen : Screen {
 
         LaunchedEffect(setupState) {
             if (setupState is ProfileSetupState.Success) {
-                navController.navigate(MibekoScreen.Home) {
-                    popUpTo(MibekoScreen.ProfileSetup) { inclusive = true }
+                navController.navigate(Screen.Home) {
+                    popUpTo(Screen.ProfileSetup) { inclusive = true }
                 }
             }
         }
@@ -131,4 +128,4 @@ class ProfileSetupScreen : Screen {
             }
         }
     }
-}
+
