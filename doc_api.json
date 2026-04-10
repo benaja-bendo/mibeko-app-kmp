@@ -1,12 +1,12 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Mibeko",
+    "title": "Mibeko-Tableau-de-Bord",
     "version": "0.0.1"
   },
   "servers": [
     {
-      "url": "http://localhost:8000/api"
+      "url": "http://127.0.0.1:8000/api"
     }
   ],
   "paths": {
@@ -67,6 +67,22 @@
               "type": "integer",
               "default": 20
             }
+          },
+          {
+            "name": "rag",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "autocomplete",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {
@@ -76,9 +92,7 @@
               "application/json": {
                 "schema": {
                   "type": "integer",
-                  "enum": [
-                    200
-                  ]
+                  "const": 200
                 }
               }
             }
@@ -147,9 +161,7 @@
               "application/json": {
                 "schema": {
                   "type": "integer",
-                  "enum": [
-                    200
-                  ]
+                  "const": 200
                 }
               }
             }
@@ -220,6 +232,65 @@
         }
       }
     },
+    "/v1/auth/firebase": {
+      "post": {
+        "operationId": "auth.firebaseLogin",
+        "description": "Authenticate or register a user via Firebase ID Token, returning a Sanctum token.",
+        "summary": "Firebase Login",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id_token": {
+                    "type": "string"
+                  },
+                  "device_name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id_token",
+                  "device_name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "user"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
     "/v1/me": {
       "get": {
         "operationId": "auth.me",
@@ -261,9 +332,7 @@
                   "properties": {
                     "message": {
                       "type": "string",
-                      "enum": [
-                        "Déconnecté avec succès."
-                      ]
+                      "const": "Déconnecté avec succès."
                     }
                   },
                   "required": [
@@ -294,9 +363,7 @@
               "application/json": {
                 "schema": {
                   "type": "integer",
-                  "enum": [
-                    200
-                  ]
+                  "const": 200
                 }
               }
             }
@@ -319,8 +386,209 @@
               "application/json": {
                 "schema": {
                   "type": "integer",
-                  "enum": [
-                    200
+                  "const": 200
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/devices/register": {
+      "post": {
+        "operationId": "device.register",
+        "summary": "Register or update a device token",
+        "tags": [
+          "Device"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "device_id": {
+                    "type": "string"
+                  },
+                  "push_token": {
+                    "type": "string"
+                  },
+                  "platform": {
+                    "type": "string",
+                    "enum": [
+                      "android",
+                      "ios"
+                    ]
+                  }
+                },
+                "required": [
+                  "device_id",
+                  "push_token",
+                  "platform"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string",
+                      "const": "Appareil enregistré avec succès."
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Device"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "$ref": "#/components/schemas/MessageBag"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "errors"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/devices/unregister": {
+      "post": {
+        "operationId": "device.unregister",
+        "summary": "Unregister a device (set status to inactive)",
+        "tags": [
+          "Device"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "device_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "device_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string",
+                      "const": "Appareil désinscrit avec succès."
+                    },
+                    "data": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string",
+                      "const": "Appareil non trouvé."
+                    },
+                    "errors": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "errors"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "$ref": "#/components/schemas/MessageBag"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "errors"
                   ]
                 }
               }
@@ -349,9 +617,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "enum": [
-                        "Types de documents récupérés avec succès"
-                      ]
+                      "const": "Types de documents récupérés avec succès"
                     },
                     "data": {
                       "type": "array",
@@ -372,6 +638,93 @@
         }
       }
     },
+    "/v1/dossiers/export-pdf": {
+      "post": {
+        "operationId": "dossierExport.exportPdf",
+        "summary": "Generate a PDF export of a dossier.\nExpects a JSON body with:\n- title: string\n- description: string (optional)\n- items: array of objects { type: 'article'|'document', id: string, note: string|null }",
+        "tags": [
+          "DossierExport"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "article",
+                            "document"
+                          ]
+                        },
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "note": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "id"
+                      ]
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "title",
+                  "items"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Return raw PDF bytes for API consumption (mobile apps)",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
     "/v1/home": {
       "get": {
         "operationId": "home.index",
@@ -387,9 +740,7 @@
               "application/json": {
                 "schema": {
                   "type": "integer",
-                  "enum": [
-                    200
-                  ]
+                  "const": 200
                 }
               }
             }
@@ -417,9 +768,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "enum": [
-                        "Institutions récupérées avec succès"
-                      ]
+                      "const": "Institutions récupérées avec succès"
                     },
                     "data": {
                       "type": "array",
@@ -461,9 +810,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "enum": [
-                        "Documents récupérés avec succès"
-                      ]
+                      "const": "Documents récupérés avec succès"
                     },
                     "data": {
                       "type": "string"
@@ -536,9 +883,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "enum": [
-                        "Document récupéré avec succès"
-                      ]
+                      "const": "Document récupéré avec succès"
                     },
                     "data": {
                       "$ref": "#/components/schemas/LegalDocumentResource"
@@ -559,7 +904,7 @@
     "/v1/legal-documents/{id}/download": {
       "get": {
         "operationId": "legalDocumentDownload.download",
-        "description": "Returns a flat list of structure nodes and articles for offline sync. \nThis is optimized for the mobile application's local database insertion.",
+        "description": "Returns a flat list of structure nodes and articles for offline sync.\nThis is optimized for the mobile application's local database insertion.",
         "summary": "Download legal document data (Flat List)",
         "tags": [
           "LegalDocumentDownload"
@@ -589,9 +934,7 @@
               "application/json": {
                 "schema": {
                   "type": "integer",
-                  "enum": [
-                    200
-                  ]
+                  "const": 200
                 }
               }
             }
@@ -625,9 +968,7 @@
               "application/json": {
                 "schema": {
                   "type": "integer",
-                  "enum": [
-                    200
-                  ]
+                  "const": 200
                 }
               }
             }
@@ -661,9 +1002,7 @@
               "application/json": {
                 "schema": {
                   "type": "integer",
-                  "enum": [
-                    200
-                  ]
+                  "const": 200
                 }
               }
             }
@@ -704,10 +1043,261 @@
         }
       }
     },
+    "/v1/notifications": {
+      "get": {
+        "operationId": "notification.index",
+        "summary": "Display a listing of the user's notifications",
+        "tags": [
+          "Notification"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "null"
+                    },
+                    "data": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/v1/notifications/{id}/read": {
+      "patch": {
+        "operationId": "notification.markAsRead",
+        "summary": "Mark a specific notification as read",
+        "tags": [
+          "Notification"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string",
+                      "const": "Notification marquée comme lue."
+                    },
+                    "data": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/v1/notifications/read-all": {
+      "post": {
+        "operationId": "notification.markAllAsRead",
+        "summary": "Mark all notifications as read",
+        "tags": [
+          "Notification"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string",
+                      "const": "Toutes les notifications ont été marquées comme lues."
+                    },
+                    "data": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/v1/notifications/{id}": {
+      "delete": {
+        "operationId": "notification.destroy",
+        "summary": "Remove the specified notification",
+        "tags": [
+          "Notification"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string",
+                      "const": "Notification supprimée."
+                    },
+                    "data": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/v1/official-journals": {
+      "get": {
+        "operationId": "official-journals.index",
+        "description": "Returns a paginated list of published official journals.\nSupports sorting via query parameters.",
+        "summary": "List official journals",
+        "tags": [
+          "OfficialJournal"
+        ],
+        "parameters": [
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": 15
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `OfficialJournalResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OfficialJournalResource"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/official-journals/{id}": {
+      "get": {
+        "operationId": "official-journals.show",
+        "description": "Returns a specific published official journal with its associated legal documents.\nThe response will include a `pdf_url` which is an absolute URL pointing to the PDF proxy endpoint.",
+        "summary": "Get an official journal",
+        "tags": [
+          "OfficialJournal"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`OfficialJournalResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfficialJournalResource"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/legal-documents/{id}/pdf": {
       "get": {
         "operationId": "pdfProxy.show",
-        "summary": "Proxy a PDF from the document's source URL (MinIO/S3).\nThis ensures the mobile app gets the file via the API without exposing direct S3 links",
+        "description": "Proxy a PDF from the document's source URL (MinIO/S3).\nThis ensures the mobile app gets the file via the API without exposing direct S3 links.",
+        "summary": "Download or view a PDF",
         "tags": [
           "PdfProxy"
         ],
@@ -718,6 +1308,14 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "document"
             }
           },
           {
@@ -732,20 +1330,10 @@
           "200": {
             "description": "",
             "content": {
-              "text/html": {
+              "application/json": {
                 "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "headers": {
-              "Transfer-Encoding": {
-                "required": true,
-                "schema": {
-                  "type": "string",
-                  "enum": [
-                    "chunked"
-                  ]
+                  "type": "integer",
+                  "const": 200
                 }
               }
             }
@@ -759,7 +1347,7 @@
     "/v1/legal-documents/{documentId}/tree": {
       "get": {
         "operationId": "structureNode.tree",
-        "description": "Returns the structure tree for a specific document. This is useful for displaying \na table of contents or navigating through the document's divisions (Books, Titles, etc.).",
+        "description": "Returns the structure tree for a specific document. This is useful for displaying\na table of contents or navigating through the document's divisions (Books, Titles, etc.).",
         "summary": "Get document hierarchy",
         "tags": [
           "StructureNode"
@@ -788,9 +1376,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "enum": [
-                        "Structure récupérée avec succès"
-                      ]
+                      "const": "Structure récupérée avec succès"
                     },
                     "data": {
                       "type": "array",
@@ -993,6 +1579,61 @@
         ],
         "title": "ArticleSyncResource"
       },
+      "Device": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "device_id": {
+            "type": "string"
+          },
+          "push_token": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "platform": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "last_registered_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "device_id",
+          "push_token",
+          "platform",
+          "status",
+          "last_registered_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Device"
+      },
       "DocumentRelationResource": {
         "type": "object",
         "properties": {
@@ -1082,6 +1723,12 @@
           "id": {
             "type": "string"
           },
+          "official_journal_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "title": {
             "type": "string"
           },
@@ -1111,6 +1758,25 @@
           },
           "institution": {
             "$ref": "#/components/schemas/InstitutionResource"
+          },
+          "official_journal": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "publication_date": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "publication_date"
+            ]
           },
           "type": {
             "type": "object",
@@ -1194,6 +1860,7 @@
         },
         "required": [
           "id",
+          "official_journal_id",
           "title",
           "reference",
           "status",
@@ -1201,6 +1868,68 @@
           "updated_at"
         ],
         "title": "LegalDocumentResource"
+      },
+      "MessageBag": {
+        "type": "array",
+        "items": {},
+        "title": "MessageBag"
+      },
+      "OfficialJournalResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "publication_date": {
+            "type": "string"
+          },
+          "transcription_status": {
+            "type": "string"
+          },
+          "is_published": {
+            "type": "boolean"
+          },
+          "pdf_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "file_size_bytes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Appended by the controller if requested"
+          },
+          "legal_documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LegalDocumentResource"
+            }
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "publication_date",
+          "transcription_status",
+          "is_published",
+          "pdf_url",
+          "file_size_bytes",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OfficialJournalResource"
       },
       "StructureNodeResource": {
         "type": "object",
@@ -1288,6 +2017,16 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         },
         "required": [
@@ -1298,7 +2037,9 @@
           "created_at",
           "updated_at",
           "two_factor_confirmed_at",
-          "deleted_at"
+          "deleted_at",
+          "status",
+          "last_seen_at"
         ],
         "title": "User"
       }
