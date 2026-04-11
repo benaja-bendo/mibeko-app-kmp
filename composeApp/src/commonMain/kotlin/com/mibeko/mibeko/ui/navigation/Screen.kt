@@ -62,6 +62,12 @@ sealed class Screen {
     
     @Serializable
     data class OfficialJournalDetail(val id: String) : Screen()
+    
+    @Serializable
+    data class Chat(val conversationId: String? = null, val initialPrompt: String? = null) : Screen()
+    
+    @Serializable
+    data object ConversationHistory : Screen()
 }
 
 val LocalNavController = staticCompositionLocalOf<NavController> {

@@ -2,6 +2,7 @@ package com.mibeko.mibeko.data.remote
 
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
@@ -13,9 +14,24 @@ data class FirebaseLoginRequest(
 )
 
 @Serializable
-data class AuthResponse(
+data class LoginRequest(
+    val email: String,
+    val password: String,
+    val device_name: String
+)
+
+@Serializable
+data class AuthResponseData(
     val token: String,
-    val user: RemoteUser
+    val user: RemoteUser? = null
+)
+
+@Serializable
+data class AuthResponse(
+    val success: Boolean = false,
+    val message: String? = null,
+    val data: AuthResponseData? = null,
+    val errors: Map<String, List<String>>? = null
 )
 
 @Serializable
@@ -45,9 +61,32 @@ class AuthApiService(
     private val baseUrl: String
 ) {
     suspend fun loginWithFirebase(idToken: String, deviceName: String): AuthResponse {
-        return client.post("$baseUrl/v1/auth/firebase") {
-            contentType(ContentType.Application.Json)
-            setBody(FirebaseLoginRequest(idToken, deviceName))
-        }.body()
+        try {
+            val response = client.post("$baseUrl/v1/auth/firebase") {
+                contentType(ContentType.Application.Json)
+                setBody(FirebaseLoginRequest(idToken, deviceName))
+            }
+            return response.body()
+        } catch (e: ClientRequestException) {
+            if (e.response.status == HttpStatusCode.UnprocessableEntity) {
+                return e.response.body()
+            }
+            throw e
+        }
+    }
+
+    suspend fun loginWithEmail(request: LoginRequest): AuthResponse {
+        try {
+            val response = client.post("$baseUrl/v1/login") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            return response.body()
+        } catch (e: ClientRequestException) {
+            if (e.response.status == HttpStatusCode.UnprocessableEntity) {
+                return e.response.body()
+            }
+            throw e
+        }
     }
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.data.remote.ApiResponse
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
+import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,6 +31,7 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     val isNetworkAvailable: Boolean = true,
     val isOfflineMode: Boolean = false,
+    val isLoggedIn: Boolean = false,
     val recentItems: List<RecentItem> = emptyList(),
     val popularCodes: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList(),
     val recentlyAdded: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList(),
@@ -41,7 +43,8 @@ data class HomeUiState(
 
 class HomeViewModel(
     private val repository: LocalLegalRepository,
-    private val networkChecker: NetworkConnectivityChecker
+    private val networkChecker: NetworkConnectivityChecker,
+    private val userPreferences: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -142,6 +145,7 @@ class HomeViewModel(
         val isOnline = networkChecker.isNetworkAvailable()
         _uiState.value = _uiState.value.copy(
             isNetworkAvailable = isOnline,
+            isLoggedIn = userPreferences.isLoggedIn(),
             isLoading = true
         )
         
@@ -167,7 +171,10 @@ class HomeViewModel(
      */
     fun refreshNetworkStatus() {
         val isOnline = networkChecker.isNetworkAvailable()
-        _uiState.value = _uiState.value.copy(isNetworkAvailable = isOnline)
+        _uiState.value = _uiState.value.copy(
+            isNetworkAvailable = isOnline,
+            isLoggedIn = userPreferences.isLoggedIn()
+        )
     }
     
     private fun loadRecentItems() {

@@ -29,11 +29,17 @@ import com.mibeko.mibeko.ui.auth.LoginScreen
 import com.mibeko.mibeko.ui.auth.ProfileSetupScreen
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.theme.MibekoTheme
+import com.mibeko.mibeko.ui.chat.ChatScreen
+import com.mibeko.mibeko.ui.chat.ConversationHistoryScreen
+import androidx.compose.ui.platform.LocalFocusManager
+import com.mibeko.mibeko.util.addFocusCleaner
+
 import org.koin.compose.koinInject
 
 @Composable
 fun App() {
     val userPreferencesRepository = koinInject<UserPreferencesRepository>()
+    val focusManager = LocalFocusManager.current
     
     // Collect the theme from the repository reactively
     val theme by userPreferencesRepository.theme.collectAsState()
@@ -48,8 +54,11 @@ fun App() {
         val navController = rememberNavController()
         
         CompositionLocalProvider(com.mibeko.mibeko.ui.navigation.LocalNavController provides navController) {
-            // Screens that should show the bottom bar
-        val bottomBarScreens = listOf(
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier.fillMaxSize().addFocusCleaner(focusManager)
+            ) {
+                // Screens that should show the bottom bar
+                val bottomBarScreens = listOf(
             Screen.Home::class.qualifiedName,
             Screen.Library::class.qualifiedName,
             Screen.Favorites::class.qualifiedName,
@@ -133,8 +142,18 @@ fun App() {
                     val route = backStackEntry.toRoute<Screen.OfficialJournalDetail>()
                     com.mibeko.mibeko.ui.officialjournal.OfficialJournalDetailScreen(route.id)
                 }
+
+                composable<Screen.Chat> { backStackEntry ->
+                    val args = backStackEntry.toRoute<Screen.Chat>()
+                    ChatScreen(conversationId = args.conversationId, initialPrompt = args.initialPrompt)
+                }
+
+                composable<Screen.ConversationHistory> {
+                    ConversationHistoryScreen()
+                }
             }
         }
-    }
+            }
+        }
     }
 }

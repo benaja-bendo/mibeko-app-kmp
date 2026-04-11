@@ -4,6 +4,7 @@ import com.mibeko.mibeko.data.local.getDatabaseBuilder
 import com.mibeko.mibeko.data.preferences.SearchHistoryManager
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.AuthApiService
+import com.mibeko.mibeko.data.remote.AiApiService
 import com.mibeko.mibeko.data.remote.LegalApiService
 import com.mibeko.mibeko.data.repository.DossierRepository
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
@@ -22,6 +23,8 @@ import com.mibeko.mibeko.ui.dossier.DossierViewModel
 import com.mibeko.mibeko.ui.favorites.FavoritesViewModel
 import com.mibeko.mibeko.ui.settings.SettingsViewModel
 import com.mibeko.mibeko.ui.officialjournal.OfficialJournalViewModel
+import com.mibeko.mibeko.ui.chat.ChatViewModel
+import com.mibeko.mibeko.ui.chat.ConversationHistoryViewModel
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import com.mibeko.mibeko.util.NotificationManager
 import com.mibeko.mibeko.util.getNetworkConnectivityChecker
@@ -79,6 +82,7 @@ val commonModule = module {
 
     single { LegalApiService(get(), get<AppConfig>().baseUrl) }
     single { AuthApiService(get(), get<AppConfig>().baseUrl) }
+    single { AiApiService(get(), get<AppConfig>().baseUrl) }
 
     // Network connectivity checker (platform-specific implementation)
     single<NetworkConnectivityChecker> { getNetworkConnectivityChecker() }
@@ -97,7 +101,7 @@ val commonModule = module {
     viewModel { LoginViewModel(get(), get()) }
     viewModel { ProfileSetupViewModel(get(), get()) }
 
-    viewModel { HomeViewModel(get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { ReaderViewModel(get(), get(), get(), get()) }
     viewModel { DocumentDetailViewModel(get(), get()) }
@@ -109,5 +113,7 @@ val commonModule = module {
     viewModel { NotificationsViewModel(get()) }
     viewModel { DossierViewModel(get()) }
     viewModel { params -> DossierDetailViewModel(params.get(), get(), get()) }
+    viewModel { ChatViewModel(get()) }
+    viewModel { ConversationHistoryViewModel(get()) }
 }
 

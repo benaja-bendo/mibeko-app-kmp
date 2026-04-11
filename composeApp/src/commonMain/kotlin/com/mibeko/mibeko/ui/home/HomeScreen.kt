@@ -76,16 +76,27 @@ fun HomeScreen() {
                     HomeHeader(
                         onNotificationsClick = {
                             navController.navigate(Screen.Notifications)
+                        },
+                        onHistoryClick = {
+                            if (uiState.isLoggedIn) {
+                                navController.navigate(Screen.ConversationHistory)
+                            } else {
+                                navController.navigate(Screen.Login)
+                            }
                         }
                     )
                 }
                 
-                // Search Trigger Button (navigates to SearchResults)
+                // Search Trigger Button (navigates to Chat or Login)
                 item {
                     AiChatInputCard(
                         onSend = { query ->
                             if (query.isNotBlank()) {
-                                navController.navigate(Screen.SearchResults(query = query))
+                                if (uiState.isLoggedIn) {
+                                    navController.navigate(Screen.Chat(initialPrompt = query))
+                                } else {
+                                    navController.navigate(Screen.Login)
+                                }
                             }
                         }
                     )
@@ -163,7 +174,10 @@ fun HomeScreen() {
  * En-tête avec dégradé bleu institutionnel, logo Mibeko et titre.
  */
 @Composable
-private fun HomeHeader(onNotificationsClick: () -> Unit = {}) {
+private fun HomeHeader(
+    onNotificationsClick: () -> Unit = {},
+    onHistoryClick: () -> Unit = {}
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -177,9 +191,9 @@ private fun HomeHeader(onNotificationsClick: () -> Unit = {}) {
             .padding(top = 16.dp, bottom = 48.dp), // Extra padding at bottom for overlap
         contentAlignment = Alignment.Center
     ) {
-        // History Icon (Top Left) - Mockup shows a history icon here
+        // History Icon (Top Left)
         IconButton(
-            onClick = { /* TODO: History */ },
+            onClick = onHistoryClick,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(start = 16.dp, top = 0.dp)
