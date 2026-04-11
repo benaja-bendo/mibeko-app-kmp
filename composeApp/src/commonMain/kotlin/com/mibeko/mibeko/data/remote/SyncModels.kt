@@ -293,3 +293,37 @@ data class DossierExportItem(
     val id: String,
     val note: String? = null
 )
+
+// =============================================================================
+// Official Journal Models
+// =============================================================================
+
+@Serializable
+data class RemoteOfficialJournalResponse(
+    val success: Boolean = true,
+    val message: String = "",
+    val data: List<RemoteOfficialJournal> = emptyList(),
+    val meta: RemoteMeta? = null,
+    val links: Map<String, String?> = emptyMap()
+)
+
+@Serializable
+data class RemoteOfficialJournalSingleResponse(
+    val success: Boolean = true,
+    val message: String = "",
+    val data: RemoteOfficialJournal? = null
+)
+
+@Serializable
+data class RemoteOfficialJournal(
+    val id: String,
+    val title: String,
+    val publication_date: String,
+    val transcription_status: String,
+    val is_published: Boolean,
+    val pdf_url: String? = null,
+    val file_size_bytes: Long? = null,
+    val legal_documents: List<RemoteDocument> = emptyList(),
+    val created_at: String,
+    val updated_at: String
+)

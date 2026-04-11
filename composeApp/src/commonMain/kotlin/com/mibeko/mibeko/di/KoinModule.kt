@@ -21,6 +21,7 @@ import com.mibeko.mibeko.ui.dossier.DossierDetailViewModel
 import com.mibeko.mibeko.ui.dossier.DossierViewModel
 import com.mibeko.mibeko.ui.favorites.FavoritesViewModel
 import com.mibeko.mibeko.ui.settings.SettingsViewModel
+import com.mibeko.mibeko.ui.officialjournal.OfficialJournalViewModel
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import com.mibeko.mibeko.util.NotificationManager
 import com.mibeko.mibeko.util.getNetworkConnectivityChecker
@@ -102,6 +103,7 @@ val commonModule = module {
     viewModel { DocumentDetailViewModel(get(), get()) }
     viewModel { FavoritesViewModel(get()) }
     viewModel { SettingsViewModel(get(), get(), get(), get()) }
+    viewModel { OfficialJournalViewModel(get(), get()) }
     viewModel { LibraryViewModel(get()) }
     viewModel { DownloadsViewModel(get()) }
     viewModel { NotificationsViewModel(get()) }

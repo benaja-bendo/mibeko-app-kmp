@@ -3,7 +3,12 @@ package com.mibeko.mibeko.data.remote
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonObject
 
 class LegalApiService(
     private val client: HttpClient,
@@ -111,8 +116,42 @@ class LegalApiService(
         return "$baseUrl/v1/articles/$articleId/export"
     }
 
+    /**
+     * Get the PDF proxy URL for an official journal.
+     */
+    fun getOfficialJournalPdfUrl(id: String): String {
+        return "$baseUrl/v1/legal-documents/$id/pdf?type=journal"
+    }
+
     suspend fun fetchInstitutions(): ApiResponse<List<RemoteInstitution>> {
         return client.get("$baseUrl/v1/institutions").body()
+    }
+
+    /**
+     * Fetch paginated list of official journals.
+     */
+    suspend fun fetchOfficialJournals(page: Int = 1): RemoteOfficialJournalResponse {
+        return client.get("$baseUrl/v1/official-journals") {
+            parameter("page", page)
+        }.body()
+    }
+
+    /**
+     * Fetch a specific official journal with its documents.
+     */
+    suspend fun fetchOfficialJournal(id: String): RemoteOfficialJournal {
+        val response = client.get("$baseUrl/v1/official-journals/$id")
+        val bodyAsText = response.bodyAsText()
+        
+        val jsonElement = Json { ignoreUnknownKeys = true }.parseToJsonElement(bodyAsText)
+        return if (jsonElement is JsonObject && jsonElement.containsKey("data")) {
+            // It's wrapped in a "data" field
+            Json { ignoreUnknownKeys = true }.decodeFromJsonElement<RemoteOfficialJournalSingleResponse>(jsonElement).data 
+                ?: throw Exception("Data object is null in response")
+        } else {
+            // It's the object directly
+            Json { ignoreUnknownKeys = true }.decodeFromJsonElement<RemoteOfficialJournal>(jsonElement)
+        }
     }
 
     /**

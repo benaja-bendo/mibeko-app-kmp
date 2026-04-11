@@ -124,6 +124,15 @@ fun App() {
                     val route = backStackEntry.toRoute<Screen.DocumentList>()
                     com.mibeko.mibeko.ui.library.DocumentListScreen(route.typeCode, route.typeName)
                 }
+                
+                composable<Screen.OfficialJournalList> {
+                    com.mibeko.mibeko.ui.officialjournal.OfficialJournalListScreen()
+                }
+                
+                composable<Screen.OfficialJournalDetail> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Screen.OfficialJournalDetail>()
+                    com.mibeko.mibeko.ui.officialjournal.OfficialJournalDetailScreen(route.id)
+                }
             }
         }
     }

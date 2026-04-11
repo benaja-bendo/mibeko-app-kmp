@@ -204,8 +204,8 @@ buildConfig {
     val baseUrl = if (isRelease) {
         "https://app.mibeko.benaja-bendo.fr/api"
     } else {
-        "https://app.mibeko.benaja-bendo.fr/api"
-        // "http://192.168.0.78:8000/api"
+        //"https://app.mibeko.benaja-bendo.fr/api"
+        "http://192.168.0.78:8000/api"
     }
     
     buildConfigField("String", "BASE_URL", "\"$baseUrl\"")

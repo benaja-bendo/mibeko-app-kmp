@@ -469,6 +469,20 @@ class LocalLegalRepository(
         return apiService.fetchHomeData()
     }
 
+    /**
+     * Fetch paginated list of Official Journals directly from API
+     */
+    suspend fun getOfficialJournals(page: Int = 1): com.mibeko.mibeko.data.remote.RemoteOfficialJournalResponse {
+        return apiService.fetchOfficialJournals(page)
+    }
+
+    /**
+     * Fetch a specific Official Journal with its documents directly from API
+     */
+    suspend fun getOfficialJournal(id: String): com.mibeko.mibeko.data.remote.RemoteOfficialJournal {
+        return apiService.fetchOfficialJournal(id)
+    }
+
     fun getArticleById(id: String): Flow<ArticleSpec?> {
         return mibekoDao.getArticleById(id).map { result ->
             result?.toArticleSpec()
@@ -615,6 +629,10 @@ class LocalLegalRepository(
 
     fun getDocumentExportUrl(documentId: String): String {
         return apiService.getDocumentExportUrl(documentId)
+    }
+
+    fun getOfficialJournalPdfUrl(id: String): String {
+        return apiService.getOfficialJournalPdfUrl(id)
     }
 
     suspend fun downloadFile(url: String): ByteArray {

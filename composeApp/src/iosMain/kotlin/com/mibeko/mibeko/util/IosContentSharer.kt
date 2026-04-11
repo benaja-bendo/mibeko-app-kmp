@@ -60,6 +60,11 @@ class IosContentSharer : ContentSharer {
         }
     }
 
+    override fun viewFile(bytes: ByteArray, fileName: String, mimeType: String) {
+        // On iOS, UIActivityViewController is the standard way to provide viewing/saving options
+        shareFile(bytes, fileName, mimeType)
+    }
+
     override fun copyToClipboard(text: String) {
         UIPasteboard.generalPasteboard.string = text
     }

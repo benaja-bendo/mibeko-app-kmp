@@ -33,6 +33,7 @@ data class HomeUiState(
     val recentItems: List<RecentItem> = emptyList(),
     val popularCodes: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList(),
     val recentlyAdded: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList(),
+    val officialJournals: List<com.mibeko.mibeko.data.remote.RemoteOfficialJournal> = emptyList(),
     val aiSuggestions: List<String> = emptyList(),
     val isSyncing: Boolean = false,
     val error: String? = null
@@ -68,60 +69,74 @@ class HomeViewModel(
     private fun loadHomeData() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            try {
-                if (networkChecker.isNetworkAvailable()) {
-                    val response = repository.getHomeData()
-                    if (response.success && response.data != null) {
-                        // Filter out documents with missing mandatory fields (id, title)
-                        val validPopular = response.data.popular_codes.filter { 
-                            it.id.isNotBlank() && it.title.isNotBlank() 
-                        }
-                        val validRecentlyAdded = response.data.recently_added.filter { 
-                            it.id.isNotBlank() && it.title.isNotBlank() 
-                        }
-                        
-                        _uiState.value = _uiState.value.copy(
-                            popularCodes = validPopular,
-                            recentlyAdded = validRecentlyAdded,
-                            aiSuggestions = response.data.ai_suggestions,
-                            isLoading = false
-                        )
-                        return@launch
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
             
-            // Fallback: load from local if offline or API fails
-            loadLocalFallbacks()
+            var validPopular: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList()
+            var validRecentlyAdded: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList()
+            var suggestions: List<String> = emptyList()
+            var journals: List<com.mibeko.mibeko.data.remote.RemoteOfficialJournal> = emptyList()
+            var isOffline = false
+
+            if (networkChecker.isNetworkAvailable()) {
+                // Fetch Home Data
+                try {
+                    val homeResponse = repository.getHomeData()
+                    if (homeResponse.success && homeResponse.data != null) {
+                        validPopular = homeResponse.data.popular_codes.filter { 
+                            it.id.isNotBlank() && it.title.isNotBlank() 
+                        }
+                        validRecentlyAdded = homeResponse.data.recently_added.filter { 
+                            it.id.isNotBlank() && it.title.isNotBlank() 
+                        }
+                        suggestions = homeResponse.data.ai_suggestions
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                // Fetch Official Journals
+                try {
+                    val journalsResponse = repository.getOfficialJournals()
+                    if (journalsResponse.success) {
+                        journals = journalsResponse.data
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            } else {
+                isOffline = true
+            }
+
+            // Fallback for popular codes if we didn't get any from API
+            if (validPopular.isEmpty()) {
+                try {
+                    val codes = repository.getLawCodes().first()
+                    if (codes.isNotEmpty()) {
+                        validPopular = codes.take(5).map { code ->
+                            com.mibeko.mibeko.data.remote.RemoteDocument(
+                                id = code.id,
+                                title = code.title,
+                                status = "published",
+                                updated_at = ""
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            _uiState.value = _uiState.value.copy(
+                popularCodes = validPopular,
+                recentlyAdded = validRecentlyAdded,
+                officialJournals = journals,
+                aiSuggestions = suggestions,
+                isOfflineMode = isOffline,
+                isLoading = false
+            )
         }
     }
 
-    private fun loadLocalFallbacks() {
-        viewModelScope.launch {
-            repository.getLawCodes().collect { codes ->
-                if (codes.isNotEmpty()) {
-                    // Use the first few codes as "popular" for MVP fallback
-                    val fallbackPopular = codes.take(5).map { code ->
-                        com.mibeko.mibeko.data.remote.RemoteDocument(
-                            id = code.id,
-                            title = code.title,
-                            status = "published",
-                            updated_at = ""
-                        )
-                    }
-                    _uiState.value = _uiState.value.copy(
-                        popularCodes = fallbackPopular,
-                        isLoading = false
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(isLoading = false)
-                }
-            }
-        }
-    }
-    
+
     private fun loadInitialState() {
         // Check initial network state
         val isOnline = networkChecker.isNetworkAvailable()

@@ -101,59 +101,46 @@ fun HomeScreen() {
                 
                 // Zone 1: Journal Officiel (Horizontal List)
                 item {
-                    val mockJournaux = listOf(
-                        Triple(
-                            "Journal Officiel n° 12 - 2026",
-                            "Publié le 15 Janvier 2026",
-                            "Décrets portant nomination des membres du Conseil Supérieur de la Magistrature et autre..."
-                        ),
-                        Triple(
-                            "Journal Officiel n° 11 - 2026",
-                            "Publié le 08 Janvier 2026",
-                            "Loi relative à la protection des données personnelles et à la cybersécurité..."
-                        ),
-                        Triple(
-                            "Journal Officiel n° 10 - 2025",
-                            "Publié le 28 Décembre 2025",
-                            "Ordonnance portant modification du code de procédure pénale et dispositions diverses..."
-                        )
-                    )
-
-                    Column(modifier = Modifier.padding(top = 16.dp)) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Journal Officiel",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            TextButton(onClick = { /* TODO: Navigate to full list */ }) {
+                    AnimatedVisibility(
+                        visible = !uiState.isLoading && uiState.officialJournals.isNotEmpty(),
+                        enter = fadeIn() + slideInVertically { 30 }
+                    ) {
+                        Column(modifier = Modifier.padding(top = 16.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    text = "Voir plus",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MibekoBluePrimary,
-                                    fontWeight = FontWeight.SemiBold
+                                    text = "Journal Officiel",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
+                                TextButton(onClick = { navController.navigate(Screen.OfficialJournalList) }) {
+                                    Text(
+                                        text = "Voir plus",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MibekoBluePrimary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
                             }
-                        }
-                        
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            items(mockJournaux) { (title, date, excerpt) ->
-                                JournalOfficielCard(
-                                    title = title,
-                                    date = date,
-                                    excerpt = excerpt,
-                                    onClick = { /* TODO: Navigate to detail */ }
-                                )
+                            
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(uiState.officialJournals.take(5)) { journal ->
+                                    JournalOfficielCard(
+                                        title = journal.title,
+                                        date = "Publié le ${journal.publication_date}",
+                                        excerpt = "Consulter le journal officiel et ses documents annexes...",
+                                        onClick = { navController.navigate(Screen.OfficialJournalDetail(journal.id)) }
+                                    )
+                                }
                             }
                         }
                     }
