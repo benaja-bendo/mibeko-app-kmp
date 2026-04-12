@@ -38,6 +38,7 @@ import com.mibeko.mibeko.ui.components.NetworkStatusBanner
 import com.mibeko.mibeko.ui.theme.MibekoGold
 import com.mibeko.mibeko.ui.theme.MibekoBluePrimary
 import com.mibeko.mibeko.ui.theme.MibekoBlueDark
+import com.mibeko.mibeko.util.formatIsoDate
 
 @Composable
 fun HomeScreen() {
@@ -147,7 +148,7 @@ fun HomeScreen() {
                                 items(uiState.officialJournals.take(5)) { journal ->
                                     JournalOfficielCard(
                                         title = journal.title,
-                                        date = "Publié le ${journal.publication_date}",
+                                        date = "Publié le ${formatIsoDate(journal.publication_date)}",
                                         excerpt = "Consulter le journal officiel et ses documents annexes...",
                                         onClick = { navController.navigate(Screen.OfficialJournalDetail(journal.id)) }
                                     )
@@ -237,14 +238,14 @@ private fun HomeHeader(
             // Logo inside white rounded square
             Surface(
                 color = Color.White,
-                shape = RoundedCornerShape(12.dp),
-                shadowElevation = 4.dp
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = 4.dp,
+                modifier = Modifier.size(72.dp)
             ) {
-                Icon(
+                androidx.compose.foundation.Image(
                     painter = painterResource(Res.drawable.logo),
                     contentDescription = "Mibeko Logo",
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(56.dp).padding(8.dp)
+                    modifier = Modifier.fillMaxSize().padding(12.dp)
                 )
             }
             

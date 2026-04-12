@@ -75,7 +75,7 @@ class OfficialJournalViewModel(
         return repository.getOfficialJournalPdfUrl(id)
     }
 
-    fun openPdf(id: String) {
+    fun sharePdf(id: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isDownloadingPdf = true, error = null)
             try {
@@ -83,10 +83,10 @@ class OfficialJournalViewModel(
                 val bytes = repository.downloadFile(url)
                 val journal = _uiState.value.currentJournal
                 val fileName = "Journal_Officiel_${journal?.publication_date ?: id}.pdf".replace(" ", "_")
-                contentSharer.viewFile(bytes, fileName, "application/pdf")
+                contentSharer.shareFile(bytes, fileName, "application/pdf")
             } catch (e: Exception) {
                 e.printStackTrace()
-                _uiState.value = _uiState.value.copy(error = "Erreur lors de l'ouverture du PDF: ${e.message}")
+                _uiState.value = _uiState.value.copy(error = "Erreur lors du partage du PDF: ${e.message}")
             } finally {
                 _uiState.value = _uiState.value.copy(isDownloadingPdf = false)
             }

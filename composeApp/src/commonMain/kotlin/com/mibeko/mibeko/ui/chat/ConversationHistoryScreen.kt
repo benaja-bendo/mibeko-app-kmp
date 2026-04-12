@@ -22,24 +22,10 @@ import com.mibeko.mibeko.data.remote.AgentConversation
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import org.koin.compose.viewmodel.koinViewModel
+import com.mibeko.mibeko.util.formatIsoDate
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-
-fun formatIsoDate(isoString: String): String {
-    try {
-        val instant = Instant.parse(isoString)
-        val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-        val day = dateTime.dayOfMonth.toString().padStart(2, '0')
-        val month = dateTime.monthNumber.toString().padStart(2, '0')
-        val year = dateTime.year
-        val hour = dateTime.hour.toString().padStart(2, '0')
-        val minute = dateTime.minute.toString().padStart(2, '0')
-        return "$day/$month/$year à $hour:$minute"
-    } catch (e: Exception) {
-        return isoString
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

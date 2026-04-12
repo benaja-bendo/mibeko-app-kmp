@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.ui.theme.MibekoBluePrimary
+import com.mibeko.mibeko.util.formatIsoDate
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,7 +65,7 @@ fun OfficialJournalListScreen() {
                 items(uiState.journals) { journal ->
                     JournalListItem(
                         title = journal.title,
-                        date = "Publié le ${journal.publication_date}",
+                        date = "Publié le ${formatIsoDate(journal.publication_date)}",
                         onClick = { navController.navigate(Screen.OfficialJournalDetail(journal.id)) }
                     )
                 }

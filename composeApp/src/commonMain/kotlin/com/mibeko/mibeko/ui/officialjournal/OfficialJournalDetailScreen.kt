@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,10 +22,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mibeko.mibeko.ui.components.PdfViewer
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.ui.theme.MibekoBluePrimary
 import com.mibeko.mibeko.ui.theme.MibekoGold
+import com.mibeko.mibeko.util.formatIsoDate
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,7 +37,7 @@ fun OfficialJournalDetailScreen(id: String) {
     val viewModel = koinViewModel<OfficialJournalViewModel>()
     val uiState by viewModel.uiState.collectAsState()
 
-    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+    var showDocumentsSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(id) {
         viewModel.loadJournalDetail(id)
@@ -47,6 +50,21 @@ fun OfficialJournalDetailScreen(id: String) {
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                    }
+                },
+                actions = {
+                    if (uiState.currentJournal?.pdf_url != null) {
+                        if (uiState.isDownloadingPdf) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(end = 16.dp).size(24.dp),
+                                color = MibekoBluePrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            IconButton(onClick = { viewModel.sharePdf(id) }) {
+                                Icon(Icons.Default.Share, contentDescription = "Partager", tint = MibekoBluePrimary)
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -71,56 +89,84 @@ fun OfficialJournalDetailScreen(id: String) {
                 }
             }
         } else {
-            uiState.currentJournal?.let { journal ->
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                uiState.currentJournal?.let { journal ->
                     // Header Card
-                    item {
-                        JournalHeaderCard(
-                            title = journal.title,
-                            date = journal.publication_date,
-                            pdfUrl = journal.pdf_url,
-                            fileSize = journal.file_size_bytes,
-                            isDownloadingPdf = uiState.isDownloadingPdf,
-                            onOpenPdf = {
-                                journal.pdf_url?.let {
-                                    viewModel.openPdf(journal.id)
-                                }
-                            }
-                        )
-                    }
+                    JournalHeaderCard(
+                        title = journal.title,
+                        date = formatIsoDate(journal.publication_date),
+                        fileSize = journal.file_size_bytes,
+                        documentCount = journal.legal_documents.size,
+                        onViewDocuments = { showDocumentsSheet = true }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    item {
-                        Text(
-                            text = "Documents rattachés",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
-
-                    if (journal.legal_documents.isEmpty()) {
-                        item {
-                            Text(
-                                text = "Aucun document rattaché à ce journal.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 16.dp)
+                    // PDF Viewer
+                    if (!journal.pdf_url.isNullOrEmpty()) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            shadowElevation = 2.dp,
+                            color = MaterialTheme.colorScheme.surface
+                        ) {
+                            PdfViewer(
+                                url = journal.pdf_url,
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                     } else {
-                        items(journal.legal_documents) { doc ->
-                            DocumentListItem(
-                                title = doc.title,
-                                reference = doc.reference ?: "Sans référence",
-                                onClick = { navController.navigate(Screen.DocumentDetail(doc.id)) }
-                            )
+                        Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                            Text("Aucun PDF disponible pour ce journal.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
+                }
+            }
+        }
+    }
+
+    if (showDocumentsSheet && uiState.currentJournal != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showDocumentsSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Text(
+                        text = "Documents rattachés",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+                val docs = uiState.currentJournal!!.legal_documents
+                if (docs.isEmpty()) {
+                    item { 
+                        Text(
+                            text = "Aucun document rattaché à ce journal.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 32.dp)
+                        ) 
+                    }
+                } else {
+                    items(docs) { doc ->
+                        DocumentListItem(
+                            title = doc.title,
+                            reference = doc.reference ?: "Sans référence",
+                            onClick = {
+                                showDocumentsSheet = false
+                                navController.navigate(Screen.DocumentDetail(doc.id))
+                            }
+                        )
+                    }
+                    item { Spacer(modifier = Modifier.height(32.dp)) }
                 }
             }
         }
@@ -128,38 +174,39 @@ fun OfficialJournalDetailScreen(id: String) {
 }
 
 @Composable
-private fun JournalHeaderCard(title: String, date: String, pdfUrl: String?, fileSize: Long?, isDownloadingPdf: Boolean, onOpenPdf: () -> Unit) {
+private fun JournalHeaderCard(title: String, date: String, fileSize: Long?, documentCount: Int, onViewDocuments: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(16.dp),
         color = MibekoBluePrimary,
         shadowElevation = 4.dp
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.2f),
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Description,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Publié le $date",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
                 }
-
+                
                 if (fileSize != null) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color.White.copy(alpha = 0.15f)
+                        color = Color.White.copy(alpha = 0.15f),
+                        modifier = Modifier.padding(start = 12.dp)
                     ) {
                         val sizeInMb = fileSize / (1024.0 * 1024.0)
                         val formattedSize = if (sizeInMb >= 1.0) {
@@ -179,41 +226,15 @@ private fun JournalHeaderCard(title: String, date: String, pdfUrl: String?, file
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = "Publié le $date",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.8f)
-            )
-            
-            if (!pdfUrl.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Button(
-                    onClick = onOpenPdf,
-                    colors = ButtonDefaults.buttonColors(containerColor = MibekoGold),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isDownloadingPdf
-                ) {
-                    if (isDownloadingPdf) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimaryContainer, strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Ouverture du PDF...", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    } else {
-                        Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Consulter le PDF original", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
-                }
+            Button(
+                onClick = onViewDocuments,
+                colors = ButtonDefaults.buttonColors(containerColor = MibekoGold),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Voir les documents rattachés ($documentCount)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
     }
