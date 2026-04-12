@@ -16,7 +16,8 @@ sealed class ChatState {
     object Error : ChatState()
     data class Content(
         val messages: List<AgentConversationMessage>,
-        val conversationId: String?
+        val conversationId: String?,
+        val isTyping: Boolean = false
     ) : ChatState()
 }
 
@@ -68,24 +69,58 @@ class ChatViewModel(
             created_at = ""
         )
         currentMessages.add(userMessage)
-        _chatState.value = ChatState.Content(currentMessages.toList(), currentConversationId)
+        
+        // Add an empty AI message that will show "thinking..." initially
+        val aiMessageId = "temp_ai_${getCurrentTimeMillis()}"
+        val initialAiMessage = AgentConversationMessage(
+            id = aiMessageId,
+            conversation_id = currentConversationId ?: "",
+            role = "assistant",
+            content = "",
+            created_at = ""
+        )
+        currentMessages.add(initialAiMessage)
+        
+        _chatState.value = ChatState.Content(currentMessages.toList(), currentConversationId, isTyping = true)
 
         viewModelScope.launch {
             try {
-                val response = aiApiService.sendMessage(message, currentConversationId)
-                currentConversationId = response.conversation_id
+                var streamContent = ""
+                aiApiService.sendMessageStream(
+                    message = message,
+                    conversationId = currentConversationId,
+                    onConversationIdReceived = { id ->
+                        currentConversationId = id
+                    }
+                ).collect { delta ->
+                    streamContent += delta
+                    
+                    // Update the last message
+                    val lastIndex = currentMessages.indexOfLast { it.id == aiMessageId }
+                    if (lastIndex != -1) {
+                        currentMessages[lastIndex] = currentMessages[lastIndex].copy(
+                            content = streamContent,
+                            conversation_id = currentConversationId ?: ""
+                        )
+                        _chatState.value = ChatState.Content(
+                            currentMessages.toList(), 
+                            currentConversationId, 
+                            isTyping = false // As soon as we receive data, we are no longer "thinking"
+                        )
+                    }
+                }
                 
-                val aiMessage = AgentConversationMessage(
-                    id = "temp_ai_${getCurrentTimeMillis()}",
-                    conversation_id = currentConversationId!!,
-                    role = "assistant",
-                    content = response.reply,
-                    created_at = ""
-                )
-                currentMessages.add(aiMessage)
-                _chatState.value = ChatState.Content(currentMessages.toList(), currentConversationId)
+                // Done streaming
+                _chatState.value = ChatState.Content(currentMessages.toList(), currentConversationId, isTyping = false)
             } catch (e: Exception) {
-                // Remove the temp message if failed or handle error
+                // If it fails completely and we have no content, show an error message
+                val lastIndex = currentMessages.indexOfLast { it.id == aiMessageId }
+                if (lastIndex != -1 && currentMessages[lastIndex].content.isEmpty()) {
+                    currentMessages[lastIndex] = currentMessages[lastIndex].copy(
+                        content = "Une erreur est survenue lors de la génération de la réponse."
+                    )
+                }
+                _chatState.value = ChatState.Content(currentMessages.toList(), currentConversationId, isTyping = false)
             }
         }
     }

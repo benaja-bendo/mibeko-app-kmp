@@ -37,4 +37,16 @@ class ConversationHistoryViewModel(
             }
         }
     }
+
+    fun deleteConversation(id: String) {
+        viewModelScope.launch {
+            try {
+                aiApiService.deleteConversation(id)
+                // Recharge l'historique après la suppression réussie
+                loadHistory()
+            } catch (e: Exception) {
+                // Optionnel: Gérer l'erreur (ex: afficher un message à l'utilisateur)
+            }
+        }
+    }
 }

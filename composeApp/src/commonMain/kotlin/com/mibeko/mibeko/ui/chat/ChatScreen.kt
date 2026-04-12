@@ -16,8 +16,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.mibeko.mibeko.data.remote.AgentConversationMessage
+import com.mikepenz.markdown.m3.Markdown
+import androidx.compose.ui.text.TextStyle
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.animation.core.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,10 +138,58 @@ fun ChatMessageItem(message: AgentConversationMessage) {
                 .padding(12.dp)
                 .widthIn(max = 280.dp)
         ) {
-            Text(
-                text = message.content,
-                color = if (isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (!isUser && message.content.isEmpty()) {
+                ThinkingDots()
+            } else if (isUser) {
+                Text(
+                    text = message.content,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Markdown(
+                    content = message.content
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun ThinkingDots() {
+    val infiniteTransition = rememberInfiniteTransition()
+    
+    val alpha1 by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, delayMillis = 0, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+    val alpha2 by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, delayMillis = 200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+    val alpha3 by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, delayMillis = 400, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
+    ) {
+        Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha1), RoundedCornerShape(50)))
+        Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha2), RoundedCornerShape(50)))
+        Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha3), RoundedCornerShape(50)))
     }
 }

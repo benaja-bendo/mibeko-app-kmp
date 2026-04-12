@@ -3,8 +3,15 @@ package com.mibeko.mibeko.data.remote
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.client.plugins.sse.*
 import io.ktor.http.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @Serializable
 data class AiChatRequest(
@@ -59,6 +66,10 @@ class AiApiService(
         return client.get("$baseUrl/v1/assistant/conversations/$id").body()
     }
 
+    suspend fun deleteConversation(id: String) {
+        client.delete("$baseUrl/v1/assistant/conversations/$id")
+    }
+
     suspend fun sendMessage(message: String, conversationId: String? = null): AiChatResponse {
         val url = if (conversationId != null) {
             "$baseUrl/v1/assistant/chat/$conversationId"
@@ -70,5 +81,54 @@ class AiApiService(
             contentType(ContentType.Application.Json)
             setBody(AiChatRequest(message = message, stream = false))
         }.body()
+    }
+
+    suspend fun sendMessageStream(
+        message: String,
+        conversationId: String?,
+        onConversationIdReceived: (String) -> Unit
+    ): Flow<String> = flow {
+        val url = if (conversationId != null) {
+            "$baseUrl/v1/assistant/chat/$conversationId"
+        } else {
+            "$baseUrl/v1/assistant/chat"
+        }
+
+        client.sse(
+            urlString = url,
+            request = {
+                method = HttpMethod.Post
+                contentType(ContentType.Application.Json)
+                setBody(AiChatRequest(message = message, stream = true))
+                headers {
+                    append(HttpHeaders.Accept, "text/event-stream")
+                }
+            }
+        ) {
+            val receivedId = call.response.headers["X-Conversation-Id"]
+            if (receivedId != null) {
+                onConversationIdReceived(receivedId)
+            }
+
+            incoming.collect { event ->
+                val data = event.data
+                if (data != null) {
+                    if (data == "[DONE]") {
+                        return@collect
+                    }
+                    try {
+                        val json = Json.decodeFromString<JsonObject>(data)
+                        if (json["type"]?.jsonPrimitive?.content == "text_delta") {
+                            val delta = json["delta"]?.jsonPrimitive?.content
+                            if (delta != null) {
+                                emit(delta)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // ignore malformed JSON or other events
+                    }
+                }
+            }
+        }
     }
 }

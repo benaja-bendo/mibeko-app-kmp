@@ -97,6 +97,9 @@ kotlin {
 
             // Firebase KMP
             implementation(libs.firebase.kmp.auth)
+            
+            // Markdown
+            implementation(libs.markdown.renderer.m3)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
