@@ -130,9 +130,11 @@ class LegalApiService(
     /**
      * Fetch paginated list of official journals.
      */
-    suspend fun fetchOfficialJournals(page: Int = 1): RemoteOfficialJournalResponse {
+    suspend fun fetchOfficialJournals(page: Int = 1, number: String? = null, year: Int? = null): RemoteOfficialJournalResponse {
         return client.get("$baseUrl/v1/official-journals") {
             parameter("page", page)
+            if (number != null) parameter("filter[number]", number)
+            if (year != null) parameter("filter[year]", year)
         }.body()
     }
 

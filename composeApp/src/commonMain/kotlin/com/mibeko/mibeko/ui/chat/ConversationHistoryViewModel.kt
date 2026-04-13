@@ -22,18 +22,34 @@ class ConversationHistoryViewModel(
     private val _historyState = MutableStateFlow<HistoryState>(HistoryState.Loading)
     val historyState: StateFlow<HistoryState> = _historyState.asStateFlow()
 
+    private var currentFilterDate: String? = null
+    private var currentFilterTitle: String? = null
+
     init {
         loadHistory()
     }
 
-    fun loadHistory() {
+    fun loadHistory(date: String? = currentFilterDate, title: String? = currentFilterTitle) {
+        currentFilterDate = date
+        currentFilterTitle = title
         viewModelScope.launch {
             _historyState.value = HistoryState.Loading
             try {
-                val response = aiApiService.getConversations(1)
+                val response = aiApiService.getConversations(1, date, title)
                 _historyState.value = HistoryState.Content(response.data)
             } catch (e: Exception) {
                 _historyState.value = HistoryState.Error
+            }
+        }
+    }
+
+    fun updateConversationTitle(id: String, newTitle: String) {
+        viewModelScope.launch {
+            try {
+                aiApiService.updateConversationTitle(id, newTitle)
+                loadHistory()
+            } catch (e: Exception) {
+                // Handle error
             }
         }
     }

@@ -472,8 +472,8 @@ class LocalLegalRepository(
     /**
      * Fetch paginated list of Official Journals directly from API
      */
-    suspend fun getOfficialJournals(page: Int = 1): com.mibeko.mibeko.data.remote.RemoteOfficialJournalResponse {
-        return apiService.fetchOfficialJournals(page)
+    suspend fun getOfficialJournals(page: Int = 1, number: String? = null, year: Int? = null): com.mibeko.mibeko.data.remote.RemoteOfficialJournalResponse {
+        return apiService.fetchOfficialJournals(page, number, year)
     }
 
     /**

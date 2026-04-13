@@ -318,6 +318,7 @@ data class RemoteOfficialJournalSingleResponse(
 data class RemoteOfficialJournal(
     val id: String,
     val title: String,
+    val number: String? = null,
     val publication_date: String,
     val transcription_status: String,
     val is_published: Boolean,

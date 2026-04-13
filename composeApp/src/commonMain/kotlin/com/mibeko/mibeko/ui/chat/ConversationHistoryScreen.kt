@@ -1,12 +1,16 @@
 package com.mibeko.mibeko.ui.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -16,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mibeko.mibeko.data.remote.AgentConversation
@@ -34,6 +39,105 @@ fun ConversationHistoryScreen() {
     val viewModel: ConversationHistoryViewModel = koinViewModel()
     val state by viewModel.historyState.collectAsState()
 
+    var showFilterSheet by remember { mutableStateOf(false) }
+    var filterDate by remember { mutableStateOf("") }
+    var filterTitle by remember { mutableStateOf("") }
+
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val instant = Instant.fromEpochMilliseconds(millis)
+                        val localDate = instant.toLocalDateTime(TimeZone.UTC).date
+                        val formattedDate = "${localDate.year}-${localDate.monthNumber.toString().padStart(2, '0')}-${localDate.dayOfMonth.toString().padStart(2, '0')}"
+                        filterDate = formattedDate
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Annuler")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showFilterSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showFilterSheet = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Filtrer l'historique", style = MaterialTheme.typography.titleLarge)
+                
+                OutlinedTextField(
+                    value = filterTitle,
+                    onValueChange = { filterTitle = it },
+                    label = { Text("Titre de la conversation") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = filterDate,
+                        onValueChange = { },
+                        label = { Text("Date") },
+                        readOnly = true,
+                        trailingIcon = {
+                            Icon(Icons.Default.DateRange, contentDescription = "Sélectionner une date")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color.Transparent)
+                            .clickable { showDatePicker = true }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = {
+                        filterDate = ""
+                        filterTitle = ""
+                        viewModel.loadHistory(null, null)
+                        showFilterSheet = false
+                    }) {
+                        Text("Réinitialiser")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = {
+                        val d = filterDate.takeIf { it.isNotBlank() }
+                        val t = filterTitle.takeIf { it.isNotBlank() }
+                        viewModel.loadHistory(d, t)
+                        showFilterSheet = false
+                    }) {
+                        Text("Appliquer")
+                    }
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -41,6 +145,11 @@ fun ConversationHistoryScreen() {
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showFilterSheet = true }) {
+                        Icon(Icons.Default.FilterList, contentDescription = "Filtrer")
                     }
                 }
             )
@@ -75,6 +184,9 @@ fun ConversationHistoryScreen() {
                                     onClick = {
                                         navController.navigate(Screen.Chat(conversationId = conversation.id))
                                     },
+                                    onEditClick = { newTitle ->
+                                        viewModel.updateConversationTitle(conversation.id, newTitle)
+                                    },
                                     onDeleteClick = {
                                         viewModel.deleteConversation(conversation.id)
                                     }
@@ -92,19 +204,22 @@ fun ConversationHistoryScreen() {
 fun ConversationItem(
     conversation: AgentConversation,
     onClick: () -> Unit,
+    onEditClick: (String) -> Unit,
     onDeleteClick: () -> Unit
 ) {
-    var showDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editTitle by remember { mutableStateOf(conversation.title) }
 
-    if (showDialog) {
+    if (showDeleteDialog) {
         AlertDialog(
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = { showDeleteDialog = false },
             title = { Text("Supprimer la conversation") },
             text = { Text("Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible.") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showDialog = false
+                        showDeleteDialog = false
                         onDeleteClick()
                     }
                 ) {
@@ -112,7 +227,39 @@ fun ConversationItem(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Modifier le titre") },
+            text = {
+                OutlinedTextField(
+                    value = editTitle,
+                    onValueChange = { editTitle = it },
+                    label = { Text("Titre") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (editTitle.isNotBlank()) {
+                            showEditDialog = false
+                            onEditClick(editTitle)
+                        }
+                    }
+                ) {
+                    Text("Enregistrer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) {
                     Text("Annuler")
                 }
             }
@@ -144,12 +291,24 @@ fun ConversationItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            IconButton(onClick = { showDialog = true }) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Supprimer la conversation",
-                    tint = MaterialTheme.colorScheme.error
-                )
+            Row {
+                IconButton(onClick = {
+                    editTitle = conversation.title
+                    showEditDialog = true
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Modifier le titre",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = { showDeleteDialog = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Supprimer la conversation",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }

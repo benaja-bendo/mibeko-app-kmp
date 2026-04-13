@@ -26,11 +26,16 @@ class OfficialJournalViewModel(
     private val _uiState = MutableStateFlow(OfficialJournalUiState())
     val uiState: StateFlow<OfficialJournalUiState> = _uiState.asStateFlow()
 
-    fun loadJournals(page: Int = 1) {
+    private var currentFilterNumber: String? = null
+    private var currentFilterYear: Int? = null
+
+    fun loadJournals(page: Int = 1, number: String? = currentFilterNumber, year: Int? = currentFilterYear) {
+        currentFilterNumber = number
+        currentFilterYear = year
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val response = repository.getOfficialJournals(page)
+                val response = repository.getOfficialJournals(page, number, year)
                 if (response.success) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,

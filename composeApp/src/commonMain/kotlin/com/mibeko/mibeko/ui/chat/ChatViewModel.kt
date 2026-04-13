@@ -10,6 +10,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.mibeko.mibeko.getCurrentTimeMillis
 
+import com.mibeko.mibeko.data.remote.AiStreamEvent
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
+
 sealed class ChatState {
     object Idle : ChatState()
     object Loading : ChatState()
@@ -77,7 +84,8 @@ class ChatViewModel(
             conversation_id = currentConversationId ?: "",
             role = "assistant",
             content = "",
-            created_at = ""
+            created_at = "",
+            meta = null
         )
         currentMessages.add(initialAiMessage)
         
@@ -86,21 +94,32 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 var streamContent = ""
+                var streamMeta: JsonObject? = null
+                
                 aiApiService.sendMessageStream(
                     message = message,
                     conversationId = currentConversationId,
                     onConversationIdReceived = { id ->
                         currentConversationId = id
                     }
-                ).collect { delta ->
-                    streamContent += delta
+                ).collect { event ->
+                    when (event) {
+                        is AiStreamEvent.Sources -> {
+                            val sourcesJsonArray = Json.encodeToJsonElement(event.sources) as JsonArray
+                            streamMeta = JsonObject(mapOf("sources" to sourcesJsonArray))
+                        }
+                        is AiStreamEvent.Delta -> {
+                            streamContent += event.text
+                        }
+                    }
                     
                     // Update the last message
                     val lastIndex = currentMessages.indexOfLast { it.id == aiMessageId }
                     if (lastIndex != -1) {
                         currentMessages[lastIndex] = currentMessages[lastIndex].copy(
                             content = streamContent,
-                            conversation_id = currentConversationId ?: ""
+                            conversation_id = currentConversationId ?: "",
+                            meta = streamMeta
                         )
                         _chatState.value = ChatState.Content(
                             currentMessages.toList(), 

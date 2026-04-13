@@ -12,6 +12,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.decodeFromJsonElement
 
 @Serializable
 data class AiChatRequest(
@@ -20,9 +22,28 @@ data class AiChatRequest(
 )
 
 @Serializable
+data class ArticleSource(
+    val id: String,
+    val number: String,
+    val content: String,
+    val document_id: String,
+    val document_title: String,
+    val document_type: String,
+    val node_title: String,
+    val breadcrumb: String,
+    val score: Double = 0.0
+)
+
+@Serializable
 data class AiChatResponse(
     val conversation_id: String,
-    val reply: String
+    val reply: String,
+    val sources: List<ArticleSource>? = null
+)
+
+@Serializable
+data class MessageMeta(
+    val sources: List<ArticleSource>? = null
 )
 
 @Serializable
@@ -42,8 +63,21 @@ data class AgentConversationMessage(
     val conversation_id: String,
     val role: String,
     val content: String,
-    val created_at: String
-)
+    val created_at: String,
+    val meta: kotlinx.serialization.json.JsonElement? = null
+) {
+    fun getSources(): List<ArticleSource>? {
+        if (meta == null || meta !is kotlinx.serialization.json.JsonObject) return null
+        val sourcesElement = meta["sources"] ?: return null
+        if (sourcesElement !is kotlinx.serialization.json.JsonArray) return null
+        return try {
+            val lenientJson = Json { ignoreUnknownKeys = true }
+            lenientJson.decodeFromJsonElement<List<ArticleSource>>(sourcesElement)
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
 
 @Serializable
 data class PaginatedConversations(
@@ -52,18 +86,32 @@ data class PaginatedConversations(
     val last_page: Int
 )
 
+sealed class AiStreamEvent {
+    data class Delta(val text: String) : AiStreamEvent()
+    data class Sources(val sources: List<ArticleSource>) : AiStreamEvent()
+}
+
 class AiApiService(
     private val client: HttpClient,
     private val baseUrl: String
 ) {
-    suspend fun getConversations(page: Int = 1): PaginatedConversations {
+    suspend fun getConversations(page: Int = 1, date: String? = null, title: String? = null): PaginatedConversations {
         return client.get("$baseUrl/v1/assistant/conversations") {
             parameter("page", page)
+            if (!date.isNullOrBlank()) parameter("filter.date", date)
+            if (!title.isNullOrBlank()) parameter("filter.title", title)
         }.body()
     }
 
     suspend fun getConversationDetails(id: String): AgentConversation {
         return client.get("$baseUrl/v1/assistant/conversations/$id").body()
+    }
+
+    suspend fun updateConversationTitle(id: String, title: String): AgentConversation {
+        return client.put("$baseUrl/v1/assistant/conversations/$id") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("title" to title))
+        }.body()
     }
 
     suspend fun deleteConversation(id: String) {
@@ -87,12 +135,14 @@ class AiApiService(
         message: String,
         conversationId: String?,
         onConversationIdReceived: (String) -> Unit
-    ): Flow<String> = flow {
+    ): Flow<AiStreamEvent> = flow {
         val url = if (conversationId != null) {
             "$baseUrl/v1/assistant/chat/$conversationId"
         } else {
             "$baseUrl/v1/assistant/chat"
         }
+        
+        val lenientJson = Json { ignoreUnknownKeys = true }
 
         client.sse(
             urlString = url,
@@ -112,20 +162,30 @@ class AiApiService(
 
             incoming.collect { event ->
                 val data = event.data
+                val type = event.event
                 if (data != null) {
                     if (data == "[DONE]") {
                         return@collect
                     }
-                    try {
-                        val json = Json.decodeFromString<JsonObject>(data)
-                        if (json["type"]?.jsonPrimitive?.content == "text_delta") {
-                            val delta = json["delta"]?.jsonPrimitive?.content
-                            if (delta != null) {
-                                emit(delta)
-                            }
+                    if (type == "sources") {
+                        try {
+                            val sources = lenientJson.decodeFromString<List<ArticleSource>>(data)
+                            emit(AiStreamEvent.Sources(sources))
+                        } catch (e: Exception) {
+                            // ignore malformed sources
                         }
-                    } catch (e: Exception) {
-                        // ignore malformed JSON or other events
+                    } else {
+                        try {
+                            val json = lenientJson.decodeFromString<JsonObject>(data)
+                            if (json["type"]?.jsonPrimitive?.content == "text_delta") {
+                                val delta = json["delta"]?.jsonPrimitive?.content
+                                if (delta != null) {
+                                    emit(AiStreamEvent.Delta(delta))
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // ignore malformed JSON or other events
+                        }
                     }
                 }
             }

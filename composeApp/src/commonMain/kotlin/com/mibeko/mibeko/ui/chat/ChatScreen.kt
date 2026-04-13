@@ -1,24 +1,37 @@
 package com.mibeko.mibeko.ui.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.data.remote.AgentConversationMessage
+import com.mibeko.mibeko.data.remote.ArticleSource
 import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.m3.markdownTypography
 import androidx.compose.ui.text.TextStyle
 import com.mibeko.mibeko.ui.navigation.LocalNavController
+import com.mibeko.mibeko.ui.navigation.Screen
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.animation.core.*
 
@@ -70,10 +83,9 @@ fun ChatScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
-                            .padding(horizontal = 16.dp),
+                            .weight(1f),
                         contentPadding = PaddingValues(vertical = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(state.messages) { message ->
                             ChatMessageItem(message)
@@ -96,7 +108,7 @@ fun ChatScreen(
                     value = textState,
                     onValueChange = { textState = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Posez votre question...") },
+                    placeholder = { Text("Posez une question sur le droit...") },
                     shape = RoundedCornerShape(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -118,6 +130,12 @@ fun ChatScreen(
                     )
                 }
             }
+            Text(
+                text = "MIBEKO AI PEUT FAIRE DES ERREURS. VÉRIFIEZ LES SOURCES CITÉES.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 16.dp)
+            )
         }
     }
 }
@@ -125,31 +143,207 @@ fun ChatScreen(
 @Composable
 fun ChatMessageItem(message: AgentConversationMessage) {
     val isUser = message.role == "user"
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
     ) {
+        // Profile Header (Icon + Name)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            if (isUser) {
+                Text(
+                    text = "Vous",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Utilisateur",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "Mibeko IA",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Mibeko IA",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Bubble
         Box(
             modifier = Modifier
+                .padding(horizontal = 16.dp)
                 .background(
-                    color = if (isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(12.dp)
+                    color = if (isUser) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(
+                        topStart = if (isUser) 16.dp else 4.dp,
+                        topEnd = if (isUser) 4.dp else 16.dp,
+                        bottomStart = 16.dp,
+                        bottomEnd = 16.dp
+                    )
                 )
-                .padding(12.dp)
-                .widthIn(max = 280.dp)
+                .padding(16.dp)
+                .widthIn(max = 320.dp)
         ) {
             if (!isUser && message.content.isEmpty()) {
                 ThinkingDots()
             } else if (isUser) {
                 Text(
                     text = message.content,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             } else {
+                val customTypography = markdownTypography(
+                    h1 = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    h2 = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    h3 = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                    h4 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    h5 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    h6 = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                    text = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
+                    paragraph = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
+                )
+                
                 Markdown(
-                    content = message.content
+                    content = message.content,
+                    typography = customTypography
                 )
             }
+        }
+        
+        // Sources outside the bubble
+        if (!isUser && message.getSources() != null && message.getSources()!!.isNotEmpty()) {
+            val sources = message.getSources()!!
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Voici les sources juridiques pertinentes pour votre situation :",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(sources) { source ->
+                    ArticleSourceCard(source)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ArticleSourceCard(source: ArticleSource) {
+    val navController = LocalNavController.current
+    
+    Card(
+        modifier = Modifier
+            .width(260.dp)
+            .clickable {
+                navController.navigate(Screen.DocumentDetail(source.document_id))
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = source.document_title.uppercase(),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Outlined.BookmarkBorder,
+                    contentDescription = "Bookmark",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            val titleText = if (source.number.isNotBlank()) {
+                if (source.number.lowercase().startsWith("article")) source.number else "Article ${source.number}"
+            } else {
+                "Extrait"
+            }
+            
+            Text(
+                text = titleText,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "\"${source.content}\"",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 16.sp
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                text = "Lire la suite >",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            )
         }
     }
 }
