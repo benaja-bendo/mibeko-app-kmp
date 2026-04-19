@@ -37,6 +37,7 @@ class ChatViewModel(
 
     private var currentConversationId: String? = null
     private val currentMessages = mutableListOf<AgentConversationMessage>()
+    private var streamJob: kotlinx.coroutines.Job? = null
 
     fun initChat(conversationId: String?, initialPrompt: String?) {
         if (conversationId != null) {
@@ -91,7 +92,8 @@ class ChatViewModel(
         
         _chatState.value = ChatState.Content(currentMessages.toList(), currentConversationId, isTyping = true)
 
-        viewModelScope.launch {
+        streamJob?.cancel()
+        streamJob = viewModelScope.launch {
             try {
                 var streamContent = ""
                 var streamMeta: JsonObject? = null
