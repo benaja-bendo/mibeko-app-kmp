@@ -1,322 +1,122 @@
 package com.mibeko.mibeko.ui.settings
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.*
-import com.mibeko.mibeko.ui.navigation.Screen as AppScreen
-import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
-import androidx.compose.foundation.clickable
-import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
-import org.koin.compose.viewmodel.koinViewModel
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Contenu principal de l'écran des réglages.
+ * Contenu principal de l'écran de profil.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {
-        val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
-        val viewModel = koinViewModel<SettingsViewModel>()
-        val uiState by viewModel.uiState.collectAsState()
-        val snackbarHostState = remember { SnackbarHostState() }
-        
-        var showThemeDialog by remember { mutableStateOf(false) }
-        var showTextSizeDialog by remember { mutableStateOf(false) }
-        var showTerms by remember { mutableStateOf(false) }
-        var showPrivacy by remember { mutableStateOf(false) }
-        var showAbout by remember { mutableStateOf(false) }
+    val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
+    val viewModel = koinViewModel<SettingsViewModel>()
+    val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    val isAuthenticated = uiState.userName.isNotEmpty() || uiState.userEmail.isNotEmpty()
+    
+    var showProfileDialog by remember { mutableStateOf(false) }
+    var showNotificationsDialog by remember { mutableStateOf(false) }
+    var showApparenceDialog by remember { mutableStateOf(false) }
+    var showOfflineDataDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var showTerms by remember { mutableStateOf(false) }
+    var showPrivacy by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
+    var showLogoutConfirmDialog by remember { mutableStateOf(false) }
 
-        LaunchedEffect(uiState.profileUpdateMessage) {
-            uiState.profileUpdateMessage?.let {
-                snackbarHostState.showSnackbar(it)
-                viewModel.clearProfileUpdateMessage()
-            }
+    LaunchedEffect(uiState.profileUpdateMessage) {
+        uiState.profileUpdateMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearProfileUpdateMessage()
         }
+    }
 
-        if (showThemeDialog) {
-            AlertDialog(
-                onDismissRequest = { showThemeDialog = false },
-                title = { Text("Choisir le thème") },
-                text = {
-                    Column {
-                        val themes = listOf(
-                            UserPreferencesRepository.AppTheme.SYSTEM to "Système",
-                            UserPreferencesRepository.AppTheme.LIGHT to "Clair",
-                            UserPreferencesRepository.AppTheme.DARK to "Sombre"
-                        )
-                        themes.forEach { pair ->
-                            val theme = pair.first
-                            val label = pair.second
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { 
-                                        viewModel.setTheme(theme)
-                                        showThemeDialog = false 
-                                    }
-                                    .padding(vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = uiState.currentTheme == theme,
-                                    onClick = { 
-                                        viewModel.setTheme(theme)
-                                        showThemeDialog = false 
-                                    }
-                                )
-                                Text(text = label, modifier = Modifier.padding(start = 8.dp))
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showThemeDialog = false }) {
-                        Text("Annuler")
-                    }
-                }
-            )
-        }
-
-        if (showTextSizeDialog) {
-            AlertDialog(
-                onDismissRequest = { showTextSizeDialog = false },
-                title = { Text("Taille du texte") },
-                text = {
-                    Column {
-                        val sizes = listOf(
-                            UserPreferencesRepository.TextSize.SMALL to "Petit",
-                            UserPreferencesRepository.TextSize.MEDIUM to "Moyen",
-                            UserPreferencesRepository.TextSize.LARGE to "Grand"
-                        )
-                        sizes.forEach { pair ->
-                            val size = pair.first
-                            val label = pair.second
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { 
-                                        viewModel.setTextSize(size)
-                                        showTextSizeDialog = false 
-                                    }
-                                    .padding(vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = uiState.textSize == size,
-                                    onClick = { 
-                                        viewModel.setTextSize(size)
-                                        showTextSizeDialog = false 
-                                    }
-                                )
-                                Text(text = label, modifier = Modifier.padding(start = 8.dp))
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showTextSizeDialog = false }) {
-                        Text("Annuler")
-                    }
-                }
-            )
-        }
-
-        if (showAbout) {
-            AlertDialog(
-                onDismissRequest = { showAbout = false },
-                title = { Text("À propos") },
-                text = {
-                    Column {
-                        Text("Mibeko - Mobile", fontWeight = FontWeight.Bold)
-                        Text("Version: ${uiState.appVersion}")
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Mibeko est une plateforme juridique centralisant les textes de loi de la République du Congo.")
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Base de données mise à jour le: ${uiState.lastUpdateDate}", style = MaterialTheme.typography.bodySmall)
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showAbout = false }) {
-                        Text("Fermer")
-                    }
-                }
-            )
-        }
-
-        if (showTerms) {
-            AlertDialog(
-                onDismissRequest = { showTerms = false },
-                title = { Text("Conditions d'Utilisation") },
-                text = {
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        Text(
-                            "En utilisant Mibeko, vous acceptez les conditions suivantes :\n\n" +
-                            "1. Utilisation du service : Mibeko est fourni 'en l'état'. L'accès peut être suspendu pour maintenance.\n\n" +
-                            "2. Responsabilité : Les informations fournies sont à titre indicatif. Seuls les textes officiels font foi.\n\n" +
-                            "3. Propriété intellectuelle : Le contenu de l'application est protégé par les lois sur la propriété intellectuelle."
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showTerms = false }) {
-                        Text("Fermer")
-                    }
-                }
-            )
-        }
-
-        if (showPrivacy) {
-            AlertDialog(
-                onDismissRequest = { showPrivacy = false },
-                title = { Text("Politique de Confidentialité") },
-                text = {
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        Text(
-                            "Votre vie privée est importante pour nous.\n\n" +
-                            "1. Collecte de données : Mibeko ne collecte aucune donnée personnelle identifiable sans votre consentement.\n\n" +
-                            "2. Utilisation : Les préférences (thème, langue) sont stockées localement sur votre appareil.\n\n" +
-                            "3. Partage : Aucune donnée n'est partagée avec des tiers à des fins commerciales."
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showPrivacy = false }) {
-                        Text("Fermer")
-                    }
-                }
-            )
-        }
-
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = { Text("Profil & Réglages", fontWeight = FontWeight.Bold) },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+    if (showProfileDialog) {
+        AlertDialog(
+            onDismissRequest = { showProfileDialog = false },
+            title = { Text("Informations personnelles") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = uiState.phone,
+                        onValueChange = { viewModel.updateProfileField("phone", it) },
+                        label = { Text("Numéro de téléphone") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
                     )
-                )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = uiState.profession,
+                        onValueChange = { viewModel.updateProfileField("profession", it) },
+                        label = { Text("Profession") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = uiState.company,
+                        onValueChange = { viewModel.updateProfileField("company", it) },
+                        label = { Text("Entreprise / Institution") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             },
-            containerColor = MaterialTheme.colorScheme.background
-        ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = padding.calculateTopPadding())
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // --- PROFIL ---
-                SettingsGroup("PROFIL") {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        if (uiState.userName.isNotEmpty() || uiState.userEmail.isNotEmpty()) {
-                            Text(
-                                text = uiState.userName,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = uiState.userEmail,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-
-                        OutlinedTextField(
-                            value = uiState.phone,
-                            onValueChange = { viewModel.updateProfileField("phone", it) },
-                            label = { Text("Numéro de téléphone") },
-                            modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        OutlinedTextField(
-                            value = uiState.profession,
-                            onValueChange = { viewModel.updateProfileField("profession", it) },
-                            label = { Text("Profession") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        OutlinedTextField(
-                            value = uiState.company,
-                            onValueChange = { viewModel.updateProfileField("company", it) },
-                            label = { Text("Entreprise / Institution") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Button(
-                            onClick = { viewModel.saveProfile() },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !uiState.isUpdatingProfile
-                        ) {
-                            if (uiState.isUpdatingProfile) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                            } else {
-                                Text("Mettre à jour le profil")
-                            }
-                        }
+            confirmButton = {
+                Button(
+                    onClick = { 
+                        viewModel.saveProfile()
+                        showProfileDialog = false 
+                    },
+                    enabled = !uiState.isUpdatingProfile
+                ) {
+                    if (uiState.isUpdatingProfile) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                        Text("Enregistrer")
                     }
                 }
-                
-                // --- APPARENCE ---
-                SettingsGroup("APPARENCE") {
-                    SettingsItem(
-                        title = "Thème", 
-                        subtitle = when(uiState.currentTheme) {
-                            UserPreferencesRepository.AppTheme.SYSTEM -> "Système"
-                            UserPreferencesRepository.AppTheme.LIGHT -> "Clair"
-                            UserPreferencesRepository.AppTheme.DARK -> "Sombre"
-                        }, 
-                        icon = Icons.Filled.Contrast,
-                        onClick = { showThemeDialog = true }
-                    )
-                    SettingsItem(
-                        title = "Taille du texte", 
-                        subtitle = when(uiState.textSize) {
-                            UserPreferencesRepository.TextSize.SMALL -> "Petit"
-                            UserPreferencesRepository.TextSize.MEDIUM -> "Moyen"
-                            UserPreferencesRepository.TextSize.LARGE -> "Grand"
-                        }, 
-                        icon = Icons.Filled.FormatSize,
-                        onClick = { showTextSizeDialog = true }
-                    )
-                    SettingsSwitch(
-                        title = "Police Dyslexie", 
-                        subtitle = if (uiState.isDyslexiaFontEnabled) "Activé" else "Désactivé", 
-                        icon = Icons.Filled.Abc,
-                        checked = uiState.isDyslexiaFontEnabled,
-                        onCheckedChange = { viewModel.setDyslexiaFontEnabled(it) }
-                    )
+            },
+            dismissButton = {
+                TextButton(onClick = { showProfileDialog = false }) {
+                    Text("Annuler")
                 }
-                
-                // --- NOTIFICATIONS ---
-                SettingsGroup("NOTIFICATIONS") {
+            }
+        )
+    }
+
+    if (showNotificationsDialog) {
+        AlertDialog(
+            onDismissRequest = { showNotificationsDialog = false },
+            title = { Text("Notifications") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     SettingsSwitch(
                         title = "Autoriser les notifications", 
                         subtitle = if (uiState.isNotificationsEnabled) "Activé" else "Désactivé", 
@@ -324,75 +124,465 @@ fun SettingsScreen() {
                         checked = uiState.isNotificationsEnabled,
                         onCheckedChange = { viewModel.setNotificationsEnabled(it) }
                     )
-                    
                     if (uiState.isNotificationsEnabled) {
                         SettingsSwitch(
                             title = "Veille Juridique", 
-                            subtitle = "Recevoir les nouveautés juridiques", 
+                            subtitle = "Recevoir les nouveautés", 
                             icon = Icons.Filled.Gavel,
                             checked = uiState.isLegalMonitoringEnabled,
                             onCheckedChange = { viewModel.setLegalMonitoringEnabled(it) }
                         )
                         SettingsSwitch(
                             title = "Alertes Dossiers", 
-                            subtitle = "Mises à jour de vos dossiers", 
+                            subtitle = "Mises à jour", 
                             icon = Icons.Filled.FolderSpecial,
                             checked = uiState.isDossierAlertsEnabled,
                             onCheckedChange = { viewModel.setDossierAlertsEnabled(it) }
                         )
                     }
                 }
-                
-                // --- DONNÉES ---
-                SettingsGroup("DONNÉES") {
-                    SettingsItem(
-                        title = "Gérer le stockage", 
-                        subtitle = uiState.diskUsage, 
-                        icon = Icons.Filled.Storage,
-                        onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Downloads) }
+            },
+            confirmButton = {
+                TextButton(onClick = { showNotificationsDialog = false }) {
+                    Text("Fermer")
+                }
+            }
+        )
+    }
+
+    if (showApparenceDialog) {
+        AlertDialog(
+            onDismissRequest = { showApparenceDialog = false },
+            title = { Text("Apparence") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text("Thème", fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+                    val themes = listOf(
+                        UserPreferencesRepository.AppTheme.SYSTEM to "Système",
+                        UserPreferencesRepository.AppTheme.LIGHT to "Clair",
+                        UserPreferencesRepository.AppTheme.DARK to "Sombre"
+                    )
+                    themes.forEach { (theme, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setTheme(theme) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = uiState.currentTheme == theme,
+                                onClick = { viewModel.setTheme(theme) }
+                            )
+                            Text(text = label, modifier = Modifier.padding(start = 8.dp))
+                        }
+                    }
+                    
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    
+                    Text("Taille du texte", fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
+                    val sizes = listOf(
+                        UserPreferencesRepository.TextSize.SMALL to "Petit",
+                        UserPreferencesRepository.TextSize.MEDIUM to "Moyen",
+                        UserPreferencesRepository.TextSize.LARGE to "Grand"
+                    )
+                    sizes.forEach { (size, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setTextSize(size) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = uiState.textSize == size,
+                                onClick = { viewModel.setTextSize(size) }
+                            )
+                            Text(text = label, modifier = Modifier.padding(start = 8.dp))
+                        }
+                    }
+                    
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    
+                    SettingsSwitch(
+                        title = "Police Dyslexie", 
+                        subtitle = "", 
+                        icon = Icons.Filled.Abc,
+                        checked = uiState.isDyslexiaFontEnabled,
+                        onCheckedChange = { viewModel.setDyslexiaFontEnabled(it) }
                     )
                 }
-                
-                // --- À PROPOS ---
-                SettingsGroup("À PROPOS") {
-                    SettingsItem(
-                        title = "Conditions d'utilisation", 
-                        subtitle = "", 
-                        icon = Icons.Filled.Description,
-                        onClick = { showTerms = true }
-                    )
-                    SettingsItem(
-                        title = "Confidentialité", 
-                        subtitle = "", 
-                        icon = Icons.Filled.PrivacyTip,
-                        onClick = { showPrivacy = true }
-                    )
-                    SettingsItem(
-                        title = "Version de l'application", 
-                        subtitle = uiState.appVersion, 
-                        icon = Icons.Filled.Info,
-                        onClick = { showAbout = true }
+            },
+            confirmButton = {
+                TextButton(onClick = { showApparenceDialog = false }) {
+                    Text("Fermer")
+                }
+            }
+        )
+    }
+
+    if (showOfflineDataDialog) {
+        AlertDialog(
+            onDismissRequest = { showOfflineDataDialog = false },
+            title = { Text("Donnée Hors ligne") },
+            text = {
+                Column {
+                    Text("Espace utilisé : ${uiState.diskUsage}")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { 
+                            showOfflineDataDialog = false
+                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Downloads) 
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Gérer le stockage")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showOfflineDataDialog = false }) {
+                    Text("Fermer")
+                }
+            }
+        )
+    }
+
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text("Langue") },
+            text = {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showLanguageDialog = false }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = true, onClick = { showLanguageDialog = false })
+                        Text("Français", modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) {
+                    Text("Fermer")
+                }
+            }
+        )
+    }
+
+    if (showAbout) {
+        AlertDialog(
+            onDismissRequest = { showAbout = false },
+            title = { Text("À propos") },
+            text = {
+                Column {
+                    Text("Mibeko - Mobile", fontWeight = FontWeight.Bold)
+                    Text("Version: ${uiState.appVersion}")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Mibeko est une plateforme juridique centralisant les textes de loi de la République du Congo.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Base de données mise à jour le: ${uiState.lastUpdateDate}", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAbout = false }) {
+                    Text("Fermer")
+                }
+            }
+        )
+    }
+
+    if (showTerms) {
+        AlertDialog(
+            onDismissRequest = { showTerms = false },
+            title = { Text("Conditions d'Utilisation") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        "En utilisant Mibeko, vous acceptez les conditions suivantes :\n\n" +
+                        "1. Utilisation du service : Mibeko est fourni 'en l'état'. L'accès peut être suspendu pour maintenance.\n\n" +
+                        "2. Responsabilité : Les informations fournies sont à titre indicatif. Seuls les textes officiels font foi.\n\n" +
+                        "3. Propriété intellectuelle : Le contenu de l'application est protégé par les lois sur la propriété intellectuelle."
                     )
                 }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTerms = false }) {
+                    Text("Fermer")
+                }
+            }
+        )
+    }
 
-                Spacer(modifier = Modifier.height(16.dp))
+    if (showPrivacy) {
+        AlertDialog(
+            onDismissRequest = { showPrivacy = false },
+            title = { Text("Politique de Confidentialité") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        "Votre vie privée est importante pour nous.\n\n" +
+                        "1. Collecte de données : Mibeko ne collecte aucune donnée personnelle identifiable sans votre consentement.\n\n" +
+                        "2. Utilisation : Les préférences (thème, langue) sont stockées localement sur votre appareil.\n\n" +
+                        "3. Partage : Aucune donnée n'est partagée avec des tiers à des fins commerciales."
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPrivacy = false }) {
+                    Text("Fermer")
+                }
+            }
+        )
+    }
 
-                // --- DÉCONNEXION ---
+    if (showLogoutConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirmDialog = false },
+            title = { Text("Déconnexion") },
+            text = { Text("Êtes-vous sûr de vouloir vous déconnecter ?") },
+            confirmButton = {
                 Button(
                     onClick = {
+                        showLogoutConfirmDialog = false
                         viewModel.logout {
-                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Login) {
+                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Home) {
                                 popUpTo(0) { inclusive = true }
                             }
                         }
                     },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Se déconnecter")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirmDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Profil", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = padding.calculateTopPadding())
+                .verticalScroll(rememberScrollState())
+        ) {
+            
+            // --- EN-TÊTE PROFIL ---
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .background(if (isAuthenticated) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Filled.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(50.dp),
+                            tint = if (isAuthenticated) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            if (isAuthenticated) Icons.Filled.Edit else Icons.Filled.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                if (isAuthenticated) {
+                    Text(
+                        text = uiState.userName.ifEmpty { "Utilisateur" },
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = uiState.userEmail,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { showProfileDialog = true },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Modifier le profil", style = MaterialTheme.typography.labelLarge)
+                    }
+                } else {
+                    Text(
+                        text = "Guest User",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Limited access mode",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+                    ) {
+                        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                        Button(
+                            onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Login) },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Se connecter", style = MaterialTheme.typography.labelLarge)
+                        }
+                        Button(
+                            onClick = { uriHandler.openUri("https://app.mibeko.benaja-bendo.fr/register") },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Créer un compte", style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
+                }
+            }
+
+            // --- COMPTE ---
+            if (isAuthenticated) {
+                SettingsGroup("COMPTE") {
+                    SettingsItem(
+                        title = "Informations personnelles",
+                        icon = Icons.Filled.Person,
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        iconBackground = MaterialTheme.colorScheme.primaryContainer,
+                        onClick = { showProfileDialog = true }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    SettingsItem(
+                        title = "Sécurité & Mot de passe",
+                        icon = Icons.Filled.Security,
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        iconBackground = MaterialTheme.colorScheme.primaryContainer,
+                        onClick = { /* TODO */ }
+                    )
+                }
+            }
+
+            // --- PRÉFÉRENCES ---
+            SettingsGroup("PRÉFÉRENCES") {
+                SettingsItem(
+                    title = "Langue",
+                    subtitle = "Français",
+                    icon = Icons.Filled.Language,
+                    iconTint = MaterialTheme.colorScheme.secondary,
+                    iconBackground = MaterialTheme.colorScheme.secondaryContainer,
+                    onClick = { showLanguageDialog = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                SettingsItem(
+                    title = "Notifications",
+                    icon = Icons.Filled.Notifications,
+                    iconTint = MaterialTheme.colorScheme.secondary,
+                    iconBackground = MaterialTheme.colorScheme.secondaryContainer,
+                    onClick = { showNotificationsDialog = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                SettingsItem(
+                    title = "Apparence",
+                    icon = Icons.Filled.Palette,
+                    iconTint = MaterialTheme.colorScheme.secondary,
+                    iconBackground = MaterialTheme.colorScheme.secondaryContainer,
+                    onClick = { showApparenceDialog = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                SettingsItem(
+                    title = "Donnée Hors ligne",
+                    icon = Icons.Filled.CloudOff,
+                    iconTint = MaterialTheme.colorScheme.secondary,
+                    iconBackground = MaterialTheme.colorScheme.secondaryContainer,
+                    onClick = { showOfflineDataDialog = true }
+                )
+            }
+
+            // --- A PROPOS DE MIBEKO ---
+            SettingsGroup("A PROPOS DE MIBEKO") {
+                SettingsLinkItem(
+                    title = "CGU",
+                    onClick = { showTerms = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                SettingsLinkItem(
+                    title = "Politique de confidentialité",
+                    onClick = { showPrivacy = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                SettingsLinkItem(
+                    title = "About Mibeko",
+                    onClick = { showAbout = true }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- DÉCONNEXION ---
+            if (isAuthenticated) {
+                Button(
+                    onClick = { showLogoutConfirmDialog = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 16.dp)
+                        .height(48.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    )
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -400,71 +590,113 @@ fun SettingsScreen() {
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                Text(
-                    text = "© 2026 Mibeko - République du Congo",
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    fontSize = 11.sp
-                )
-                
-                Spacer(modifier = Modifier.height(32.dp))
             }
-        }
-    }
- 
-
-
-/**
- * Groupe de réglages avec un titre.
- */
-@Composable
-fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Column(modifier = Modifier.fillMaxWidth(), content = content)
+            
+            Text(
+                text = "MIBEKO ${uiState.appVersion.uppercase()}",
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
-/**
- * Élément de réglage simple avec icône, titre et sous-titre.
- */
 @Composable
-fun SettingsItem(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit = {}) {
+fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+        )
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsItem(
+    title: String,
+    subtitle: String = "",
+    icon: ImageVector? = null,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
+    iconBackground: Color = MaterialTheme.colorScheme.primaryContainer,
+    onClick: () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
-            if (subtitle.isNotEmpty()) {
-                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+        if (icon != null) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(iconBackground),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
             }
+            Spacer(modifier = Modifier.width(16.dp))
         }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        }
+        
+        if (subtitle.isNotEmpty()) {
+            Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+        
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
-/**
- * Élément de réglage avec un commutateur (switch).
- */
+@Composable
+fun SettingsLinkItem(
+    title: String,
+    onClick: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        Icon(
+            Icons.Filled.OpenInNew,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
 @Composable
 fun SettingsSwitch(
     title: String,
@@ -483,9 +715,9 @@ fun SettingsSwitch(
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
             if (subtitle.isNotEmpty()) {
-                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
             }
         }
         Switch(

@@ -150,7 +150,7 @@ class SettingsViewModel(
             } catch (e: Exception) {
                 // Proceed to logout locally even if API fails
             } finally {
-                userPreferencesRepository.clearAll()
+                userPreferencesRepository.logout()
                 legalRepository.clearAllData()
                 onLogoutComplete()
             }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -27,9 +28,10 @@ import mibeko.composeapp.generated.resources.Res
 import mibeko.composeapp.generated.resources.logo
 import org.koin.compose.viewmodel.koinViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen() {
-        val navController = LocalNavController.current
+    val navController = LocalNavController.current
     val viewModel: LoginViewModel = koinViewModel()
     val loginState by viewModel.loginState.collectAsState()
     
@@ -37,26 +39,39 @@ fun LoginScreen() {
     val isIos = remember { getPlatform().name.lowercase().contains("ios") }
     val uriHandler = LocalUriHandler.current
 
-        LaunchedEffect(loginState) {
-            if (loginState is LoginState.Success) {
-                navController.navigate(Screen.ProfileSetup) {
-                    popUpTo(Screen.Login) { inclusive = true }
-                }
+    LaunchedEffect(loginState) {
+        if (loginState is LoginState.Success) {
+            navController.navigate(Screen.ProfileSetup) {
+                popUpTo(Screen.Login) { inclusive = true }
             }
         }
+    }
 
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { },
+                navigationIcon = {
+                    IconButton(onClick = { navController.navigateUp() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Image(
+            Image(
                     painter = painterResource(Res.drawable.logo),
                     contentDescription = null,
                     modifier = Modifier.size(100.dp)

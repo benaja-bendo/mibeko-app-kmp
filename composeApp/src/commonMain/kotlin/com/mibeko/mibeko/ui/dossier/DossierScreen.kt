@@ -316,20 +316,22 @@ fun DossierCard(
                             Icon(Icons.Filled.Edit, contentDescription = null)
                         }
                     )
-                    DropdownMenuItem(
-                        text = { Text("Supprimer", color = MaterialTheme.colorScheme.error) },
-                        onClick = {
-                            showMenu = false
-                            onDelete()
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    )
+                    if (dossier.tag != DossierTag.FAVORIS) {
+                        DropdownMenuItem(
+                            text = { Text("Supprimer", color = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Filled.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -424,6 +426,7 @@ fun CreateDossierDialog(
                     label = { Text("Nom du dossier") },
                     placeholder = { Text("Ex: Affaire M. Tchicaya") },
                     singleLine = true,
+                    enabled = dossier?.tag != DossierTag.FAVORIS,
                     modifier = Modifier.fillMaxWidth()
                 )
                 
@@ -617,20 +620,22 @@ fun DossierGridCard(
                         },
                         leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) }
                     )
-                    DropdownMenuItem(
-                        text = { Text("Supprimer", color = MaterialTheme.colorScheme.error) },
-                        onClick = {
-                            showMenu = false
-                            onDelete()
-                        },
-                        leadingIcon = { 
-                            Icon(
-                                Icons.Filled.Delete, 
-                                contentDescription = null, 
-                                tint = MaterialTheme.colorScheme.error
-                            ) 
-                        }
-                    )
+                    if (dossier.tag != DossierTag.FAVORIS) {
+                        DropdownMenuItem(
+                            text = { Text("Supprimer", color = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
+                            },
+                            leadingIcon = { 
+                                Icon(
+                                    Icons.Filled.Delete, 
+                                    contentDescription = null, 
+                                    tint = MaterialTheme.colorScheme.error
+                                ) 
+                            }
+                        )
+                    }
                 }
             }
             
