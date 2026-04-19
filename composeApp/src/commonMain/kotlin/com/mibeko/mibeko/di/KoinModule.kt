@@ -10,6 +10,7 @@ import com.mibeko.mibeko.data.repository.DossierRepository
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.repository.NotificationRepository
 import com.mibeko.mibeko.ui.auth.LoginViewModel
+import com.mibeko.mibeko.ui.auth.RegisterViewModel
 import com.mibeko.mibeko.ui.auth.ProfileSetupViewModel
 import com.mibeko.mibeko.ui.home.HomeViewModel
 import com.mibeko.mibeko.ui.search.SearchViewModel
@@ -102,6 +103,7 @@ val commonModule = module {
     single { NotificationRepository(get(), get<AppConfig>().baseUrl) }
 
     viewModel { LoginViewModel(get(), get()) }
+    viewModel { RegisterViewModel(get(), get()) }
     viewModel { ProfileSetupViewModel(get(), get()) }
 
     viewModel { HomeViewModel(get(), get(), get()) }

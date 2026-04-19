@@ -35,6 +35,9 @@ import com.mibeko.mibeko.ui.navigation.Screen
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.animation.core.*
 
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -44,11 +47,27 @@ fun ChatScreen(
     val navController = LocalNavController.current
     val viewModel: ChatViewModel = koinViewModel()
     val chatState by viewModel.chatState.collectAsState()
+    val listState = rememberLazyListState()
 
     var textState by remember { mutableStateOf(TextFieldValue("")) }
 
     LaunchedEffect(conversationId, initialPrompt) {
         viewModel.initChat(conversationId, initialPrompt)
+    }
+
+    // Auto-scroll to bottom when messages change
+    LaunchedEffect(chatState) {
+        if (chatState is ChatState.Content) {
+            val state = chatState as ChatState.Content
+            if (state.messages.isNotEmpty()) {
+                val lastIndex = state.messages.size - 1
+                if (state.isTyping) {
+                    listState.scrollToItem(lastIndex)
+                } else {
+                    listState.animateScrollToItem(lastIndex)
+                }
+            }
+        }
     }
 
     Scaffold(
@@ -80,15 +99,30 @@ fun ChatScreen(
                     }
                 }
                 is ChatState.Content -> {
+                    val customTypography = markdownTypography(
+                        h1 = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        h2 = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        h3 = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                        h4 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        h5 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        h6 = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                        text = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
+                        paragraph = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
+                    )
+
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
                         contentPadding = PaddingValues(vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        items(state.messages) { message ->
-                            ChatMessageItem(message)
+                        items(
+                            items = state.messages,
+                            key = { it.id } // Stable keys are crucial for performance
+                        ) { message ->
+                            ChatMessageItem(message, customTypography)
                         }
                     }
                 }
@@ -141,7 +175,7 @@ fun ChatScreen(
 }
 
 @Composable
-fun ChatMessageItem(message: AgentConversationMessage) {
+fun ChatMessageItem(message: AgentConversationMessage, customTypography: com.mikepenz.markdown.model.MarkdownTypography) {
     val isUser = message.role == "user"
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -220,17 +254,6 @@ fun ChatMessageItem(message: AgentConversationMessage) {
                     style = MaterialTheme.typography.bodyMedium
                 )
             } else {
-                val customTypography = markdownTypography(
-                    h1 = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    h2 = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    h3 = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                    h4 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                    h5 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                    h6 = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                    text = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
-                    paragraph = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
-                )
-                
                 Markdown(
                     content = message.content,
                     typography = customTypography
@@ -302,7 +325,7 @@ fun ArticleSourceCard(source: ArticleSource) {
                 }
                 Icon(
                     imageVector = Icons.Outlined.BookmarkBorder,
-                    contentDescription = "Bookmark",
+                    contentDescription = "Favori",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )

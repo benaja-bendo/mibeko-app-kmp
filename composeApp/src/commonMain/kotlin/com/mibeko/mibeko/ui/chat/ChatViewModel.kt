@@ -95,6 +95,7 @@ class ChatViewModel(
             try {
                 var streamContent = ""
                 var streamMeta: JsonObject? = null
+                var lastUpdateTime = 0L
                 
                 aiApiService.sendMessageStream(
                     message = message,
@@ -121,15 +122,21 @@ class ChatViewModel(
                             conversation_id = currentConversationId ?: "",
                             meta = streamMeta
                         )
-                        _chatState.value = ChatState.Content(
-                            currentMessages.toList(), 
-                            currentConversationId, 
-                            isTyping = false // As soon as we receive data, we are no longer "thinking"
-                        )
+                        
+                        // Throttle updates to avoid flickering and excessive recompositions
+                        val currentTime = getCurrentTimeMillis()
+                        if (currentTime - lastUpdateTime > 200 || event is AiStreamEvent.Sources) {
+                            _chatState.value = ChatState.Content(
+                                currentMessages.toList(), 
+                                currentConversationId, 
+                                isTyping = true
+                            )
+                            lastUpdateTime = currentTime
+                        }
                     }
                 }
                 
-                // Done streaming
+                // Final update after streaming is done
                 _chatState.value = ChatState.Content(currentMessages.toList(), currentConversationId, isTyping = false)
             } catch (e: Exception) {
                 // If it fails completely and we have no content, show an error message

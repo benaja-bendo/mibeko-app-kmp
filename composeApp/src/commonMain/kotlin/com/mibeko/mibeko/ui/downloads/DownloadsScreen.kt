@@ -39,7 +39,7 @@ fun DownloadsScreen() {
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
         
-        val tabs = listOf("Documents", "Articles")
+        val tabs = remember { listOf("Documents", "Articles") }
         val pagerState = rememberPagerState { tabs.size }
         
         var isSearchActive by remember { mutableStateOf(false) }

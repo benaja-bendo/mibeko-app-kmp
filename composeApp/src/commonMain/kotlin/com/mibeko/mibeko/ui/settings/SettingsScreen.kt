@@ -43,6 +43,7 @@ fun SettingsScreen() {
     val isAuthenticated = uiState.userName.isNotEmpty() || uiState.userEmail.isNotEmpty()
     
     var showProfileDialog by remember { mutableStateOf(false) }
+    var showPasswordDialog by remember { mutableStateOf(false) }
     var showNotificationsDialog by remember { mutableStateOf(false) }
     var showApparenceDialog by remember { mutableStateOf(false) }
     var showOfflineDataDialog by remember { mutableStateOf(false) }
@@ -59,12 +60,29 @@ fun SettingsScreen() {
         }
     }
 
+    LaunchedEffect(uiState.passwordUpdateMessage) {
+        uiState.passwordUpdateMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearPasswordUpdateMessage()
+            if (it == "Mot de passe mis à jour avec succès") {
+                showPasswordDialog = false
+            }
+        }
+    }
+
     if (showProfileDialog) {
         AlertDialog(
             onDismissRequest = { showProfileDialog = false },
             title = { Text("Informations personnelles") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = uiState.userName,
+                        onValueChange = { viewModel.updateProfileField("name", it) },
+                        label = { Text("Nom complet") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = uiState.phone,
                         onValueChange = { viewModel.updateProfileField("phone", it) },
@@ -105,6 +123,59 @@ fun SettingsScreen() {
             },
             dismissButton = {
                 TextButton(onClick = { showProfileDialog = false }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    if (showPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { showPasswordDialog = false },
+            title = { Text("Changer le mot de passe") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = uiState.currentPassword,
+                        onValueChange = { viewModel.updatePasswordField("currentPassword", it) },
+                        label = { Text("Mot de passe actuel") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = uiState.newPassword,
+                        onValueChange = { viewModel.updatePasswordField("newPassword", it) },
+                        label = { Text("Nouveau mot de passe") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = uiState.confirmPassword,
+                        onValueChange = { viewModel.updatePasswordField("confirmPassword", it) },
+                        label = { Text("Confirmer le mot de passe") },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { 
+                        viewModel.updatePassword()
+                    },
+                    enabled = !uiState.isUpdatingPassword && uiState.newPassword.isNotBlank()
+                ) {
+                    if (uiState.isUpdatingPassword) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                        Text("Enregistrer")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPasswordDialog = false }) {
                     Text("Annuler")
                 }
             }
@@ -455,7 +526,7 @@ fun SettingsScreen() {
                     }
                 } else {
                     Text(
-                        text = "Guest User",
+                        text = "Utilisateur Invité",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -509,7 +580,7 @@ fun SettingsScreen() {
                         icon = Icons.Filled.Security,
                         iconTint = MaterialTheme.colorScheme.primary,
                         iconBackground = MaterialTheme.colorScheme.primaryContainer,
-                        onClick = { /* TODO */ }
+                        onClick = { showPasswordDialog = true }
                     )
                 }
             }

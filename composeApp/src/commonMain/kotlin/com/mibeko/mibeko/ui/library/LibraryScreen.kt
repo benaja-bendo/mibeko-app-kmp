@@ -68,11 +68,6 @@ fun LibraryScreen() {
             LibraryHeader(
                 searchQuery = searchQuery,
                 onSearchChange = { searchQuery = it },
-                onRapidScan = { 
-                    if (searchQuery.isNotBlank()) {
-                        navController.navigate(Screen.Chat(initialPrompt = searchQuery))
-                    }
-                },
                 currentType = libraryState.selectedType,
                 currentInstitution = libraryState.selectedInstitution,
                 currentYear = libraryState.selectedYear,
@@ -419,7 +414,6 @@ fun DocumentVerticalCard(
 private fun LibraryHeader(
     searchQuery: String,
     onSearchChange: (String) -> Unit,
-    onRapidScan: () -> Unit,
     currentType: String?,
     currentInstitution: String?,
     currentYear: String?,
@@ -479,18 +473,14 @@ private fun LibraryHeader(
                     Icon(Icons.Default.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
                 },
                 trailingIcon = {
-                    Surface(
-                        color = MibekoGoldLight,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.padding(end = 8.dp).clickable { onRapidScan() }
-                    ) {
-                        Text(
-                            text = "RAPID SCAN",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MibekoBlueDark,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchChange("") }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Effacer",
+                                tint = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
@@ -705,7 +695,7 @@ private fun NouveauteCard(
                     ) {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("AI SUMMARY", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text("RÉSUMÉ IA", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     }
                     
                     OutlinedButton(
@@ -717,7 +707,7 @@ private fun NouveauteCard(
                     ) {
                         Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("DISMISS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("IGNORER", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

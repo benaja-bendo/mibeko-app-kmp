@@ -21,6 +21,15 @@ data class LoginRequest(
 )
 
 @Serializable
+data class RegisterRequest(
+    val name: String,
+    val email: String,
+    val password: String,
+    val password_confirmation: String,
+    val device_name: String
+)
+
+@Serializable
 data class AuthResponseData(
     val token: String,
     val user: RemoteUser? = null
@@ -58,9 +67,17 @@ data class RemoteMobileProfile(
 
 @Serializable
 data class ProfileUpdateRequest(
+    val name: String,
     val phone: String,
     val profession: String,
     val company: String
+)
+
+@Serializable
+data class PasswordUpdateRequest(
+    val current_password: String,
+    val password: String,
+    val password_confirmation: String
 )
 
 @Serializable
@@ -90,6 +107,21 @@ class AuthApiService(
     suspend fun updateProfile(request: ProfileUpdateRequest): ProfileResponse {
         try {
             val response = client.put("$baseUrl/v1/profile") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            return response.body()
+        } catch (e: ClientRequestException) {
+            if (e.response.status == HttpStatusCode.UnprocessableEntity) {
+                return e.response.body()
+            }
+            throw e
+        }
+    }
+
+    suspend fun updatePassword(request: PasswordUpdateRequest): ProfileResponse {
+        try {
+            val response = client.put("$baseUrl/v1/profile/password") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -132,6 +164,21 @@ class AuthApiService(
     suspend fun loginWithEmail(request: LoginRequest): AuthResponse {
         try {
             val response = client.post("$baseUrl/v1/login") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            return response.body()
+        } catch (e: ClientRequestException) {
+            if (e.response.status == HttpStatusCode.UnprocessableEntity) {
+                return e.response.body()
+            }
+            throw e
+        }
+    }
+
+    suspend fun register(request: RegisterRequest): AuthResponse {
+        try {
+            val response = client.post("$baseUrl/v1/register") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }

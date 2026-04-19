@@ -145,7 +145,7 @@ fun LoginScreen() {
                     Spacer(modifier = Modifier.height(16.dp))
 
                     TextButton(onClick = {
-                        uriHandler.openUri("https://app.mibeko.benaja-bendo.fr/register")
+                        navController.navigate(Screen.Register)
                     }) {
                         Text("Pas encore de compte ? S'inscrire")
                     }

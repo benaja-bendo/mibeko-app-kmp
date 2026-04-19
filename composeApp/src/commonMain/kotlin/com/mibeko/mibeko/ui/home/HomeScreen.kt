@@ -36,6 +36,7 @@ import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.ui.components.NetworkStatusBanner
 import com.mibeko.mibeko.ui.theme.MibekoGold
+import com.mibeko.mibeko.ui.theme.MibekoGoldDark
 import com.mibeko.mibeko.ui.theme.MibekoBluePrimary
 import com.mibeko.mibeko.ui.theme.MibekoBlueDark
 import com.mibeko.mibeko.util.formatIsoDate
@@ -260,11 +261,11 @@ private fun HomeHeader(
                     color = Color.White
                 )
                 Text(
-                    text = "Mobile",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MibekoGold,
-                    fontWeight = FontWeight.SemiBold
-                )
+                text = "Mobile",
+                style = MaterialTheme.typography.labelSmall,
+                color = MibekoGoldDark,
+                fontWeight = FontWeight.Bold
+            )
             }
         }
     }

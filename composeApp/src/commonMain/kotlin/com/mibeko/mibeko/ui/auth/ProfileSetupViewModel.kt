@@ -29,7 +29,12 @@ class ProfileSetupViewModel(
         viewModelScope.launch {
             _setupState.value = ProfileSetupState.Loading
             try {
-                val request = ProfileUpdateRequest(phone, profession, company)
+                val request = ProfileUpdateRequest(
+                    name = "", // Nom déjà capturé ou optionnel
+                    phone = phone,
+                    profession = profession,
+                    company = company
+                )
                 val response = authApiService.updateProfile(request)
                 
                 if (response.success) {

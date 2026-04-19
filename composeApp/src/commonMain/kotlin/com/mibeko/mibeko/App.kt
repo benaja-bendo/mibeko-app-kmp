@@ -26,6 +26,7 @@ import com.mibeko.mibeko.ui.library.LibraryScreen
 import com.mibeko.mibeko.ui.downloads.DownloadsScreen
 import com.mibeko.mibeko.ui.notifications.NotificationsScreen
 import com.mibeko.mibeko.ui.auth.LoginScreen
+import com.mibeko.mibeko.ui.auth.RegisterScreen
 import com.mibeko.mibeko.ui.auth.ProfileSetupScreen
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.theme.MibekoTheme
@@ -88,6 +89,7 @@ fun App() {
             ) {
                 composable<Screen.Splash> { SplashScreen() }
                 composable<Screen.Login> { LoginScreen() }
+                composable<Screen.Register> { RegisterScreen() }
                 composable<Screen.ProfileSetup> { ProfileSetupScreen() }
                 composable<Screen.Disclaimer> { com.mibeko.mibeko.ui.onboarding.DisclaimerScreen() }
                 composable<Screen.Onboarding> { com.mibeko.mibeko.ui.onboarding.OnboardingScreen() }

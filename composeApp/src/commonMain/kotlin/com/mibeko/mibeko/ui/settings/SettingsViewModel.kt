@@ -57,7 +57,14 @@ data class SettingsUiState(
     val profession: String = "",
     val company: String = "",
     val isUpdatingProfile: Boolean = false,
-    val profileUpdateMessage: String? = null
+    val profileUpdateMessage: String? = null,
+    
+    // Password Fields
+    val currentPassword: String = "",
+    val newPassword: String = "",
+    val confirmPassword: String = "",
+    val isUpdatingPassword: Boolean = false,
+    val passwordUpdateMessage: String? = null
 )
 
 /**
@@ -103,9 +110,18 @@ class SettingsViewModel(
 
     fun updateProfileField(field: String, value: String) {
         when (field) {
+            "name" -> _uiState.value = _uiState.value.copy(userName = value)
             "phone" -> _uiState.value = _uiState.value.copy(phone = value)
             "profession" -> _uiState.value = _uiState.value.copy(profession = value)
             "company" -> _uiState.value = _uiState.value.copy(company = value)
+        }
+    }
+
+    fun updatePasswordField(field: String, value: String) {
+        when (field) {
+            "currentPassword" -> _uiState.value = _uiState.value.copy(currentPassword = value)
+            "newPassword" -> _uiState.value = _uiState.value.copy(newPassword = value)
+            "confirmPassword" -> _uiState.value = _uiState.value.copy(confirmPassword = value)
         }
     }
 
@@ -113,7 +129,8 @@ class SettingsViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isUpdatingProfile = true, profileUpdateMessage = null)
             try {
-                val request = ProfileUpdateRequest(
+                val request = com.mibeko.mibeko.data.remote.ProfileUpdateRequest(
+                    name = _uiState.value.userName,
                     phone = _uiState.value.phone,
                     profession = _uiState.value.profession,
                     company = _uiState.value.company
@@ -139,8 +156,50 @@ class SettingsViewModel(
         }
     }
 
+    fun updatePassword() {
+        if (_uiState.value.newPassword != _uiState.value.confirmPassword) {
+            _uiState.value = _uiState.value.copy(passwordUpdateMessage = "Les mots de passe ne correspondent pas")
+            return
+        }
+        
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isUpdatingPassword = true, passwordUpdateMessage = null)
+            try {
+                val request = com.mibeko.mibeko.data.remote.PasswordUpdateRequest(
+                    current_password = _uiState.value.currentPassword,
+                    password = _uiState.value.newPassword,
+                    password_confirmation = _uiState.value.confirmPassword
+                )
+                val response = authApiService.updatePassword(request)
+                if (response.success) {
+                    _uiState.value = _uiState.value.copy(
+                        isUpdatingPassword = false,
+                        passwordUpdateMessage = "Mot de passe mis à jour avec succès",
+                        currentPassword = "",
+                        newPassword = "",
+                        confirmPassword = ""
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isUpdatingPassword = false,
+                        passwordUpdateMessage = response.message ?: "Erreur lors de la mise à jour"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isUpdatingPassword = false,
+                    passwordUpdateMessage = "Erreur de connexion"
+                )
+            }
+        }
+    }
+
     fun clearProfileUpdateMessage() {
         _uiState.value = _uiState.value.copy(profileUpdateMessage = null)
+    }
+
+    fun clearPasswordUpdateMessage() {
+        _uiState.value = _uiState.value.copy(passwordUpdateMessage = null)
     }
 
     fun logout(onLogoutComplete: () -> Unit) {

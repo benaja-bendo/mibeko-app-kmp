@@ -13,6 +13,9 @@ sealed class Screen {
     data object Login : Screen()
 
     @Serializable
+    data object Register : Screen()
+
+    @Serializable
     data object ProfileSetup : Screen()
 
     @Serializable
