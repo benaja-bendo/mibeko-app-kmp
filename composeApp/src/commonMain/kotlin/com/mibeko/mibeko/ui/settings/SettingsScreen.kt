@@ -23,6 +23,9 @@ import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 import androidx.compose.foundation.clickable
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 
 /**
  * Contenu principal de l'écran des réglages.
@@ -41,10 +44,10 @@ fun SettingsScreen() {
         var showPrivacy by remember { mutableStateOf(false) }
         var showAbout by remember { mutableStateOf(false) }
 
-        LaunchedEffect(uiState.syncError) {
-            uiState.syncError?.let {
+        LaunchedEffect(uiState.profileUpdateMessage) {
+            uiState.profileUpdateMessage?.let {
                 snackbarHostState.showSnackbar(it)
-                viewModel.clearSyncError()
+                viewModel.clearProfileUpdateMessage()
             }
         }
 
@@ -206,7 +209,7 @@ fun SettingsScreen() {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text("Réglages", fontWeight = FontWeight.Bold) },
+                    title = { Text("Profil & Réglages", fontWeight = FontWeight.Bold) },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                         titleContentColor = MaterialTheme.colorScheme.onSurface,
@@ -223,6 +226,63 @@ fun SettingsScreen() {
                     .verticalScroll(rememberScrollState())
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // --- PROFIL ---
+                SettingsGroup("PROFIL") {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        if (uiState.userName.isNotEmpty() || uiState.userEmail.isNotEmpty()) {
+                            Text(
+                                text = uiState.userName,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = uiState.userEmail,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
+                        OutlinedTextField(
+                            value = uiState.phone,
+                            onValueChange = { viewModel.updateProfileField("phone", it) },
+                            label = { Text("Numéro de téléphone") },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = uiState.profession,
+                            onValueChange = { viewModel.updateProfileField("profession", it) },
+                            label = { Text("Profession") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = uiState.company,
+                            onValueChange = { viewModel.updateProfileField("company", it) },
+                            label = { Text("Entreprise / Institution") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = { viewModel.saveProfile() },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !uiState.isUpdatingProfile
+                        ) {
+                            if (uiState.isUpdatingProfile) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                            } else {
+                                Text("Mettre à jour le profil")
+                            }
+                        }
+                    }
+                }
                 
                 // --- APPARENCE ---
                 SettingsGroup("APPARENCE") {
@@ -313,6 +373,30 @@ fun SettingsScreen() {
                         icon = Icons.Filled.Info,
                         onClick = { showAbout = true }
                     )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- DÉCONNEXION ---
+                Button(
+                    onClick = {
+                        viewModel.logout {
+                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Login) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Se déconnecter", fontWeight = FontWeight.Bold)
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))

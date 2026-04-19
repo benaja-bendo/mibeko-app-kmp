@@ -199,6 +199,40 @@ interface MibekoDao {
 
     @Query("SELECT dossier_id FROM dossier_articles WHERE article_id = :articleId")
     fun getDossiersContainingArticle(articleId: String): Flow<List<String>>
+
+    // ========== CLEAR DATA ==========
+
+    @Query("DELETE FROM documents")
+    suspend fun clearDocuments()
+
+    @Query("DELETE FROM nodes")
+    suspend fun clearNodes()
+
+    @Query("DELETE FROM articles")
+    suspend fun clearArticles()
+
+    @Query("DELETE FROM tags")
+    suspend fun clearTags()
+
+    @Query("DELETE FROM article_tags")
+    suspend fun clearArticleTags()
+
+    @Query("DELETE FROM dossiers")
+    suspend fun clearDossiers()
+
+    @Query("DELETE FROM dossier_articles")
+    suspend fun clearDossierArticles()
+
+    @Transaction
+    suspend fun clearAllData() {
+        clearDocuments()
+        clearNodes()
+        clearArticles()
+        clearTags()
+        clearArticleTags()
+        clearDossiers()
+        clearDossierArticles()
+    }
 }
 
 data class ArticleSearchResult(

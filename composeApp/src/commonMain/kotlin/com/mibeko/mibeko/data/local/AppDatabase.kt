@@ -15,7 +15,7 @@ import com.mibeko.mibeko.data.local.entities.*
         DossierEntity::class,
         DossierArticleEntity::class
     ],
-    version = 6
+    version = 7
 )
 
 @ConstructedBy(AppDatabaseConstructor::class)

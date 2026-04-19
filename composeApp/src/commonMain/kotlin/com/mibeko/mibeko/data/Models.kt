@@ -6,7 +6,9 @@ data class LawCodeSpec(
     val type: String, // Added for filtering
     val icon: String, // Simple identifier for icon selection
     val lastUpdated: String,
-    val isDownloaded: Boolean = false
+    val isDownloaded: Boolean = false,
+    val institutionName: String? = null,
+    val dateSignature: String? = null
 )
 
 data class ArticleSpec(

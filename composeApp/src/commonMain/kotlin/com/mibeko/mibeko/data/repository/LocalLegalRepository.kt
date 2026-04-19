@@ -90,7 +90,9 @@ class LocalLegalRepository(
                     title = remoteDoc.title,
                     type_code = remoteDoc.type?.code ?: "unknown",
                     last_updated = parseIsoDate(remoteDoc.updated_at),
-                    is_downloaded = downloadedIds.contains(remoteDoc.id)
+                    is_downloaded = downloadedIds.contains(remoteDoc.id),
+                    institution_name = remoteDoc.institution?.name,
+                    date_signature = remoteDoc.dates?.signature
                 ))
 
                 // Fetch full tree for this document to get structure and articles
@@ -279,7 +281,9 @@ class LocalLegalRepository(
                 title = remoteDoc.title,
                 type_code = remoteDoc.type?.code ?: "unknown",
                 last_updated = parseIsoDate(remoteDoc.updated_at),
-                is_downloaded = mibekoDao.getDownloadedDocumentIds().contains(remoteDoc.id)
+                is_downloaded = mibekoDao.getDownloadedDocumentIds().contains(remoteDoc.id),
+                institution_name = remoteDoc.institution?.name,
+                date_signature = remoteDoc.dates?.signature
             )
             
             mibekoDao.upsertDocuments(listOf(document))
@@ -356,7 +360,9 @@ class LocalLegalRepository(
                 title = "Document", // We might not have the full title if from search
                 type_code = article.typeCode.ifEmpty { "unknown" },
                 last_updated = getCurrentTimeMillis(),
-                is_downloaded = false
+                is_downloaded = false,
+                institution_name = null,
+                date_signature = null
             )
             val node = NodeEntity(
                 id = article.id, // In this app, often article ID and node ID are related or same in some contexts, 
@@ -637,5 +643,12 @@ class LocalLegalRepository(
 
     suspend fun downloadFile(url: String): ByteArray {
         return apiService.downloadFile(url)
+    }
+
+    /**
+     * Clear all data from the local database.
+     */
+    suspend fun clearAllData() {
+        mibekoDao.clearAllData()
     }
 }

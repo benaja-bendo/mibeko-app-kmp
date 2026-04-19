@@ -44,6 +44,7 @@ val commonModule = module {
     // User Preferences
     single { UserPreferencesRepository() }
     single { SearchHistoryManager() }
+    single { com.mibeko.mibeko.data.preferences.RecentlyViewedManager() }
     single {
         Json {
             ignoreUnknownKeys = true
@@ -105,12 +106,12 @@ val commonModule = module {
 
     viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { SearchViewModel(get(), get(), get(), get()) }
-    viewModel { ReaderViewModel(get(), get(), get(), get()) }
+    viewModel { ReaderViewModel(get(), get(), get(), get(), get()) }
     viewModel { DocumentDetailViewModel(get(), get()) }
     viewModel { FavoritesViewModel(get()) }
-    viewModel { SettingsViewModel(get(), get(), get(), get()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get()) }
     viewModel { OfficialJournalViewModel(get(), get()) }
-    viewModel { LibraryViewModel(get()) }
+    viewModel { LibraryViewModel(get(), get()) }
     viewModel { DownloadsViewModel(get()) }
     viewModel { NotificationsViewModel(get()) }
     viewModel { DossierViewModel(get()) }

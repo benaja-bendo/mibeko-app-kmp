@@ -40,6 +40,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            freeCompilerArgs += "-Xbinary=bundleId=com.mibeko.mibeko"
         }
         // Force include KSP generated sources for iOS targets
         iosTarget.compilations.getByName("main").defaultSourceSet.kotlin.srcDir("build/generated/ksp/${iosTarget.name}/${iosTarget.name}Main/kotlin")

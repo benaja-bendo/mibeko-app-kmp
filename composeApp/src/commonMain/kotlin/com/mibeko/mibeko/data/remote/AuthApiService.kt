@@ -56,10 +56,64 @@ data class RemoteMobileProfile(
     val company: String? = null
 )
 
+@Serializable
+data class ProfileUpdateRequest(
+    val phone: String,
+    val profession: String,
+    val company: String
+)
+
+@Serializable
+data class ProfileResponse(
+    val success: Boolean = false,
+    val message: String? = null,
+    val data: RemoteUser? = null,
+    val errors: Map<String, List<String>>? = null
+)
+
 class AuthApiService(
     private val client: HttpClient,
     private val baseUrl: String
 ) {
+    suspend fun getProfile(): ProfileResponse {
+        try {
+            val response = client.get("$baseUrl/v1/profile")
+            return response.body()
+        } catch (e: ClientRequestException) {
+            if (e.response.status == HttpStatusCode.UnprocessableEntity || e.response.status == HttpStatusCode.Unauthorized) {
+                return e.response.body()
+            }
+            throw e
+        }
+    }
+
+    suspend fun updateProfile(request: ProfileUpdateRequest): ProfileResponse {
+        try {
+            val response = client.put("$baseUrl/v1/profile") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            return response.body()
+        } catch (e: ClientRequestException) {
+            if (e.response.status == HttpStatusCode.UnprocessableEntity) {
+                return e.response.body()
+            }
+            throw e
+        }
+    }
+
+    suspend fun logout(): AuthResponse {
+        try {
+            val response = client.post("$baseUrl/v1/logout")
+            return response.body()
+        } catch (e: ClientRequestException) {
+            if (e.response.status == HttpStatusCode.Unauthorized) {
+                return e.response.body()
+            }
+            throw e
+        }
+    }
+
     suspend fun loginWithFirebase(idToken: String, deviceName: String): AuthResponse {
         try {
             val response = client.post("$baseUrl/v1/auth/firebase") {

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
+import com.mibeko.mibeko.data.preferences.RecentlyViewedManager
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.repository.DossierRepository
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,12 +22,12 @@ data class ReaderUiState(
     val error: String? = null
 )
 
-
 class ReaderViewModel(
     private val repository: LocalLegalRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val dossierRepository: DossierRepository,
-    private val contentSharer: com.mibeko.mibeko.util.ContentSharer
+    private val contentSharer: com.mibeko.mibeko.util.ContentSharer,
+    private val recentlyViewedManager: RecentlyViewedManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReaderUiState())
@@ -105,6 +106,13 @@ class ReaderViewModel(
                         documentTitle = docResult?.title,
                         documentType = docResult?.type,
                         error = null
+                    )
+                    
+                    // Log to recently viewed
+                    recentlyViewedManager.addRecentlyViewed(
+                        id = articleResult.id,
+                        title = "Article ${articleResult.number}",
+                        typeCode = docResult?.type ?: "Inconnu"
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(

@@ -1,152 +1,204 @@
 package com.mibeko.mibeko.ui.library
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.data.LawCodeSpec
+import com.mibeko.mibeko.data.preferences.RecentlyViewedItem
+import com.mibeko.mibeko.ui.components.HighlightedText
+import com.mibeko.mibeko.ui.components.SearchResultsShimmer
 import com.mibeko.mibeko.ui.navigation.LocalNavController
+import com.mibeko.mibeko.ui.navigation.Screen
+import com.mibeko.mibeko.ui.search.SearchViewModel
+import com.mibeko.mibeko.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
-
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.material.icons.filled.Search
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen() {
-        val navController = LocalNavController.current
-        val viewModel = koinViewModel<LibraryViewModel>()
-        val uiState by viewModel.uiState.collectAsState()
-        val snackbarHostState = remember { SnackbarHostState() }
-
-        LaunchedEffect(uiState.error) {
-            uiState.error?.let {
-                snackbarHostState.showSnackbar(it)
-                viewModel.clearError()
-            }
+    val navController = LocalNavController.current
+    val libraryViewModel = koinViewModel<LibraryViewModel>()
+    val searchViewModel = koinViewModel<SearchViewModel>()
+    
+    val libraryState by libraryViewModel.uiState.collectAsState()
+    val searchState by searchViewModel.uiState.collectAsState()
+    val recentItems by libraryViewModel.recentItems.collectAsState()
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    var searchQuery by remember { mutableStateOf("") }
+    
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isNotEmpty()) {
+            searchViewModel.updateQuery(searchQuery)
         }
+    }
 
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = { 
-                        Text(
-                            "Bibliothèque juridique", 
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Black
-                        ) 
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        scrolledContainerColor = MaterialTheme.colorScheme.background
-                    )
-                )
-            },
-            containerColor = MaterialTheme.colorScheme.background
-        ) { padding ->
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = padding.calculateTopPadding(),
-                    bottom = padding.calculateBottomPadding() + 16.dp
-                )
-            ) {
-                // 1. Hero Section (Constitution)
-                item {
-                    HeroCard(
-                        title = "CONSTITUTION",
-                        subtitle = "Loi Fondamentale de la République du Congo",
-                        onClick = { 
-                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentList(typeCode = "CONST", typeName = "Constitution"))
-                        }
-                    )
+    var activeFilterSheet by remember { mutableStateOf<String?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = padding.calculateBottomPadding())
+        ) {
+            // Header with Search and Filters
+            LibraryHeader(
+                searchQuery = searchQuery,
+                onSearchChange = { searchQuery = it },
+                onRapidScan = { 
+                    if (searchQuery.isNotBlank()) {
+                        navController.navigate(Screen.Chat(initialPrompt = searchQuery))
+                    }
+                },
+                currentType = libraryState.selectedType,
+                currentInstitution = libraryState.selectedInstitution,
+                currentYear = libraryState.selectedYear,
+                onOpenFilterSheet = { activeFilterSheet = it },
+                onClearFilters = {
+                    libraryViewModel.updateTypeFilter(null)
+                    libraryViewModel.updateInstitutionFilter(null)
+                    libraryViewModel.updateYearFilter(null)
+                },
+                onNotificationsClick = { navController.navigate(Screen.Notifications) }
+            )
+            
+            // Body Content
+            if (searchQuery.isNotEmpty()) {
+                // Search Results
+                AnimatedVisibility(visible = searchState.isLoading) {
+                    Column(modifier = Modifier.padding(top = 16.dp)) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        SearchResultsShimmer(itemCount = 4, modifier = Modifier.padding(horizontal = 16.dp))
+                    }
                 }
-
-                // 2. Hiérarchie des Normes
-                item {
-                    Column(modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Hiérarchie des Normes",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            
-                            Text(
-                                text = "Importance",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                
+                if (!searchState.isLoading) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(searchState.results) { article ->
+                            LibrarySearchResultCard(
+                                articleNumber = article.number,
+                                source = article.breadcrumb,
+                                snippet = article.content ?: "",
+                                query = searchQuery,
+                                typeCode = article.typeCode,
+                                isDownloaded = article.isDownloaded,
+                                onClick = { navController.navigate(Screen.Reader(article.id)) }
                             )
                         }
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (uiState.documentTypes.isEmpty()) {
-                                // Fallback if API fails
-                                val fallbackTypes = listOf(
-                                    "Constitution" to Icons.Default.Balance,
-                                    "Traités Internationaux" to Icons.Default.Public,
-                                    "Lois Organiques" to Icons.Default.AccountBalance,
-                                    "Lois Ordinaires" to Icons.Default.Description,
-                                    "Ordonnances" to Icons.Default.Gavel,
-                                    "Décrets" to Icons.AutoMirrored.Filled.Article,
-                                    "Arrêtés" to Icons.AutoMirrored.Filled.Assignment
+                        if (searchState.results.isEmpty()) {
+                            item {
+                                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                    Text("Aucun résultat trouvé", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Default Content (Filtered vertical list + Top recent)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    // Only show "Nouveautés" and "Récents" if NO filters are active
+                    if (libraryState.selectedType == null && libraryState.selectedInstitution == null && libraryState.selectedYear == null) {
+                        item {
+                            if (libraryState.latestDocuments.isNotEmpty()) {
+                                SectionTitle(
+                                    title = "NOUVEAUTÉS LÉGISLATIVES",
+                                    badgeText = "NOUVELLES ALERTES",
+                                    showDot = true
                                 )
-                                fallbackTypes.forEach { pair ->
-                                    HierarchyCard(
-                                        icon = pair.second,
-                                        title = pair.first,
-                                        count = uiState.stats.find { it.type_name.contains(pair.first.split(" ").last(), ignoreCase = true) }?.count ?: 0,
-                                        onClick = { 
-                                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentList(typeCode = pair.first, typeName = pair.first))
-                                        }
-                                    )
+                                
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(libraryState.latestDocuments) { doc ->
+                                        NouveauteCard(
+                                            title = doc.title,
+                                            subtitle = "Mise à jour récente des textes applicables.",
+                                            tag = doc.type,
+                                            onClick = { navController.navigate(Screen.DocumentDetail(doc.id)) },
+                                            onAiSummary = { navController.navigate(Screen.Chat(initialPrompt = "Fais-moi un résumé de: ${doc.title}")) }
+                                        )
+                                    }
                                 }
-                            } else {
-                                uiState.documentTypes.forEach { type ->
-                                    HierarchyCard(
-                                        icon = when {
-                                            type.name.contains("Constitution", true) -> Icons.Default.Balance
-                                            type.name.contains("Traité", true) -> Icons.Default.Public
-                                            type.name.contains("Organique", true) -> Icons.Default.AccountBalance
-                                            type.name.contains("Ordinaire", true) -> Icons.Default.Description
-                                            type.name.contains("Ordonnance", true) -> Icons.Default.Gavel
-                                            type.name.contains("Décret", true) -> Icons.AutoMirrored.Filled.Article
-                                            else -> Icons.AutoMirrored.Filled.Assignment
-                                        },
-                                        title = type.name,
-                                        count = uiState.stats.find { it.type_code == type.code }?.count ?: 0,
-                                        onClick = { 
-                                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.DocumentList(typeCode = type.code, typeName = type.name))
-                                        }
-                                    )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                        
+                        item {
+                            if (recentItems.isNotEmpty()) {
+                                SectionTitle(
+                                    title = "RÉCEMMENT CONSULTÉS",
+                                    actionText = "VOIR TOUT",
+                                    onActionClick = { navController.navigate(Screen.ConversationHistory) } 
+                                )
+                                
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(recentItems) { item ->
+                                        RecentCard(
+                                            item = item,
+                                            onClick = { navController.navigate(Screen.Reader(item.id)) } 
+                                        )
+                                    }
                                 }
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                    }
+
+                    item {
+                        SectionTitle(
+                            title = if (libraryState.selectedType != null || libraryState.selectedInstitution != null || libraryState.selectedYear != null) "RÉSULTATS FILTRÉS" else "TOUS LES DOCUMENTS"
+                        )
+                    }
+
+                    items(libraryState.filteredDocuments) { doc ->
+                        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                            DocumentVerticalCard(
+                                document = doc,
+                                onClick = { navController.navigate(Screen.DocumentDetail(doc.id)) }
+                            )
+                        }
+                    }
+
+                    if (libraryState.filteredDocuments.isEmpty() && !libraryState.isLoading) {
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                Text("Aucun document ne correspond à vos critères", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -154,96 +206,207 @@ fun LibraryScreen() {
             }
         }
     }
- 
 
-/**
- * Carte de héros pour mettre en avant un document (ex: Constitution).
- */
+    if (activeFilterSheet != null) {
+        ModalBottomSheet(
+            onDismissRequest = { activeFilterSheet = null },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+                Text(
+                    text = when(activeFilterSheet) {
+                        "type" -> "Sélectionner un type"
+                        "institution" -> "Sélectionner une institution"
+                        "year" -> "Sélectionner une année"
+                        else -> ""
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                )
+                
+                LazyColumn {
+                    item {
+                        FilterOptionRow(
+                            text = "Tous",
+                            isSelected = when(activeFilterSheet) {
+                                "type" -> libraryState.selectedType == null
+                                "institution" -> libraryState.selectedInstitution == null
+                                "year" -> libraryState.selectedYear == null
+                                else -> false
+                            },
+                            onClick = {
+                                when(activeFilterSheet) {
+                                    "type" -> libraryViewModel.updateTypeFilter(null)
+                                    "institution" -> libraryViewModel.updateInstitutionFilter(null)
+                                    "year" -> libraryViewModel.updateYearFilter(null)
+                                }
+                                activeFilterSheet = null
+                            }
+                        )
+                    }
+                    
+                    val options = when(activeFilterSheet) {
+                        "type" -> libraryState.documentTypes.map { it.name to it.code }
+                        "institution" -> libraryState.institutions.map { it to it }
+                        "year" -> libraryState.years.map { it to it }
+                        else -> emptyList()
+                    }
+                    
+                    items(options) { (label, value) ->
+                        FilterOptionRow(
+                            text = label,
+                            isSelected = when(activeFilterSheet) {
+                                "type" -> libraryState.selectedType == value
+                                "institution" -> libraryState.selectedInstitution == value
+                                "year" -> libraryState.selectedYear == value
+                                else -> false
+                            },
+                            onClick = {
+                                when(activeFilterSheet) {
+                                    "type" -> libraryViewModel.updateTypeFilter(value)
+                                    "institution" -> libraryViewModel.updateInstitutionFilter(value)
+                                    "year" -> libraryViewModel.updateYearFilter(value)
+                                }
+                                activeFilterSheet = null
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
-private fun HeroCard(title: String, subtitle: String, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
+fun FilterOptionRow(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
-            .padding(16.dp),
-        color = MaterialTheme.colorScheme.primary,
-        shape = RoundedCornerShape(28.dp),
-        shadowElevation = 10.dp
+            .clickable { onClick() }
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Premium background decoration
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (isSelected) MibekoBluePrimary else MaterialTheme.colorScheme.onSurface,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+        )
+        if (isSelected) {
             Icon(
-                Icons.Default.AccountBalance,
+                Icons.Default.Check,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.08f),
-                modifier = Modifier
-                    .size(240.dp)
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 60.dp, y = 60.dp)
+                tint = MibekoBluePrimary,
+                modifier = Modifier.size(20.dp)
             )
-            
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(28.dp),
-                verticalArrangement = Arrangement.Center
+        }
+    }
+}
+
+@Composable
+fun DocumentVerticalCard(
+    document: LawCodeSpec,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Surface(
-                    color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(10.dp)
+                    color = MibekoBluePrimary.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
-                        text = "LOI SUPRÊME",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        text = document.type,
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 1.sp
+                        fontWeight = FontWeight.Bold,
+                        color = MibekoBluePrimary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                    letterSpacing = (-0.5).sp
-                )
-                
-                Spacer(modifier = Modifier.height(6.dp))
-                
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.85f),
-                    lineHeight = 22.sp,
-                    maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
-                
-                Spacer(modifier = Modifier.height(20.dp))
-                
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .background(Color.White, RoundedCornerShape(20.dp))
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        "Consulter",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
+                if (document.isDownloaded) {
                     Icon(
-                        Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Disponible hors-ligne",
+                        tint = LegalValid,
                         modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = document.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (!document.institutionName.isNullOrEmpty()) {
+                    Icon(
+                        Icons.Default.AccountBalance,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = document.institutionName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                }
+                
+                if (!document.institutionName.isNullOrEmpty() && !document.dateSignature.isNullOrEmpty()) {
+                    Text(
+                        text = " • ",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                if (!document.dateSignature.isNullOrEmpty()) {
+                    Icon(
+                        Icons.Default.CalendarToday,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = document.dateSignature.take(4), // Display year
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -251,78 +414,429 @@ private fun HeroCard(title: String, subtitle: String, onClick: () -> Unit) {
     }
 }
 
-/**
- * Carte modernisée pour la hiérarchie des normes.
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HierarchyCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    count: Int,
-    onClick: () -> Unit
+private fun LibraryHeader(
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
+    onRapidScan: () -> Unit,
+    currentType: String?,
+    currentInstitution: String?,
+    currentYear: String?,
+    onOpenFilterSheet: (String) -> Unit,
+    onClearFilters: () -> Unit,
+    onNotificationsClick: () -> Unit
 ) {
-    Surface(
-        onClick = onClick,
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-        shadowElevation = 2.dp
+            .background(MibekoBlueDark)
+            .statusBarsPadding()
+            .padding(top = 16.dp, bottom = 16.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(18.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                modifier = Modifier.size(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Top Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    icon, 
-                    contentDescription = null, 
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(14.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.width(18.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title,
+                    text = "BIBLIOTHÈQUE MIBEKO",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color.White,
+                    letterSpacing = 1.sp
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "$count documents disponibles",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
+                
+                IconButton(onClick = onNotificationsClick) {
+                    BadgedBox(
+                        badge = {
+                            Badge(containerColor = LegalRepealed)
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = Color.White
+                        )
+                    }
+                }
             }
             
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = CircleShape,
-                modifier = Modifier.size(32.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Search Input
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchChange,
+                placeholder = { 
+                    Text("Rechercher une loi, un arrêt, un...", color = Color.White.copy(alpha = 0.5f)) 
+                },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.7f))
+                },
+                trailingIcon = {
+                    Surface(
+                        color = MibekoGoldLight,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.padding(end = 8.dp).clickable { onRapidScan() }
+                    ) {
+                        Text(
+                            text = "RAPID SCAN",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MibekoBlueDark,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White.copy(alpha = 0.1f),
+                    unfocusedContainerColor = Color.White.copy(alpha = 0.1f),
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .height(56.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Filter Chips Row
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.KeyboardArrowRight, 
-                        contentDescription = null, 
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
+                item {
+                    FilterDropdownChip(
+                        label = currentType ?: "Type",
+                        isSelected = currentType != null,
+                        onClick = { onOpenFilterSheet("type") }
                     )
+                }
+                item {
+                    FilterDropdownChip(
+                        label = currentInstitution ?: "Institution",
+                        isSelected = currentInstitution != null,
+                        onClick = { onOpenFilterSheet("institution") }
+                    )
+                }
+                item {
+                    FilterDropdownChip(
+                        label = currentYear ?: "Année",
+                        isSelected = currentYear != null,
+                        onClick = { onOpenFilterSheet("year") }
+                    )
+                }
+                if (currentType != null || currentInstitution != null || currentYear != null) {
+                    item {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                            shape = CircleShape,
+                            modifier = Modifier.clickable { onClearFilters() }
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Effacer filtres",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(8.dp).size(16.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
     }
+}
 
+@Composable
+private fun FilterDropdownChip(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        color = if (isSelected) MibekoBluePrimary else Color.White.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(20.dp),
+        border = if (!isSelected) BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)) else null,
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 120.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+        }
+    }
+}
 
+@Composable
+private fun SectionTitle(title: String, badgeText: String? = null, showDot: Boolean = false, actionText: String? = null, onActionClick: (() -> Unit)? = null) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MibekoBlueDark,
+                letterSpacing = 0.5.sp
+            )
+            if (showDot) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(modifier = Modifier.size(6.dp).background(LegalRepealed, CircleShape))
+            }
+            if (badgeText != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = badgeText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+        if (actionText != null && onActionClick != null) {
+            Text(
+                text = actionText,
+                style = MaterialTheme.typography.labelSmall,
+                color = MibekoGoldDark,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { onActionClick() }
+            )
+        }
+    }
+}
+
+@Composable
+private fun NouveauteCard(
+    title: String,
+    subtitle: String,
+    tag: String,
+    onClick: () -> Unit,
+    onAiSummary: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.width(300.dp).clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        shadowElevation = 2.dp
+    ) {
+        Column {
+            // Top Red Border Indicator
+            Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(LegalRepealed))
+            
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        color = LegalRepealed.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "RÉCENT • $tag",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = LegalRepealed,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                    Icon(Icons.Default.BookmarkBorder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MibekoBlueDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 18.sp
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = onAiSummary,
+                        colors = ButtonDefaults.buttonColors(containerColor = MibekoBlueDark),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f).height(40.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("AI SUMMARY", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
+                    
+                    OutlinedButton(
+                        onClick = { /* Dismiss */ },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f).height(40.dp),
+                        contentPadding = PaddingValues(0.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("DISMISS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentCard(item: RecentlyViewedItem, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.width(200.dp).clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        shadowElevation = 1.dp
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.MenuBook, contentDescription = null, tint = MibekoBluePrimary, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = item.typeCode,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            Text(
+                text = "Consulté récemment",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun LibrarySearchResultCard(
+    articleNumber: String,
+    source: String,
+    snippet: String,
+    query: String,
+    typeCode: String,
+    isDownloaded: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Surface(
+                        color = MibekoBluePrimary.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = typeCode,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MibekoBluePrimary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = source.split(">").last().trim(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (isDownloaded) {
+                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = LegalValid, modifier = Modifier.size(16.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Article $articleNumber",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = MibekoBluePrimary
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            HighlightedText(
+                text = snippet.trim().take(180) + if (snippet.length > 180) "..." else "",
+                query = query,
+                maxLines = 3,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+            )
+        }
+    }
 }
