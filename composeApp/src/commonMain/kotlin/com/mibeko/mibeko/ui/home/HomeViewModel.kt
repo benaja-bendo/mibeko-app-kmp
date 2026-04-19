@@ -16,6 +16,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
 /**
  * Represents a recently viewed item for the home screen.
  */
@@ -37,8 +40,7 @@ data class HomeUiState(
     val recentlyAdded: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList(),
     val officialJournals: List<com.mibeko.mibeko.data.remote.RemoteOfficialJournal> = emptyList(),
     val aiSuggestions: List<String> = emptyList(),
-    val isSyncing: Boolean = false,
-    val error: String? = null
+    val isSyncing: Boolean = false
 )
 
 class HomeViewModel(
@@ -50,18 +52,11 @@ class HomeViewModel(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val _uiEvent = MutableSharedFlow<String>()
+    val uiEvent = _uiEvent.asSharedFlow()
+
     val lawCodes: StateFlow<List<LawCodeSpec>> = repository.getLawCodes()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    // Legacy accessors for backward compatibility
-    private val _isSyncing = MutableStateFlow(false)
-    val isSyncing: StateFlow<Boolean> = _isSyncing
-    
-    private val _recentItems = MutableStateFlow<List<RecentItem>>(emptyList())
-    val recentItems: StateFlow<List<RecentItem>> = _recentItems
-    
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
     
     init {
         loadInitialState()
@@ -183,25 +178,16 @@ class HomeViewModel(
         // The UI will show demo items if this is empty.
     }
 
-    fun clearError() {
-        _error.value = null
-        _uiState.value = _uiState.value.copy(error = null)
-    }
-
     fun syncData() {
         viewModelScope.launch {
-            _isSyncing.value = true
             _uiState.value = _uiState.value.copy(isSyncing = true, isLoading = true)
-            _error.value = null
             try {
                 repository.sync()
             } catch (e: Exception) {
                 e.printStackTrace()
                 val errorMsg = "Erreur de synchronisation: ${e.message ?: "Inconnue"}"
-                _error.value = errorMsg
-                _uiState.value = _uiState.value.copy(error = errorMsg)
+                _uiEvent.emit(errorMsg)
             } finally {
-                _isSyncing.value = false
                 _uiState.value = _uiState.value.copy(isSyncing = false, isLoading = false)
             }
         }

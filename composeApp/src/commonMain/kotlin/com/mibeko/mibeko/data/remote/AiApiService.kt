@@ -89,6 +89,8 @@ data class PaginatedConversations(
 sealed class AiStreamEvent {
     data class Delta(val text: String) : AiStreamEvent()
     data class Sources(val sources: List<ArticleSource>) : AiStreamEvent()
+    data class Status(val message: String) : AiStreamEvent()
+    data class Error(val message: String) : AiStreamEvent()
 }
 
 class AiApiService(
@@ -167,12 +169,32 @@ class AiApiService(
                     if (data == "[DONE]") {
                         return@collect
                     }
-                    if (type == "sources") {
+                    if (type == "status") {
+                        try {
+                            val json = lenientJson.decodeFromString<JsonObject>(data)
+                            val statusMsg = json["message"]?.jsonPrimitive?.content
+                            if (statusMsg != null) {
+                                emit(AiStreamEvent.Status(statusMsg))
+                            }
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                    } else if (type == "sources") {
                         try {
                             val sources = lenientJson.decodeFromString<List<ArticleSource>>(data)
                             emit(AiStreamEvent.Sources(sources))
                         } catch (e: Exception) {
                             // ignore malformed sources
+                        }
+                    } else if (type == "error") {
+                        try {
+                            val json = lenientJson.decodeFromString<JsonObject>(data)
+                            val errorMsg = json["message"]?.jsonPrimitive?.content
+                            if (errorMsg != null) {
+                                emit(AiStreamEvent.Error(errorMsg))
+                            }
+                        } catch (e: Exception) {
+                            // ignore
                         }
                     } else {
                         try {

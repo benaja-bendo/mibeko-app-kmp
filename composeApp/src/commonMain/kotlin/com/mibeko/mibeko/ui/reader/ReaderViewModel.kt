@@ -33,15 +33,8 @@ class ReaderViewModel(
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
-    // Keep for backward compatibility with ReaderScreen
-    private val _article = MutableStateFlow<ArticleSpec?>(null)
-    val article: StateFlow<ArticleSpec?> = _article
-
-    private val _textSize = MutableStateFlow(userPreferencesRepository.getTextSize())
-    val textSize: StateFlow<UserPreferencesRepository.TextSize> = _textSize.asStateFlow()
-
-    private val _isDyslexiaFontEnabled = MutableStateFlow(userPreferencesRepository.isDyslexiaFontEnabled())
-    val isDyslexiaFontEnabled: StateFlow<Boolean> = _isDyslexiaFontEnabled.asStateFlow()
+    val textSize: StateFlow<UserPreferencesRepository.TextSize> = userPreferencesRepository.textSizeFlow
+    val isDyslexiaFontEnabled: StateFlow<Boolean> = userPreferencesRepository.isDyslexiaFontEnabledFlow
 
     private val _isSharing = MutableStateFlow(false)
     val isSharing: StateFlow<Boolean> = _isSharing.asStateFlow()
@@ -96,7 +89,6 @@ class ReaderViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val articleResult = repository.getArticleById(id).firstOrNull()
-                _article.value = articleResult
                 
                 if (articleResult != null) {
                     val docResult = repository.getLawCodeById(articleResult.codeId).firstOrNull()
@@ -131,18 +123,15 @@ class ReaderViewModel(
     }
 
     fun refreshPreferences() {
-        _textSize.value = userPreferencesRepository.getTextSize()
-        _isDyslexiaFontEnabled.value = userPreferencesRepository.isDyslexiaFontEnabled()
+        // Obsolete now that we use reactive Flow
     }
 
     fun setTextSize(size: UserPreferencesRepository.TextSize) {
         userPreferencesRepository.setTextSize(size)
-        _textSize.value = size
     }
 
     fun setDyslexiaFontEnabled(enabled: Boolean) {
         userPreferencesRepository.setDyslexiaFontEnabled(enabled)
-        _isDyslexiaFontEnabled.value = enabled
     }
 
     fun exportPdf(): String {

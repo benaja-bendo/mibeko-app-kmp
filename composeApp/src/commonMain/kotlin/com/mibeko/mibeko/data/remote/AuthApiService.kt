@@ -92,102 +92,59 @@ class AuthApiService(
     private val client: HttpClient,
     private val baseUrl: String
 ) {
-    suspend fun getProfile(): ProfileResponse {
-        try {
-            val response = client.get("$baseUrl/v1/profile")
-            return response.body()
+    private suspend inline fun <reified T> safeApiCall(apiCall: () -> io.ktor.client.statement.HttpResponse): T {
+        return try {
+            apiCall().body()
         } catch (e: ClientRequestException) {
-            if (e.response.status == HttpStatusCode.UnprocessableEntity || e.response.status == HttpStatusCode.Unauthorized) {
-                return e.response.body()
+            val status = e.response.status
+            if (status == HttpStatusCode.UnprocessableEntity || status == HttpStatusCode.Unauthorized) {
+                e.response.body()
+            } else {
+                throw e
             }
-            throw e
         }
     }
 
-    suspend fun updateProfile(request: ProfileUpdateRequest): ProfileResponse {
-        try {
-            val response = client.put("$baseUrl/v1/profile") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
-            return response.body()
-        } catch (e: ClientRequestException) {
-            if (e.response.status == HttpStatusCode.UnprocessableEntity) {
-                return e.response.body()
-            }
-            throw e
+    suspend fun getProfile(): ProfileResponse = safeApiCall {
+        client.get("$baseUrl/v1/profile")
+    }
+
+    suspend fun updateProfile(request: ProfileUpdateRequest): ProfileResponse = safeApiCall {
+        client.put("$baseUrl/v1/profile") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
         }
     }
 
-    suspend fun updatePassword(request: PasswordUpdateRequest): ProfileResponse {
-        try {
-            val response = client.put("$baseUrl/v1/profile/password") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
-            return response.body()
-        } catch (e: ClientRequestException) {
-            if (e.response.status == HttpStatusCode.UnprocessableEntity) {
-                return e.response.body()
-            }
-            throw e
+    suspend fun updatePassword(request: PasswordUpdateRequest): ProfileResponse = safeApiCall {
+        client.put("$baseUrl/v1/profile/password") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
         }
     }
 
-    suspend fun logout(): AuthResponse {
-        try {
-            val response = client.post("$baseUrl/v1/logout")
-            return response.body()
-        } catch (e: ClientRequestException) {
-            if (e.response.status == HttpStatusCode.Unauthorized) {
-                return e.response.body()
-            }
-            throw e
+    suspend fun logout(): AuthResponse = safeApiCall {
+        client.post("$baseUrl/v1/logout")
+    }
+
+    suspend fun loginWithFirebase(idToken: String, deviceName: String): AuthResponse = safeApiCall {
+        client.post("$baseUrl/v1/auth/firebase") {
+            contentType(ContentType.Application.Json)
+            setBody(FirebaseLoginRequest(idToken, deviceName))
         }
     }
 
-    suspend fun loginWithFirebase(idToken: String, deviceName: String): AuthResponse {
-        try {
-            val response = client.post("$baseUrl/v1/auth/firebase") {
-                contentType(ContentType.Application.Json)
-                setBody(FirebaseLoginRequest(idToken, deviceName))
-            }
-            return response.body()
-        } catch (e: ClientRequestException) {
-            if (e.response.status == HttpStatusCode.UnprocessableEntity) {
-                return e.response.body()
-            }
-            throw e
+    suspend fun loginWithEmail(request: LoginRequest): AuthResponse = safeApiCall {
+        client.post("$baseUrl/v1/login") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
         }
     }
 
-    suspend fun loginWithEmail(request: LoginRequest): AuthResponse {
-        try {
-            val response = client.post("$baseUrl/v1/login") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
-            return response.body()
-        } catch (e: ClientRequestException) {
-            if (e.response.status == HttpStatusCode.UnprocessableEntity) {
-                return e.response.body()
-            }
-            throw e
-        }
-    }
-
-    suspend fun register(request: RegisterRequest): AuthResponse {
-        try {
-            val response = client.post("$baseUrl/v1/register") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
-            return response.body()
-        } catch (e: ClientRequestException) {
-            if (e.response.status == HttpStatusCode.UnprocessableEntity) {
-                return e.response.body()
-            }
-            throw e
+    suspend fun register(request: RegisterRequest): AuthResponse = safeApiCall {
+        client.post("$baseUrl/v1/register") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
         }
     }
 }

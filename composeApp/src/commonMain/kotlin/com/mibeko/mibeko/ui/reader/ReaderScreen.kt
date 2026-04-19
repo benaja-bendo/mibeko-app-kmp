@@ -9,7 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
@@ -40,7 +41,7 @@ fun ReaderScreen(articleId: String) {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<ReaderViewModel>()
         val uiState by viewModel.uiState.collectAsState()
-        val article by viewModel.article.collectAsState()
+        val article = uiState.article
         val textSize by viewModel.textSize.collectAsState()
         val isDyslexiaFontEnabled by viewModel.isDyslexiaFontEnabled.collectAsState()
         val isSharing by viewModel.isSharing.collectAsState()
@@ -246,53 +247,52 @@ fun ReaderScreen(articleId: String) {
                 }
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            floatingActionButton = {
-                 // Removed FAB if all actions are in top bar
-            },
             containerColor = backgroundColor
         ) { padding ->
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
+                    .padding(padding),
+                contentPadding = PaddingValues(bottom = 100.dp)
             ) {
                 // Article title in caps
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = currentArticle.breadcrumb.split(">").last().uppercase(),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = textColor,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 28.sp
-                    )
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = currentArticle.breadcrumb.split(">").last().uppercase(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = textColor,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 28.sp
+                        )
+                    }
                 }
                 
                 // Article content with optimized typography
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = currentArticle.content ?: "",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = fontSizeValue,
-                            lineHeight = lineSpacingValue,
-                            letterSpacing = if (isDyslexiaFontEnabled) 0.8.sp else 0.3.sp,
-                            fontWeight = if (isDyslexiaFontEnabled) FontWeight.Medium else FontWeight.Normal
-                        ),
-                        color = textColor
-                    )
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = currentArticle.content ?: "",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = fontSizeValue,
+                                lineHeight = lineSpacingValue,
+                                letterSpacing = if (isDyslexiaFontEnabled) 0.8.sp else 0.3.sp,
+                                fontWeight = if (isDyslexiaFontEnabled) FontWeight.Medium else FontWeight.Normal
+                            ),
+                            color = textColor
+                        )
+                    }
                 }
-                
-                Spacer(modifier = Modifier.height(100.dp))
             }
 
             if (showSettings) {

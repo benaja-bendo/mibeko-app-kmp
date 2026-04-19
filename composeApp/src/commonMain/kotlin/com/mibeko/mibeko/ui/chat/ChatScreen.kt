@@ -51,6 +51,28 @@ fun ChatScreen(
 
     var textState by remember { mutableStateOf(TextFieldValue("")) }
 
+    // Pour optimiser les performances, on met en cache les styles
+    val typography = MaterialTheme.typography
+    val h1Style = remember(typography) { typography.titleMedium.copy(fontWeight = FontWeight.Bold) }
+    val h2Style = remember(typography) { typography.titleSmall.copy(fontWeight = FontWeight.Bold) }
+    val h3Style = remember(typography) { typography.bodyLarge.copy(fontWeight = FontWeight.Bold) }
+    val h4Style = remember(typography) { typography.bodyMedium.copy(fontWeight = FontWeight.Bold) }
+    val h5Style = remember(typography) { typography.bodyMedium.copy(fontWeight = FontWeight.Bold) }
+    val h6Style = remember(typography) { typography.bodySmall.copy(fontWeight = FontWeight.Bold) }
+    val textStyle = remember(typography) { typography.bodyMedium.copy(lineHeight = 22.sp) }
+
+    // markdownTypography est une fonction @Composable, elle doit être appelée directement
+    val customTypography = markdownTypography(
+        h1 = h1Style,
+        h2 = h2Style,
+        h3 = h3Style,
+        h4 = h4Style,
+        h5 = h5Style,
+        h6 = h6Style,
+        text = textStyle,
+        paragraph = textStyle
+    )
+
     LaunchedEffect(conversationId, initialPrompt) {
         viewModel.initChat(conversationId, initialPrompt)
     }
@@ -99,17 +121,6 @@ fun ChatScreen(
                     }
                 }
                 is ChatState.Content -> {
-                    val customTypography = markdownTypography(
-                        h1 = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        h2 = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        h3 = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                        h4 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        h5 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        h6 = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                        text = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
-                        paragraph = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
-                    )
-
                     LazyColumn(
                         state = listState,
                         modifier = Modifier

@@ -107,12 +107,30 @@ class ChatViewModel(
                     }
                 ).collect { event ->
                     when (event) {
+                        is AiStreamEvent.Status -> {
+                            // On peut afficher le status dans le contenu temporairement,
+                            // ou dans une variable de state si l'UI le gère
+                            if (streamContent.isEmpty()) {
+                                streamContent = "🔄 ${event.message}..."
+                            }
+                        }
                         is AiStreamEvent.Sources -> {
                             val sourcesJsonArray = Json.encodeToJsonElement(event.sources) as JsonArray
                             streamMeta = JsonObject(mapOf("sources" to sourcesJsonArray))
                         }
                         is AiStreamEvent.Delta -> {
+                            // Si on avait un message de status, on l'efface au premier vrai mot
+                            if (streamContent.startsWith("🔄 ")) {
+                                streamContent = ""
+                            }
                             streamContent += event.text
+                        }
+                        is AiStreamEvent.Error -> {
+                            streamContent = if (streamContent.startsWith("🔄 ") || streamContent.isEmpty()) {
+                                event.message
+                            } else {
+                                "$streamContent\n\n[Erreur: ${event.message}]"
+                            }
                         }
                     }
                     

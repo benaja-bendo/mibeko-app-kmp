@@ -53,15 +53,13 @@ fun HomeScreen() {
         
         // Refresh data on resume
         LaunchedEffect(Unit) {
-            viewModel.refreshNetworkStatus()
-            delay(100)
+            // refreshNetworkStatus is handled internally or removed
             showContent = true
         }
 
-        LaunchedEffect(uiState.error) {
-            uiState.error?.let {
-                snackbarHostState.showSnackbar(it)
-                viewModel.clearError()
+        LaunchedEffect(viewModel.uiEvent) {
+            viewModel.uiEvent.collect { message ->
+                snackbarHostState.showSnackbar(message)
             }
         }
 
