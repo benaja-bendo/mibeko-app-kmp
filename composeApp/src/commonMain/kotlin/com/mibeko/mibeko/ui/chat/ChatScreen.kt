@@ -287,7 +287,10 @@ fun ChatMessageItem(message: AgentConversationMessage, customTypography: com.mik
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(sources) { source ->
+                items(
+                    items = sources,
+                    key = { it.id }
+                ) { source ->
                     ArticleSourceCard(source)
                 }
             }

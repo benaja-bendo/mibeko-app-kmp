@@ -40,6 +40,16 @@ class ChatViewModel(
     private var streamJob: kotlinx.coroutines.Job? = null
 
     fun initChat(conversationId: String?, initialPrompt: String?) {
+        // Prevent re-initialization when navigating back from another screen (e.g. DocumentDetail)
+        if (_chatState.value is ChatState.Content || _chatState.value is ChatState.Loading) {
+            // Exception: si l'ID de conversation a changé (réutilisation du ViewModel avec SingleTop)
+            if (conversationId != null && conversationId != currentConversationId) {
+                // On laisse passer pour charger la nouvelle conversation
+            } else {
+                return
+            }
+        }
+
         if (conversationId != null) {
             loadConversation(conversationId)
         } else if (initialPrompt != null && initialPrompt.isNotBlank()) {
