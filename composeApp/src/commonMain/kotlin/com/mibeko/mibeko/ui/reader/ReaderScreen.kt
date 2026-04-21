@@ -2,6 +2,7 @@ package com.mibeko.mibeko.ui.reader
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,7 +33,9 @@ import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import org.koin.compose.viewmodel.koinViewModel
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.graphics.Color
+import com.mibeko.mibeko.ui.components.DossierSelectionSheet
 import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
@@ -57,6 +60,7 @@ fun ReaderScreen(articleId: String) {
         var showSettings by remember { mutableStateOf(false) }
         var showShareSheet by remember { mutableStateOf(false) }
         var showReportDialog by remember { mutableStateOf(false) }
+        var showDossierSelection by remember { mutableStateOf(false) }
 
         val listState = rememberLazyListState()
 
@@ -179,10 +183,10 @@ fun ReaderScreen(articleId: String) {
                                 )
                             }
                             // Favorite Toggle
-                            IconButton(onClick = { viewModel.toggleFavorite() }) {
+                            IconButton(onClick = { showDossierSelection = true }) {
                                 Icon(
                                     if (currentArticle.isFavorite) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                                    contentDescription = "Favori",
+                                    contentDescription = "Ajouter à un dossier",
                                     tint = if (currentArticle.isFavorite) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.6f)
                                 )
                             }
@@ -298,6 +302,8 @@ fun ReaderScreen(articleId: String) {
                             color = textColor
                         )
                     }
+                }
+
                 item {
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 24.dp, horizontal = 48.dp),
@@ -320,13 +326,22 @@ fun ReaderScreen(articleId: String) {
                     }
                 }
             }
-        }
 
         if (showReportDialog) {
             ReportErrorDialog(
                 onDismiss = { showReportDialog = false },
                 onSubmit = { type, desc ->
                     viewModel.reportError(type, desc)
+                }
+            )
+        }
+
+        if (showDossierSelection) {
+            DossierSelectionSheet(
+                articleId = currentArticle.id,
+                onDismiss = { 
+                    showDossierSelection = false
+                    viewModel.loadArticle(currentArticle.id) // Reload to get updated isFavorite status
                 }
             )
         }
@@ -380,7 +395,6 @@ fun ReaderScreen(articleId: String) {
                 }
             }
         }
-    }
  
 
 @Composable

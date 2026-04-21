@@ -21,6 +21,7 @@ import com.mibeko.mibeko.ui.downloads.DownloadsViewModel
 import com.mibeko.mibeko.ui.notifications.NotificationsViewModel
 import com.mibeko.mibeko.ui.dossier.DossierDetailViewModel
 import com.mibeko.mibeko.ui.dossier.DossierViewModel
+import com.mibeko.mibeko.ui.components.DossierSelectionViewModel
 import com.mibeko.mibeko.ui.favorites.FavoritesViewModel
 import com.mibeko.mibeko.ui.settings.SettingsViewModel
 import com.mibeko.mibeko.ui.officialjournal.OfficialJournalViewModel
@@ -117,6 +118,7 @@ val commonModule = module {
     viewModel { DownloadsViewModel(get()) }
     viewModel { NotificationsViewModel(get()) }
     viewModel { DossierViewModel(get()) }
+    viewModel { DossierSelectionViewModel(get(), get()) }
     viewModel { params -> DossierDetailViewModel(params.get(), get(), get()) }
     viewModel { ChatViewModel(get()) }
     viewModel { ConversationHistoryViewModel(get()) }
