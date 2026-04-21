@@ -1,6 +1,5 @@
 package com.mibeko.mibeko.ui.library
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,10 +23,8 @@ import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.data.preferences.RecentlyViewedItem
 import com.mibeko.mibeko.ui.components.HighlightedText
-import com.mibeko.mibeko.ui.components.SearchResultsShimmer
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
-import com.mibeko.mibeko.ui.search.SearchViewModel
 import com.mibeko.mibeko.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -36,21 +33,11 @@ import org.koin.compose.viewmodel.koinViewModel
 fun LibraryScreen() {
     val navController = LocalNavController.current
     val libraryViewModel = koinViewModel<LibraryViewModel>()
-    val searchViewModel = koinViewModel<SearchViewModel>()
     
     val libraryState by libraryViewModel.uiState.collectAsState()
-    val searchState by searchViewModel.uiState.collectAsState()
     val recentItems by libraryViewModel.recentItems.collectAsState()
     
     val snackbarHostState = remember { SnackbarHostState() }
-    
-    var searchQuery by remember { mutableStateOf("") }
-    
-    LaunchedEffect(searchQuery) {
-        if (searchQuery.isNotEmpty()) {
-            searchViewModel.updateQuery(searchQuery)
-        }
-    }
 
     var activeFilterSheet by remember { mutableStateOf<String?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -66,8 +53,8 @@ fun LibraryScreen() {
         ) {
             // Header with Search and Filters
             LibraryHeader(
-                searchQuery = searchQuery,
-                onSearchChange = { searchQuery = it },
+                searchQuery = libraryState.searchQuery,
+                onSearchChange = { libraryViewModel.updateSearchQuery(it) },
                 currentType = libraryState.selectedType,
                 currentInstitution = libraryState.selectedInstitution,
                 currentYear = libraryState.selectedYear,
@@ -81,120 +68,89 @@ fun LibraryScreen() {
             )
             
             // Body Content
-            if (searchQuery.isNotEmpty()) {
-                // Search Results
-                AnimatedVisibility(visible = searchState.isLoading) {
-                    Column(modifier = Modifier.padding(top = 16.dp)) {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        SearchResultsShimmer(itemCount = 4, modifier = Modifier.padding(horizontal = 16.dp))
-                    }
-                }
-                
-                if (!searchState.isLoading) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(searchState.results) { article ->
-                            LibrarySearchResultCard(
-                                articleNumber = article.number,
-                                source = article.breadcrumb,
-                                snippet = article.content ?: "",
-                                query = searchQuery,
-                                typeCode = article.typeCode,
-                                isDownloaded = article.isDownloaded,
-                                onClick = { navController.navigate(Screen.Reader(article.id)) }
-                            )
-                        }
-                        if (searchState.results.isEmpty()) {
-                            item {
-                                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                    Text("Aucun résultat trouvé", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Default Content (Filtered vertical list + Top recent)
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    // Only show "Nouveautés" and "Récents" if NO filters are active
-                    if (libraryState.selectedType == null && libraryState.selectedInstitution == null && libraryState.selectedYear == null) {
-                        item {
-                            if (libraryState.latestDocuments.isNotEmpty()) {
-                                SectionTitle(
-                                    title = "NOUVEAUTÉS LÉGISLATIVES",
-                                    badgeText = "NOUVELLES ALERTES",
-                                    showDot = true
-                                )
-                                
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    items(libraryState.latestDocuments) { doc ->
-                                        NouveauteCard(
-                                            title = doc.title,
-                                            subtitle = "Mise à jour récente des textes applicables.",
-                                            tag = doc.type,
-                                            onClick = { navController.navigate(Screen.DocumentDetail(doc.id)) },
-                                            onAiSummary = { navController.navigate(Screen.Chat(initialPrompt = "Fais-moi un résumé de: ${doc.title}")) }
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
-                        }
-                        
-                        item {
-                            if (recentItems.isNotEmpty()) {
-                                SectionTitle(
-                                    title = "RÉCEMMENT CONSULTÉS",
-                                    actionText = "VOIR TOUT",
-                                    onActionClick = { navController.navigate(Screen.ConversationHistory) } 
-                                )
-                                
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    items(recentItems) { item ->
-                                        RecentCard(
-                                            item = item,
-                                            onClick = { navController.navigate(Screen.Reader(item.id)) } 
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
-                        }
-                    }
-
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                // Only show "Nouveautés" and "Récents" if NO filters are active
+                if (libraryState.selectedType == null && libraryState.selectedInstitution == null && libraryState.selectedYear == null && libraryState.searchQuery.isEmpty()) {
                     item {
-                        SectionTitle(
-                            title = if (libraryState.selectedType != null || libraryState.selectedInstitution != null || libraryState.selectedYear != null) "RÉSULTATS FILTRÉS" else "TOUS LES DOCUMENTS"
+                        if (libraryState.latestDocuments.isNotEmpty()) {
+                            SectionTitle(
+                                title = "NOUVEAUTÉS LÉGISLATIVES",
+                                badgeText = "NOUVELLES ALERTES",
+                                showDot = true
+                            )
+                            
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(libraryState.latestDocuments) { doc ->
+                                    NouveauteCard(
+                                        title = doc.title,
+                                        subtitle = "Mise à jour récente des textes applicables.",
+                                        tag = doc.type,
+                                        onClick = { navController.navigate(Screen.DocumentDetail(doc.id)) },
+                                        onAiSummary = { navController.navigate(Screen.Chat(initialPrompt = "Fais-moi un résumé de: ${doc.title}")) }
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                    
+                    item {
+                        if (recentItems.isNotEmpty()) {
+                            SectionTitle(
+                                title = "RÉCEMMENT CONSULTÉS",
+                                actionText = "VOIR TOUT",
+                                onActionClick = { navController.navigate(Screen.ConversationHistory) } 
+                            )
+                            
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(recentItems) { item ->
+                                    RecentCard(
+                                        item = item,
+                                        onClick = { navController.navigate(Screen.Reader(item.id)) } 
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                }
+
+                item {
+                    val titleText = if (libraryState.searchQuery.isNotEmpty()) {
+                        "RÉSULTATS DE LA RECHERCHE"
+                    } else if (libraryState.selectedType != null || libraryState.selectedInstitution != null || libraryState.selectedYear != null) {
+                        "RÉSULTATS FILTRÉS"
+                    } else {
+                        "TOUS LES DOCUMENTS"
+                    }
+                    SectionTitle(title = titleText)
+                }
+
+                items(libraryState.filteredDocuments) { doc ->
+                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                        DocumentVerticalCard(
+                            document = doc,
+                            onClick = { navController.navigate(Screen.DocumentDetail(doc.id)) }
                         )
                     }
+                }
 
-                    items(libraryState.filteredDocuments) { doc ->
-                        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                            DocumentVerticalCard(
-                                document = doc,
-                                onClick = { navController.navigate(Screen.DocumentDetail(doc.id)) }
+                if (libraryState.filteredDocuments.isEmpty() && !libraryState.isLoading) {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = if (libraryState.searchQuery.isNotEmpty()) "Aucun document ne correspond à votre recherche" else "Aucun document ne correspond à vos critères", 
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        }
-                    }
-
-                    if (libraryState.filteredDocuments.isEmpty() && !libraryState.isLoading) {
-                        item {
-                            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text("Aucun document ne correspond à vos critères", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
                         }
                     }
                 }
@@ -753,79 +709,6 @@ private fun RecentCard(item: RecentlyViewedItem, onClick: () -> Unit) {
                 text = "Consulté récemment",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun LibrarySearchResultCard(
-    articleNumber: String,
-    source: String,
-    snippet: String,
-    query: String,
-    typeCode: String,
-    isDownloaded: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Surface(
-                        color = MibekoBluePrimary.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        Text(
-                            text = typeCode,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MibekoBluePrimary,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = source.split(">").last().trim(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                if (isDownloaded) {
-                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = LegalValid, modifier = Modifier.size(16.dp))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = "Article $articleNumber",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = MibekoBluePrimary
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            HighlightedText(
-                text = snippet.trim().take(180) + if (snippet.length > 180) "..." else "",
-                query = query,
-                maxLines = 3,
-                fontSize = 14.sp,
-                lineHeight = 22.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
             )
         }
     }

@@ -56,16 +56,7 @@ class LegalApiService(
      * Fetch the structure tree for a document with articles.
      */
     suspend fun fetchDocumentTree(documentId: String): List<RemoteNode> {
-        return client.get("$baseUrl/v1/legal-documents/$documentId/tree").body<RemoteTreeResponse>().data
-    }
-
-    /**
-     * Fetch articles updated since a given timestamp.
-     */
-    suspend fun fetchUpdates(since: String): RemoteSyncResponse {
-        return client.get("$baseUrl/v1/sync/updates") {
-            parameter("since", since)
-        }.body()
+        return client.get("$baseUrl/v1/legal-documents/$documentId/tree").body<ApiResponse<List<RemoteNode>>>().data ?: emptyList()
     }
 
     /**

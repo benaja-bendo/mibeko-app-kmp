@@ -59,6 +59,12 @@ interface MibekoDao {
     @Query("DELETE FROM articles WHERE node_id IN (SELECT id FROM nodes WHERE document_id = :documentId) AND is_favorite = 0 AND is_offline = 0")
     suspend fun deleteNonFavoriteArticlesFromDocument(documentId: String)
 
+    @Query("SELECT id FROM articles WHERE is_favorite = 1")
+    suspend fun getFavoriteArticleIds(): List<String>
+
+    @Query("SELECT id FROM articles WHERE is_offline = 1")
+    suspend fun getOfflineArticleIds(): List<String>
+
     @Transaction
     @Query("""
         SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code

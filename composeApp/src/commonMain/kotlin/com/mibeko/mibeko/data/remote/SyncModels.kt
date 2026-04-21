@@ -151,6 +151,7 @@ data class RemoteDocumentRelation(
 @Serializable
 data class RemoteNode(
     val id: String,
+    val parent_id: String? = null,
     val type: String,
     val number: String? = null,
     val title: String? = null,
@@ -181,27 +182,6 @@ data class RemoteArticle(
     val content: String? = null,
     val tags: List<String> = emptyList(),
     val updated_at: String
-)
-
-// =============================================================================
-// Sync Models
-// =============================================================================
-
-@Serializable
-data class RemoteSyncResponse(
-    val data: RemoteSyncData,
-    val meta: RemoteMeta
-)
-
-@Serializable
-data class RemoteSyncData(
-    val updated: List<RemoteArticle>,
-    val deleted_ids: List<String>
-)
-
-@Serializable
-data class RemoteTreeResponse(
-    val data: List<RemoteNode>
 )
 
 // =============================================================================

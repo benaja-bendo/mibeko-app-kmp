@@ -41,28 +41,8 @@ class LocalLegalRepository(
 ) {
 
     suspend fun sync() {
-        val lastSync = userPreferencesRepository.getLastSyncTimestamp()
-        if (lastSync > 0) {
-            // Convert timestamp to ISO string for backend
-            val since = DateTimeInstant.fromEpochMilliseconds(lastSync).toString()
-            try {
-                val serverTime = syncUpdates(since)
-                if (serverTime != null) {
-                    val newTimestamp = parseIsoDate(serverTime)
-                    if (newTimestamp > 0) {
-                        userPreferencesRepository.setLastSyncTimestamp(newTimestamp)
-                    }
-                }
-                return
-            } catch (e: Exception) {
-                // If differential sync fails, fallback to full sync
-                e.printStackTrace()
-            }
-        }
-
         var currentPage = 1
         var totalPages = 1
-        var finalServerTime: String? = null
 
         while (currentPage <= totalPages) {
             val response = apiService.fetchDocuments(currentPage)
@@ -108,57 +88,6 @@ class LocalLegalRepository(
         userPreferencesRepository.setLastSyncTimestamp(getCurrentTimeMillis())
     }
 
-    suspend fun syncUpdates(since: String): String? {
-        val response = apiService.fetchUpdates(since)
-        
-        val updatedArticles = mutableListOf<ArticleEntity>()
-        val updatedTags = mutableListOf<TagEntity>()
-        val updatedArticleTags = mutableListOf<ArticleTagEntity>()
-
-        // Get favorite and offline IDs to preserve them
-        val favoriteIds = mibekoDao.getFavoriteArticles().first().map { it.article.id }.toSet()
-        val offlineIds = mibekoDao.getOfflineArticles().first().map { it.article.id }.toSet()
-
-        response.data.updated.forEach { remoteArticle ->
-            updatedArticles.add(ArticleEntity(
-                id = remoteArticle.id,
-                node_id = remoteArticle.parent_node_id ?: "",
-                number = remoteArticle.number,
-                content = remoteArticle.content ?: "",
-                is_favorite = favoriteIds.contains(remoteArticle.id),
-                is_offline = offlineIds.contains(remoteArticle.id)
-            ))
-
-            remoteArticle.tags.forEach { tagName ->
-                val tagId = tagName.hashCode().toString() 
-                val tagSlug = tagName.lowercase().replace(" ", "-")
-                
-                updatedTags.add(TagEntity(
-                    id = tagId,
-                    name = tagName,
-                    slug = tagSlug,
-                    type = "generated"
-                ))
-                
-                updatedArticleTags.add(ArticleTagEntity(
-                    article_id = remoteArticle.id,
-                    tag_id = tagId
-                ))
-            }
-        }
-
-        mibekoDao.syncAll(
-            documents = emptyList(),
-            nodes = emptyList(),
-            articles = updatedArticles,
-            tags = updatedTags,
-            articleTags = updatedArticleTags,
-            deletedArticleIds = response.data.deleted_ids
-        )
-        
-        return response.meta.server_time
-    }
-
     private fun flattenTree(
         documentId: String,
         nodes: List<RemoteNode>,
@@ -171,7 +100,7 @@ class LocalLegalRepository(
             outNodes.add(NodeEntity(
                 id = node.id,
                 document_id = documentId,
-                parent_id = null,
+                parent_id = node.parent_id,
                 title = node.title ?: "",
                 sort_order = node.order
             ))
@@ -198,66 +127,43 @@ class LocalLegalRepository(
         }
     }
 
+    /**
+     * Download a full document (structure + articles) for offline use.
+     * Crucially preserves the 'is_favorite' and 'is_offline' status of existing articles 
+     * by querying their current IDs before performing the bulk upsert.
+     */
     suspend fun downloadDocument(documentId: String) {
         val response = apiService.downloadDocument(documentId)
         val data = response.data
         
-        val nodes = mutableListOf<NodeEntity>()
-        val articles = mutableListOf<ArticleEntity>()
+        val favoriteIds = mibekoDao.getFavoriteArticleIds().toSet()
+        val offlineIds = mibekoDao.getOfflineArticleIds().toSet()
 
-        // Map Nodes
-        data.nodes.forEach { node ->
-            nodes.add(NodeEntity(
+        val nodes = data.nodes.map { node ->
+            NodeEntity(
                 id = node.id,
                 document_id = documentId,
-                parent_id = null, // Backend should ideally provide parent info if hierarchical, or flat list needs checks
+                parent_id = node.parent_id,
                 title = node.title ?: "",
                 sort_order = node.order
-            ))
+            )
         }
 
-        // Map Articles
-        data.articles.forEach { article ->
-            articles.add(ArticleEntity(
+        val articles = data.articles.map { article ->
+            ArticleEntity(
                 id = article.id,
                 node_id = article.parent_node_id ?: "",
                 number = article.number,
                 content = article.content ?: "",
-                is_favorite = false // Will be ignored by Upsert if row exists? No, Upsert replaces.
-                // Critical: We might lose favorite status if we upsert blind.
-                // MibekoDao.upsertArticles uses REPLACE/UPSERT.
-                // SQLite Upsert preserves if logic added, but Room @Upsert usually replaces.
-                // We typically need to read favorite status or use partial update?
-                // For MVP, simplistic approach: Assume sync brings fresh data. 
-                // But Favorites MUST be preserved.
-                // 'is_favorite' is in ArticleEntity.
-                // We should probably NOT change is_favorite during download if it exists.
-                // But room @Upsert overrides.
-                // We need to implement careful Upsert in DAO or logic here.
-                // Logic: is_favorite = false.
-                // If it was true, it becomes false. BAD.
-            ))
-        }
-        
-        // FIXME: Handling Favorite preservation is tricky with full Upsert.
-        // Option: In DAO, use: INSERT INTO ... ON CONFLICT(id) DO UPDATE SET content=excluded.content ... (not changing is_favorite)
-        // For now, let's implement the basic flow and note the risk.
-        // Actually, we can fetch existing favorites IDs first.
-        
-        val favoriteIds = mibekoDao.getFavoriteArticles().first().map { it.article.id }.toSet()
-        val offlineIds = mibekoDao.getOfflineArticles().first().map { it.article.id }.toSet()
-        
-        val articlesWithStates = articles.map { 
-            it.copy(
-                is_favorite = favoriteIds.contains(it.id),
-                is_offline = offlineIds.contains(it.id)
+                is_favorite = favoriteIds.contains(article.id),
+                is_offline = offlineIds.contains(article.id)
             )
         }
 
         mibekoDao.syncAll(
-            documents = emptyList(), // Don't touch doc here or do we need to set is_downloaded?
+            documents = emptyList(),
             nodes = nodes,
-            articles = articlesWithStates
+            articles = articles
         )
         
         mibekoDao.updateDocumentDownloadStatus(documentId, true)
@@ -306,8 +212,8 @@ class LocalLegalRepository(
             val allArticles = mutableListOf<ArticleEntity>()
             
             // Get favorite and offline IDs to preserve them
-            val favoriteIds = mibekoDao.getFavoriteArticles().first().map { it.article.id }.toSet()
-            val offlineIds = mibekoDao.getOfflineArticles().first().map { it.article.id }.toSet()
+            val favoriteIds = mibekoDao.getFavoriteArticleIds().toSet()
+            val offlineIds = mibekoDao.getOfflineArticleIds().toSet()
             
             flattenTree(documentId, treeNodes, allNodes, allArticles, favoriteIds, offlineIds)
             

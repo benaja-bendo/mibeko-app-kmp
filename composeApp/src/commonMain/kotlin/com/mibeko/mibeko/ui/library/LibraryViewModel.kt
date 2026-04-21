@@ -32,6 +32,7 @@ data class LibraryUiState(
     val selectedType: String? = null,
     val selectedInstitution: String? = null,
     val selectedYear: String? = null,
+    val searchQuery: String = "",
     val error: String? = null
 )
 
@@ -76,6 +77,10 @@ class LibraryViewModel(
         val state = _uiState.value
         var filtered = state.documents
 
+        if (state.currentFilter == LibraryFilter.DOWNLOADED) {
+            filtered = filtered.filter { it.isDownloaded }
+        }
+
         if (state.selectedType != null) {
             filtered = filtered.filter { it.type == state.selectedType }
         }
@@ -84,6 +89,15 @@ class LibraryViewModel(
         }
         if (state.selectedYear != null) {
             filtered = filtered.filter { it.dateSignature?.take(4) == state.selectedYear }
+        }
+
+        if (state.searchQuery.isNotBlank()) {
+            val query = state.searchQuery.lowercase()
+            filtered = filtered.filter { 
+                it.title.lowercase().contains(query) || 
+                (it.institutionName?.lowercase()?.contains(query) == true) ||
+                it.type.lowercase().contains(query)
+            }
         }
         
         // Default sort for the vertical list (e.g., most recent first)
@@ -104,6 +118,11 @@ class LibraryViewModel(
 
     fun updateYearFilter(year: String?) {
         _uiState.value = _uiState.value.copy(selectedYear = year)
+        applyFilters()
+    }
+
+    fun updateSearchQuery(query: String) {
+        _uiState.value = _uiState.value.copy(searchQuery = query)
         applyFilters()
     }
 
@@ -131,6 +150,7 @@ class LibraryViewModel(
 
     fun updateFilter(filter: LibraryFilter) {
         _uiState.value = _uiState.value.copy(currentFilter = filter)
+        applyFilters()
     }
 
     /**
