@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.FontDownload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
+import com.mibeko.mibeko.ui.components.ReportErrorDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +56,9 @@ fun ReaderScreen(articleId: String) {
         var readerTheme by remember { mutableStateOf("paper") } // "white", "paper", "dark"
         var showSettings by remember { mutableStateOf(false) }
         var showShareSheet by remember { mutableStateOf(false) }
+        var showReportDialog by remember { mutableStateOf(false) }
+
+        val listState = rememberLazyListState()
 
         // Show snackbar when message changes
         LaunchedEffect(snackbarMessage) {
@@ -292,11 +298,41 @@ fun ReaderScreen(articleId: String) {
                             color = textColor
                         )
                     }
+                item {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 24.dp, horizontal = 48.dp),
+                            color = textColor.copy(alpha = 0.1f)
+                        )
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            OutlinedButton(
+                                onClick = { showReportDialog = true },
+                                border = BorderStroke(1.dp, textColor.copy(alpha = 0.2f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = textColor.copy(alpha = 0.7f))
+                            ) {
+                                Icon(Icons.Default.Flag, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Signaler une erreur")
+                            }
+                        }
+                    }
                 }
             }
+        }
 
-            if (showSettings) {
-                 ModalBottomSheet(
+        if (showReportDialog) {
+            ReportErrorDialog(
+                onDismiss = { showReportDialog = false },
+                onSubmit = { type, desc ->
+                    viewModel.reportError(type, desc)
+                }
+            )
+        }
+
+        if (showSettings) {
+             ModalBottomSheet(
                      onDismissRequest = { showSettings = false },
                      containerColor = MaterialTheme.colorScheme.surface
                  ) {

@@ -42,6 +42,26 @@ class ReaderViewModel(
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
 
+    /**
+     * Envoie un signalement d'erreur pour cet article
+     */
+    fun reportError(type: String, description: String) {
+        val article = _uiState.value.article ?: return
+        viewModelScope.launch {
+            try {
+                repository.reportError(
+                    documentId = null,
+                    articleId = article.id,
+                    type = type,
+                    description = description
+                )
+                _uiState.value = _uiState.value.copy(error = "Signalement envoyé avec succès. Merci !")
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Erreur lors de l'envoi du signalement : ${e.message}")
+            }
+        }
+    }
+
     fun clearSnackbar() {
         _snackbarMessage.value = null
     }

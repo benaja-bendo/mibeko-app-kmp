@@ -12,6 +12,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.ReportProblem
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
+import com.mibeko.mibeko.ui.components.ReportErrorDialog
 
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.reader.ReaderScreen
@@ -53,6 +56,7 @@ fun DocumentDetailScreen(documentId: String) {
         
         var isSearchActive by remember { mutableStateOf(false) }
         var showShareSheet by remember { mutableStateOf(false) }
+        var showReportDialog by remember { mutableStateOf(false) }
 
         LaunchedEffect(documentId) {
             viewModel.loadStructure(documentId)
@@ -345,9 +349,42 @@ fun DocumentDetailScreen(documentId: String) {
                                 }
                             }
                         }
+
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp, horizontal = 24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                TextButton(
+                                    onClick = { showReportDialog = true },
+                                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Icon(Icons.Default.ReportProblem, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Signaler une erreur dans ce document")
+                                }
+                                Text(
+                                    "Mibeko s'appuie sur la communauté pour garantir la qualité des textes.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        if (showReportDialog) {
+            ReportErrorDialog(
+                onDismiss = { showReportDialog = false },
+                onSubmit = { type, desc ->
+                    viewModel.reportError(type, desc)
+                }
+            )
         }
 
         if (showShareSheet) {

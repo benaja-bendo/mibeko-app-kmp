@@ -552,6 +552,18 @@ class LocalLegalRepository(
     }
 
     /**
+     * Envoie un signalement d'erreur pour un document ou un article.
+     */
+    suspend fun reportError(
+        documentId: String?,
+        articleId: String?,
+        type: String,
+        description: String
+    ) {
+        apiService.reportError(documentId, articleId, type, description)
+    }
+
+    /**
      * Clear all data from the local database.
      */
     suspend fun clearAllData() {

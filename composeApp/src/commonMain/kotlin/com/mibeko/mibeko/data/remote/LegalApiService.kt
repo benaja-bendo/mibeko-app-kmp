@@ -158,6 +158,26 @@ class LegalApiService(
     }
 
     /**
+     * Envoie un signalement d'erreur pour un document ou un article.
+     */
+    suspend fun reportError(
+        documentId: String?,
+        articleId: String?,
+        type: String,
+        description: String
+    ): ApiResponse<Unit> {
+        return client.post("$baseUrl/v1/reports") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf(
+                "document_id" to documentId,
+                "article_id" to articleId,
+                "type_probleme" to type,
+                "description" to description
+            ))
+        }.body()
+    }
+
+    /**
      * Download a file from a URL.
      */
     suspend fun downloadFile(url: String): ByteArray {
