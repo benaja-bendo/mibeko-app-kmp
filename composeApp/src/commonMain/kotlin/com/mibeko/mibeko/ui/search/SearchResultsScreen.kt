@@ -54,6 +54,7 @@ import kotlinx.coroutines.launch
 import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.components.HighlightedText
+import com.mibeko.mibeko.ui.components.DossierSelectionSheet
 import com.mibeko.mibeko.ui.components.SearchResultsShimmer
 import com.mibeko.mibeko.util.copyToClipboard
 
@@ -75,6 +76,7 @@ fun SearchResultsScreen(query: String? = null, tag: String? = null) {
         
         var searchText by remember { mutableStateOf(query ?: tag ?: "") }
         var isActive by remember { mutableStateOf(false) }
+        var selectedArticleForDossier by remember { mutableStateOf<String?>(null) }
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
 
@@ -326,13 +328,24 @@ fun SearchResultsScreen(query: String? = null, tag: String? = null) {
                                     typeCode = article.typeCode,
                                     isDownloaded = article.isDownloaded,
                                     isFavorite = article.isFavorite,
-                                    onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id)) }
+                                    onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id)) },
+                                    onFavoriteClick = { selectedArticleForDossier = article.id }
                                 )
                             }
                         }
                     }
                 }
             }
+        }
+        
+        selectedArticleForDossier?.let { articleId ->
+            DossierSelectionSheet(
+                articleId = articleId,
+                onDismiss = {
+                    selectedArticleForDossier = null
+                    viewModel.retrySearch() // Rafraîchir les résultats pour mettre à jour l'icône
+                }
+            )
         }
     }
 }
@@ -523,9 +536,9 @@ private fun SearchResultCard(
     typeCode: String,
     isDownloaded: Boolean,
     isFavorite: Boolean = false,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onFavoriteClick: () -> Unit
 ) {
-    val viewModel = koinViewModel<SearchViewModel>()
     Surface(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -581,7 +594,7 @@ private fun SearchResultCard(
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     IconButton(
-                        onClick = { viewModel.toggleFavorite(articleId) },
+                        onClick = onFavoriteClick,
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(

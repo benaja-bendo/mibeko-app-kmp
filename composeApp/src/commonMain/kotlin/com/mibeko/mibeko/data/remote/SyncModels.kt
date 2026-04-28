@@ -151,6 +151,7 @@ data class RemoteDocumentRelation(
 @Serializable
 data class RemoteNode(
     val id: String,
+    val parent_id: String? = null,
     val type: String,
     val number: String? = null,
     val title: String? = null,
@@ -181,27 +182,6 @@ data class RemoteArticle(
     val content: String? = null,
     val tags: List<String> = emptyList(),
     val updated_at: String
-)
-
-// =============================================================================
-// Sync Models
-// =============================================================================
-
-@Serializable
-data class RemoteSyncResponse(
-    val data: RemoteSyncData,
-    val meta: RemoteMeta
-)
-
-@Serializable
-data class RemoteSyncData(
-    val updated: List<RemoteArticle>,
-    val deleted_ids: List<String>
-)
-
-@Serializable
-data class RemoteTreeResponse(
-    val data: List<RemoteNode>
 )
 
 // =============================================================================
@@ -292,4 +272,39 @@ data class DossierExportItem(
     val type: String,
     val id: String,
     val note: String? = null
+)
+
+// =============================================================================
+// Official Journal Models
+// =============================================================================
+
+@Serializable
+data class RemoteOfficialJournalResponse(
+    val success: Boolean = true,
+    val message: String = "",
+    val data: List<RemoteOfficialJournal> = emptyList(),
+    val meta: RemoteMeta? = null,
+    val links: Map<String, String?> = emptyMap()
+)
+
+@Serializable
+data class RemoteOfficialJournalSingleResponse(
+    val success: Boolean = true,
+    val message: String = "",
+    val data: RemoteOfficialJournal? = null
+)
+
+@Serializable
+data class RemoteOfficialJournal(
+    val id: String,
+    val title: String,
+    val number: String? = null,
+    val publication_date: String,
+    val transcription_status: String,
+    val is_published: Boolean,
+    val pdf_url: String? = null,
+    val file_size_bytes: Long? = null,
+    val legal_documents: List<RemoteDocument> = emptyList(),
+    val created_at: String,
+    val updated_at: String
 )

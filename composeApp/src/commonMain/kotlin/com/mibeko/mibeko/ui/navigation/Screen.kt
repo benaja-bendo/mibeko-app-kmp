@@ -13,6 +13,9 @@ sealed class Screen {
     data object Login : Screen()
 
     @Serializable
+    data object Register : Screen()
+
+    @Serializable
     data object ProfileSetup : Screen()
 
     @Serializable
@@ -56,6 +59,18 @@ sealed class Screen {
     
     @Serializable
     data class DocumentList(val typeCode: String, val typeName: String) : Screen()
+    
+    @Serializable
+    data object OfficialJournalList : Screen()
+    
+    @Serializable
+    data class OfficialJournalDetail(val id: String) : Screen()
+    
+    @Serializable
+    data class Chat(val conversationId: String? = null, val initialPrompt: String? = null) : Screen()
+    
+    @Serializable
+    data object ConversationHistory : Screen()
 }
 
 val LocalNavController = staticCompositionLocalOf<NavController> {

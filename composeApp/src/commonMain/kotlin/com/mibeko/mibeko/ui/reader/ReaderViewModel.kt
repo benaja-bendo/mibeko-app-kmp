@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
+import com.mibeko.mibeko.data.preferences.RecentlyViewedManager
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.repository.DossierRepository
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,32 +22,45 @@ data class ReaderUiState(
     val error: String? = null
 )
 
-
 class ReaderViewModel(
     private val repository: LocalLegalRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val dossierRepository: DossierRepository,
-    private val contentSharer: com.mibeko.mibeko.util.ContentSharer
+    private val contentSharer: com.mibeko.mibeko.util.ContentSharer,
+    private val recentlyViewedManager: RecentlyViewedManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
-    // Keep for backward compatibility with ReaderScreen
-    private val _article = MutableStateFlow<ArticleSpec?>(null)
-    val article: StateFlow<ArticleSpec?> = _article
-
-    private val _textSize = MutableStateFlow(userPreferencesRepository.getTextSize())
-    val textSize: StateFlow<UserPreferencesRepository.TextSize> = _textSize.asStateFlow()
-
-    private val _isDyslexiaFontEnabled = MutableStateFlow(userPreferencesRepository.isDyslexiaFontEnabled())
-    val isDyslexiaFontEnabled: StateFlow<Boolean> = _isDyslexiaFontEnabled.asStateFlow()
+    val textSize: StateFlow<UserPreferencesRepository.TextSize> = userPreferencesRepository.textSizeFlow
+    val isDyslexiaFontEnabled: StateFlow<Boolean> = userPreferencesRepository.isDyslexiaFontEnabledFlow
 
     private val _isSharing = MutableStateFlow(false)
     val isSharing: StateFlow<Boolean> = _isSharing.asStateFlow()
 
     private val _snackbarMessage = MutableStateFlow<String?>(null)
     val snackbarMessage: StateFlow<String?> = _snackbarMessage.asStateFlow()
+
+    /**
+     * Envoie un signalement d'erreur pour cet article
+     */
+    fun reportError(type: String, description: String) {
+        val article = _uiState.value.article ?: return
+        viewModelScope.launch {
+            try {
+                repository.reportError(
+                    documentId = null,
+                    articleId = article.id,
+                    type = type,
+                    description = description
+                )
+                _uiState.value = _uiState.value.copy(error = "Signalement envoyé avec succès. Merci !")
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Erreur lors de l'envoi du signalement : ${e.message}")
+            }
+        }
+    }
 
     fun clearSnackbar() {
         _snackbarMessage.value = null
@@ -95,7 +109,6 @@ class ReaderViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val articleResult = repository.getArticleById(id).firstOrNull()
-                _article.value = articleResult
                 
                 if (articleResult != null) {
                     val docResult = repository.getLawCodeById(articleResult.codeId).firstOrNull()
@@ -105,6 +118,13 @@ class ReaderViewModel(
                         documentTitle = docResult?.title,
                         documentType = docResult?.type,
                         error = null
+                    )
+                    
+                    // Log to recently viewed
+                    recentlyViewedManager.addRecentlyViewed(
+                        id = articleResult.id,
+                        title = "Article ${articleResult.number}",
+                        typeCode = docResult?.type ?: "Inconnu"
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(
@@ -123,18 +143,15 @@ class ReaderViewModel(
     }
 
     fun refreshPreferences() {
-        _textSize.value = userPreferencesRepository.getTextSize()
-        _isDyslexiaFontEnabled.value = userPreferencesRepository.isDyslexiaFontEnabled()
+        // Obsolete now that we use reactive Flow
     }
 
     fun setTextSize(size: UserPreferencesRepository.TextSize) {
         userPreferencesRepository.setTextSize(size)
-        _textSize.value = size
     }
 
     fun setDyslexiaFontEnabled(enabled: Boolean) {
         userPreferencesRepository.setDyslexiaFontEnabled(enabled)
-        _isDyslexiaFontEnabled.value = enabled
     }
 
     fun exportPdf(): String {

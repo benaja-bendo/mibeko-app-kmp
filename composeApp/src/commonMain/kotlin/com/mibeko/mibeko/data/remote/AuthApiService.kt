@@ -2,6 +2,7 @@ package com.mibeko.mibeko.data.remote
 
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
@@ -13,9 +14,33 @@ data class FirebaseLoginRequest(
 )
 
 @Serializable
-data class AuthResponse(
+data class LoginRequest(
+    val email: String,
+    val password: String,
+    val device_name: String
+)
+
+@Serializable
+data class RegisterRequest(
+    val name: String,
+    val email: String,
+    val password: String,
+    val password_confirmation: String,
+    val device_name: String
+)
+
+@Serializable
+data class AuthResponseData(
     val token: String,
-    val user: RemoteUser
+    val user: RemoteUser? = null
+)
+
+@Serializable
+data class AuthResponse(
+    val success: Boolean = false,
+    val message: String? = null,
+    val data: AuthResponseData? = null,
+    val errors: Map<String, List<String>>? = null
 )
 
 @Serializable
@@ -40,14 +65,86 @@ data class RemoteMobileProfile(
     val company: String? = null
 )
 
+@Serializable
+data class ProfileUpdateRequest(
+    val name: String,
+    val phone: String,
+    val profession: String,
+    val company: String
+)
+
+@Serializable
+data class PasswordUpdateRequest(
+    val current_password: String,
+    val password: String,
+    val password_confirmation: String
+)
+
+@Serializable
+data class ProfileResponse(
+    val success: Boolean = false,
+    val message: String? = null,
+    val data: RemoteUser? = null,
+    val errors: Map<String, List<String>>? = null
+)
+
 class AuthApiService(
     private val client: HttpClient,
     private val baseUrl: String
 ) {
-    suspend fun loginWithFirebase(idToken: String, deviceName: String): AuthResponse {
-        return client.post("$baseUrl/v1/auth/firebase") {
+    private suspend inline fun <reified T> safeApiCall(apiCall: () -> io.ktor.client.statement.HttpResponse): T {
+        return try {
+            apiCall().body()
+        } catch (e: ClientRequestException) {
+            val status = e.response.status
+            if (status == HttpStatusCode.UnprocessableEntity || status == HttpStatusCode.Unauthorized) {
+                e.response.body()
+            } else {
+                throw e
+            }
+        }
+    }
+
+    suspend fun getProfile(): ProfileResponse = safeApiCall {
+        client.get("$baseUrl/v1/profile")
+    }
+
+    suspend fun updateProfile(request: ProfileUpdateRequest): ProfileResponse = safeApiCall {
+        client.put("$baseUrl/v1/profile") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+    }
+
+    suspend fun updatePassword(request: PasswordUpdateRequest): ProfileResponse = safeApiCall {
+        client.put("$baseUrl/v1/profile/password") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+    }
+
+    suspend fun logout(): AuthResponse = safeApiCall {
+        client.post("$baseUrl/v1/logout")
+    }
+
+    suspend fun loginWithFirebase(idToken: String, deviceName: String): AuthResponse = safeApiCall {
+        client.post("$baseUrl/v1/auth/firebase") {
             contentType(ContentType.Application.Json)
             setBody(FirebaseLoginRequest(idToken, deviceName))
-        }.body()
+        }
+    }
+
+    suspend fun loginWithEmail(request: LoginRequest): AuthResponse = safeApiCall {
+        client.post("$baseUrl/v1/login") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+    }
+
+    suspend fun register(request: RegisterRequest): AuthResponse = safeApiCall {
+        client.post("$baseUrl/v1/register") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
     }
 }

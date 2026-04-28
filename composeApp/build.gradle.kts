@@ -40,6 +40,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            freeCompilerArgs += "-Xbinary=bundleId=com.mibeko.mibeko"
         }
         // Force include KSP generated sources for iOS targets
         iosTarget.compilations.getByName("main").defaultSourceSet.kotlin.srcDir("build/generated/ksp/${iosTarget.name}/${iosTarget.name}Main/kotlin")
@@ -97,6 +98,9 @@ kotlin {
 
             // Firebase KMP
             implementation(libs.firebase.kmp.auth)
+            
+            // Markdown
+            implementation(libs.markdown.renderer.m3)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -204,8 +208,9 @@ buildConfig {
     val baseUrl = if (isRelease) {
         "https://app.mibeko.benaja-bendo.fr/api"
     } else {
-        "https://app.mibeko.benaja-bendo.fr/api"
-        // "http://192.168.0.78:8000/api"
+        //"https://app.mibeko.benaja-bendo.fr/api"
+        "http://192.168.0.78:8000/api"
+        //"http://10.60.104.35:8000/api"
     }
     
     buildConfigField("String", "BASE_URL", "\"$baseUrl\"")

@@ -233,6 +233,26 @@ class DocumentDetailViewModel(
     }
 
     /**
+     * Envoie un signalement d'erreur
+     */
+    fun reportError(type: String, description: String) {
+        val docId = _uiState.value.document?.id ?: return
+        viewModelScope.launch {
+            try {
+                repository.reportError(
+                    documentId = docId,
+                    articleId = null,
+                    type = type,
+                    description = description
+                )
+                _uiState.value = _uiState.value.copy(error = "Signalement envoyé avec succès. Merci pour votre contribution.")
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Erreur lors de l'envoi du signalement : ${e.message}")
+            }
+        }
+    }
+
+    /**
      * Efface l'erreur actuelle.
      */
     fun clearError() {

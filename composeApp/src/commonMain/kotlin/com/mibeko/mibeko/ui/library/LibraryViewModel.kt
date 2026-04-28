@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+import com.mibeko.mibeko.data.preferences.RecentlyViewedItem
+import com.mibeko.mibeko.data.preferences.RecentlyViewedManager
+
 enum class LibraryFilter {
     ALL, DOWNLOADED
 }
@@ -18,19 +21,30 @@ enum class LibraryFilter {
 data class LibraryUiState(
     val isLoading: Boolean = false,
     val documents: List<LawCodeSpec> = emptyList(),
+    val filteredDocuments: List<LawCodeSpec> = emptyList(),
+    val latestDocuments: List<LawCodeSpec> = emptyList(),
     val documentTypes: List<RemoteDocumentType> = emptyList(),
+    val institutions: List<String> = emptyList(),
+    val years: List<String> = emptyList(),
     val stats: List<DocumentStats> = emptyList(),
     val downloadingIds: Set<String> = emptySet(),
     val currentFilter: LibraryFilter = LibraryFilter.ALL,
+    val selectedType: String? = null,
+    val selectedInstitution: String? = null,
+    val selectedYear: String? = null,
+    val searchQuery: String = "",
     val error: String? = null
 )
 
 class LibraryViewModel(
-    private val repository: LocalLegalRepository
+    private val repository: LocalLegalRepository,
+    private val recentlyViewedManager: RecentlyViewedManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
+
+    val recentItems: StateFlow<List<RecentlyViewedItem>> = recentlyViewedManager.recentItems
 
     init {
         observeDocuments()
@@ -42,12 +56,74 @@ class LibraryViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             repository.getLawCodes().collect { codes ->
+                val sortedCodes = codes.sortedByDescending { it.lastUpdated }
+                
+                val institutions = codes.mapNotNull { it.institutionName }.distinct().sorted()
+                val years = codes.mapNotNull { it.dateSignature?.take(4) }.distinct().sortedDescending()
+                
                 _uiState.value = _uiState.value.copy(
                     documents = codes,
+                    institutions = institutions,
+                    years = years,
+                    latestDocuments = sortedCodes.take(5), // Take top 5 for Nouveautés
                     isLoading = false
                 )
+                applyFilters()
             }
         }
+    }
+
+    private fun applyFilters() {
+        val state = _uiState.value
+        var filtered = state.documents
+
+        if (state.currentFilter == LibraryFilter.DOWNLOADED) {
+            filtered = filtered.filter { it.isDownloaded }
+        }
+
+        if (state.selectedType != null) {
+            filtered = filtered.filter { it.type == state.selectedType }
+        }
+        if (state.selectedInstitution != null) {
+            filtered = filtered.filter { it.institutionName == state.selectedInstitution }
+        }
+        if (state.selectedYear != null) {
+            filtered = filtered.filter { it.dateSignature?.take(4) == state.selectedYear }
+        }
+
+        if (state.searchQuery.isNotBlank()) {
+            val query = state.searchQuery.lowercase()
+            filtered = filtered.filter { 
+                it.title.lowercase().contains(query) || 
+                (it.institutionName?.lowercase()?.contains(query) == true) ||
+                it.type.lowercase().contains(query)
+            }
+        }
+        
+        // Default sort for the vertical list (e.g., most recent first)
+        filtered = filtered.sortedByDescending { it.dateSignature ?: it.lastUpdated }
+
+        _uiState.value = state.copy(filteredDocuments = filtered)
+    }
+
+    fun updateTypeFilter(type: String?) {
+        _uiState.value = _uiState.value.copy(selectedType = type)
+        applyFilters()
+    }
+
+    fun updateInstitutionFilter(institution: String?) {
+        _uiState.value = _uiState.value.copy(selectedInstitution = institution)
+        applyFilters()
+    }
+
+    fun updateYearFilter(year: String?) {
+        _uiState.value = _uiState.value.copy(selectedYear = year)
+        applyFilters()
+    }
+
+    fun updateSearchQuery(query: String) {
+        _uiState.value = _uiState.value.copy(searchQuery = query)
+        applyFilters()
     }
 
     private fun loadDocumentTypes() {
@@ -74,6 +150,7 @@ class LibraryViewModel(
 
     fun updateFilter(filter: LibraryFilter) {
         _uiState.value = _uiState.value.copy(currentFilter = filter)
+        applyFilters()
     }
 
     /**

@@ -14,6 +14,15 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
     private val _theme = MutableStateFlow(getAppTheme())
     val theme: StateFlow<AppTheme> = _theme.asStateFlow()
 
+    private val _isLoggedIn = MutableStateFlow(isLoggedIn())
+    val isLoggedInFlow: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
+
+    private val _textSize = MutableStateFlow(getTextSize())
+    val textSizeFlow: StateFlow<TextSize> = _textSize.asStateFlow()
+
+    private val _isDyslexiaFontEnabled = MutableStateFlow(isDyslexiaFontEnabled())
+    val isDyslexiaFontEnabledFlow: StateFlow<Boolean> = _isDyslexiaFontEnabled.asStateFlow()
+
     companion object {
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
         private const val KEY_OFFLINE_MODE = "offline_mode_enabled"
@@ -82,6 +91,7 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
      */
     fun setTextSize(size: TextSize) {
         settings.putString(KEY_TEXT_SIZE, size.name)
+        _textSize.value = size
     }
 
     /**
@@ -96,6 +106,7 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
      */
     fun setDyslexiaFontEnabled(enabled: Boolean) {
         settings.putBoolean(KEY_DYSLEXIA_FONT, enabled)
+        _isDyslexiaFontEnabled.value = enabled
     }
 
     /**
@@ -221,8 +232,10 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
     fun setAuthToken(token: String?) {
         if (token == null) {
             settings.remove(KEY_AUTH_TOKEN)
+            _isLoggedIn.value = false
         } else {
             settings.putString(KEY_AUTH_TOKEN, token)
+            _isLoggedIn.value = true
         }
     }
 
@@ -262,6 +275,7 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
         settings.remove(KEY_AUTH_TOKEN)
         settings.remove(KEY_USER_NAME)
         settings.remove(KEY_USER_EMAIL)
+        _isLoggedIn.value = false
     }
 
     /**

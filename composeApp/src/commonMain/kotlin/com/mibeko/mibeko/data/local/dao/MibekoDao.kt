@@ -59,6 +59,12 @@ interface MibekoDao {
     @Query("DELETE FROM articles WHERE node_id IN (SELECT id FROM nodes WHERE document_id = :documentId) AND is_favorite = 0 AND is_offline = 0")
     suspend fun deleteNonFavoriteArticlesFromDocument(documentId: String)
 
+    @Query("SELECT id FROM articles WHERE is_favorite = 1")
+    suspend fun getFavoriteArticleIds(): List<String>
+
+    @Query("SELECT id FROM articles WHERE is_offline = 1")
+    suspend fun getOfflineArticleIds(): List<String>
+
     @Transaction
     @Query("""
         SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
@@ -199,6 +205,40 @@ interface MibekoDao {
 
     @Query("SELECT dossier_id FROM dossier_articles WHERE article_id = :articleId")
     fun getDossiersContainingArticle(articleId: String): Flow<List<String>>
+
+    // ========== CLEAR DATA ==========
+
+    @Query("DELETE FROM documents")
+    suspend fun clearDocuments()
+
+    @Query("DELETE FROM nodes")
+    suspend fun clearNodes()
+
+    @Query("DELETE FROM articles")
+    suspend fun clearArticles()
+
+    @Query("DELETE FROM tags")
+    suspend fun clearTags()
+
+    @Query("DELETE FROM article_tags")
+    suspend fun clearArticleTags()
+
+    @Query("DELETE FROM dossiers")
+    suspend fun clearDossiers()
+
+    @Query("DELETE FROM dossier_articles")
+    suspend fun clearDossierArticles()
+
+    @Transaction
+    suspend fun clearAllData() {
+        clearDocuments()
+        clearNodes()
+        clearArticles()
+        clearTags()
+        clearArticleTags()
+        clearDossiers()
+        clearDossierArticles()
+    }
 }
 
 data class ArticleSearchResult(

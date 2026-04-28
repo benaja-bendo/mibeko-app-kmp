@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+import com.mibeko.mibeko.data.remote.ProfileUpdateRequest
+
 sealed class ProfileSetupState {
     object Idle : ProfileSetupState()
     object Loading : ProfileSetupState()
@@ -27,15 +29,20 @@ class ProfileSetupViewModel(
         viewModelScope.launch {
             _setupState.value = ProfileSetupState.Loading
             try {
-                // In a real scenario, we'd have a specific endpoint to update the profile
-                // For now, I'll simulate a success response since the backend stores blank 
-                // profile upon create and it can be updated via generic user/profile update API later.
+                val request = ProfileUpdateRequest(
+                    name = "", // Nom déjà capturé ou optionnel
+                    phone = phone,
+                    profession = profession,
+                    company = company
+                )
+                val response = authApiService.updateProfile(request)
                 
-                // simulate API call
-                kotlinx.coroutines.delay(1000)
-                
-                userPreferences.setOnboardingCompleted()
-                _setupState.value = ProfileSetupState.Success
+                if (response.success) {
+                    userPreferences.setOnboardingCompleted()
+                    _setupState.value = ProfileSetupState.Success
+                } else {
+                    _setupState.value = ProfileSetupState.Error(response.message ?: "Une erreur est survenue.")
+                }
             } catch (e: Exception) {
                 _setupState.value = ProfileSetupState.Error(e.message ?: "Une erreur est survenue.")
             }

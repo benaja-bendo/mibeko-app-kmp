@@ -3,7 +3,12 @@ package com.mibeko.mibeko.data.remote
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonObject
 
 class LegalApiService(
     private val client: HttpClient,
@@ -51,16 +56,7 @@ class LegalApiService(
      * Fetch the structure tree for a document with articles.
      */
     suspend fun fetchDocumentTree(documentId: String): List<RemoteNode> {
-        return client.get("$baseUrl/v1/legal-documents/$documentId/tree").body<RemoteTreeResponse>().data
-    }
-
-    /**
-     * Fetch articles updated since a given timestamp.
-     */
-    suspend fun fetchUpdates(since: String): RemoteSyncResponse {
-        return client.get("$baseUrl/v1/sync/updates") {
-            parameter("since", since)
-        }.body()
+        return client.get("$baseUrl/v1/legal-documents/$documentId/tree").body<ApiResponse<List<RemoteNode>>>().data ?: emptyList()
     }
 
     /**
@@ -111,8 +107,44 @@ class LegalApiService(
         return "$baseUrl/v1/articles/$articleId/export"
     }
 
+    /**
+     * Get the PDF proxy URL for an official journal.
+     */
+    fun getOfficialJournalPdfUrl(id: String): String {
+        return "$baseUrl/v1/legal-documents/$id/pdf?type=journal"
+    }
+
     suspend fun fetchInstitutions(): ApiResponse<List<RemoteInstitution>> {
         return client.get("$baseUrl/v1/institutions").body()
+    }
+
+    /**
+     * Fetch paginated list of official journals.
+     */
+    suspend fun fetchOfficialJournals(page: Int = 1, number: String? = null, year: Int? = null): RemoteOfficialJournalResponse {
+        return client.get("$baseUrl/v1/official-journals") {
+            parameter("page", page)
+            if (number != null) parameter("filter[number]", number)
+            if (year != null) parameter("filter[year]", year)
+        }.body()
+    }
+
+    /**
+     * Fetch a specific official journal with its documents.
+     */
+    suspend fun fetchOfficialJournal(id: String): RemoteOfficialJournal {
+        val response = client.get("$baseUrl/v1/official-journals/$id")
+        val bodyAsText = response.bodyAsText()
+        
+        val jsonElement = Json { ignoreUnknownKeys = true }.parseToJsonElement(bodyAsText)
+        return if (jsonElement is JsonObject && jsonElement.containsKey("data")) {
+            // It's wrapped in a "data" field
+            Json { ignoreUnknownKeys = true }.decodeFromJsonElement<RemoteOfficialJournalSingleResponse>(jsonElement).data 
+                ?: throw Exception("Data object is null in response")
+        } else {
+            // It's the object directly
+            Json { ignoreUnknownKeys = true }.decodeFromJsonElement<RemoteOfficialJournal>(jsonElement)
+        }
     }
 
     /**
@@ -123,6 +155,26 @@ class LegalApiService(
             header(io.ktor.http.HttpHeaders.ContentType, io.ktor.http.ContentType.Application.Json)
             setBody(request)
         }.body<ByteArray>()
+    }
+
+    /**
+     * Envoie un signalement d'erreur pour un document ou un article.
+     */
+    suspend fun reportError(
+        documentId: String?,
+        articleId: String?,
+        type: String,
+        description: String
+    ): ApiResponse<Unit> {
+        return client.post("$baseUrl/v1/reports") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf(
+                "document_id" to documentId,
+                "article_id" to articleId,
+                "type_probleme" to type,
+                "description" to description
+            ))
+        }.body()
     }
 
     /**

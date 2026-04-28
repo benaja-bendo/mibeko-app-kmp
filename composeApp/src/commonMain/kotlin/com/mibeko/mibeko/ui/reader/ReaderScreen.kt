@@ -2,6 +2,7 @@ package com.mibeko.mibeko.ui.reader
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,10 +10,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.FontDownload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,10 +33,13 @@ import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import org.koin.compose.viewmodel.koinViewModel
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.graphics.Color
+import com.mibeko.mibeko.ui.components.DossierSelectionSheet
 import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
+import com.mibeko.mibeko.ui.components.ReportErrorDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +47,7 @@ fun ReaderScreen(articleId: String) {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<ReaderViewModel>()
         val uiState by viewModel.uiState.collectAsState()
-        val article by viewModel.article.collectAsState()
+        val article = uiState.article
         val textSize by viewModel.textSize.collectAsState()
         val isDyslexiaFontEnabled by viewModel.isDyslexiaFontEnabled.collectAsState()
         val isSharing by viewModel.isSharing.collectAsState()
@@ -52,6 +59,10 @@ fun ReaderScreen(articleId: String) {
         var readerTheme by remember { mutableStateOf("paper") } // "white", "paper", "dark"
         var showSettings by remember { mutableStateOf(false) }
         var showShareSheet by remember { mutableStateOf(false) }
+        var showReportDialog by remember { mutableStateOf(false) }
+        var showDossierSelection by remember { mutableStateOf(false) }
+
+        val listState = rememberLazyListState()
 
         // Show snackbar when message changes
         LaunchedEffect(snackbarMessage) {
@@ -172,10 +183,10 @@ fun ReaderScreen(articleId: String) {
                                 )
                             }
                             // Favorite Toggle
-                            IconButton(onClick = { viewModel.toggleFavorite() }) {
+                            IconButton(onClick = { showDossierSelection = true }) {
                                 Icon(
                                     if (currentArticle.isFavorite) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                                    contentDescription = "Favori",
+                                    contentDescription = "Ajouter à un dossier",
                                     tint = if (currentArticle.isFavorite) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.6f)
                                 )
                             }
@@ -246,57 +257,97 @@ fun ReaderScreen(articleId: String) {
                 }
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            floatingActionButton = {
-                 // Removed FAB if all actions are in top bar
-            },
             containerColor = backgroundColor
         ) { padding ->
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
+                    .padding(padding),
+                contentPadding = PaddingValues(bottom = 100.dp)
             ) {
                 // Article title in caps
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = currentArticle.breadcrumb.split(">").last().uppercase(),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = textColor,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 28.sp
-                    )
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = currentArticle.breadcrumb.split(">").last().uppercase(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = textColor,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 28.sp
+                        )
+                    }
                 }
                 
                 // Article content with optimized typography
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = currentArticle.content ?: "",
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = fontSizeValue,
-                            lineHeight = lineSpacingValue,
-                            letterSpacing = if (isDyslexiaFontEnabled) 0.8.sp else 0.3.sp,
-                            fontWeight = if (isDyslexiaFontEnabled) FontWeight.Medium else FontWeight.Normal
-                        ),
-                        color = textColor
-                    )
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = currentArticle.content ?: "",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = fontSizeValue,
+                                lineHeight = lineSpacingValue,
+                                letterSpacing = if (isDyslexiaFontEnabled) 0.8.sp else 0.3.sp,
+                                fontWeight = if (isDyslexiaFontEnabled) FontWeight.Medium else FontWeight.Normal
+                            ),
+                            color = textColor
+                        )
+                    }
                 }
-                
-                Spacer(modifier = Modifier.height(100.dp))
+
+                item {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 24.dp, horizontal = 48.dp),
+                            color = textColor.copy(alpha = 0.1f)
+                        )
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            OutlinedButton(
+                                onClick = { showReportDialog = true },
+                                border = BorderStroke(1.dp, textColor.copy(alpha = 0.2f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = textColor.copy(alpha = 0.7f))
+                            ) {
+                                Icon(Icons.Default.Flag, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Signaler une erreur")
+                            }
+                        }
+                    }
+                }
             }
 
-            if (showSettings) {
-                 ModalBottomSheet(
+        if (showReportDialog) {
+            ReportErrorDialog(
+                onDismiss = { showReportDialog = false },
+                onSubmit = { type, desc ->
+                    viewModel.reportError(type, desc)
+                }
+            )
+        }
+
+        if (showDossierSelection) {
+            DossierSelectionSheet(
+                articleId = currentArticle.id,
+                onDismiss = { 
+                    showDossierSelection = false
+                    viewModel.loadArticle(currentArticle.id) // Reload to get updated isFavorite status
+                }
+            )
+        }
+
+        if (showSettings) {
+             ModalBottomSheet(
                      onDismissRequest = { showSettings = false },
                      containerColor = MaterialTheme.colorScheme.surface
                  ) {
@@ -344,7 +395,6 @@ fun ReaderScreen(articleId: String) {
                 }
             }
         }
-    }
  
 
 @Composable

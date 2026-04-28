@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,8 +36,10 @@ import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.ui.components.NetworkStatusBanner
 import com.mibeko.mibeko.ui.theme.MibekoGold
+import com.mibeko.mibeko.ui.theme.MibekoGoldDark
 import com.mibeko.mibeko.ui.theme.MibekoBluePrimary
 import com.mibeko.mibeko.ui.theme.MibekoBlueDark
+import com.mibeko.mibeko.util.formatIsoDate
 
 @Composable
 fun HomeScreen() {
@@ -49,15 +53,13 @@ fun HomeScreen() {
         
         // Refresh data on resume
         LaunchedEffect(Unit) {
-            viewModel.refreshNetworkStatus()
-            delay(100)
+            // refreshNetworkStatus is handled internally or removed
             showContent = true
         }
 
-        LaunchedEffect(uiState.error) {
-            uiState.error?.let {
-                snackbarHostState.showSnackbar(it)
-                viewModel.clearError()
+        LaunchedEffect(viewModel.uiEvent) {
+            viewModel.uiEvent.collect { message ->
+                snackbarHostState.showSnackbar(message)
             }
         }
 
@@ -74,15 +76,28 @@ fun HomeScreen() {
                     HomeHeader(
                         onNotificationsClick = {
                             navController.navigate(Screen.Notifications)
+                        },
+                        onHistoryClick = {
+                            if (uiState.isLoggedIn) {
+                                navController.navigate(Screen.ConversationHistory)
+                            } else {
+                                navController.navigate(Screen.Login)
+                            }
                         }
                     )
                 }
                 
-                // Search Trigger Button (navigates to SearchResults)
+                // Search Trigger Button (navigates to Chat or Login)
                 item {
-                    SearchTriggerButton(
-                        onClick = { 
-                            navController.navigate(Screen.SearchResults())
+                    AiChatInputCard(
+                        onSend = { query ->
+                            if (query.isNotBlank()) {
+                                if (uiState.isLoggedIn) {
+                                    navController.navigate(Screen.Chat(initialPrompt = query))
+                                } else {
+                                    navController.navigate(Screen.Login)
+                                }
+                            }
                         }
                     )
                 }
@@ -95,71 +110,50 @@ fun HomeScreen() {
                     )
                 }
                 
-                // Zone 1: Popular Codes (Horizontal List)
+                // Zone 1: Journal Officiel (Horizontal List)
                 item {
                     AnimatedVisibility(
-                        visible = !uiState.isLoading && uiState.popularCodes.isNotEmpty(),
+                        visible = !uiState.isLoading && uiState.officialJournals.isNotEmpty(),
                         enter = fadeIn() + slideInVertically { 30 }
                     ) {
-                        Column(modifier = Modifier.padding(top = 24.dp)) {
-                            Text(
-                                text = "Codes Populaires",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
+                        Column(modifier = Modifier.padding(top = 16.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Journal Officiel",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                TextButton(onClick = { navController.navigate(Screen.OfficialJournalList) }) {
+                                    Text(
+                                        text = "Voir plus",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MibekoBluePrimary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
                             
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                items(uiState.popularCodes) { doc ->
-                                    PopularCodeCard(
-                                        title = doc.title,
-                                        onClick = { 
-                                            if (doc.id.isNotBlank()) {
-                                                navController.navigate(Screen.DocumentDetail(doc.id))
-                                            }
-                                        }
+                                items(uiState.officialJournals.take(5)) { journal ->
+                                    JournalOfficielCard(
+                                        title = journal.title,
+                                        date = "Publié le ${formatIsoDate(journal.publication_date)}",
+                                        excerpt = "Consulter le journal officiel et ses documents annexes...",
+                                        onClick = { navController.navigate(Screen.OfficialJournalDetail(journal.id)) }
                                     )
                                 }
                             }
                         }
-                    }
-                }
-                
-                // Zone 2: Recently Added (Vertical List)
-                item {
-                    AnimatedVisibility(
-                        visible = !uiState.isLoading && uiState.recentlyAdded.isNotEmpty(),
-                        enter = fadeIn() + slideInVertically { 40 }
-                    ) {
-                        Column(modifier = Modifier.padding(top = 24.dp)) {
-                            Text(
-                                text = "Documents",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-                        }
-                    }
-                }
-
-                if (!uiState.isLoading) {
-                    items(uiState.recentlyAdded) { doc ->
-                        RecentDocumentItem(
-                            title = doc.title,
-                            date = "Récemment", 
-                            onClick = {
-                                if (doc.id.isNotBlank()) {
-                                    navController.navigate(Screen.DocumentDetail(doc.id))
-                                } else {
-                                    viewModel.refreshNetworkStatus() // Just to trigger something or we could show a snackbar
-                                }
-                            }
-                        )
                     }
                 }
 
@@ -180,19 +174,43 @@ fun HomeScreen() {
  * En-tête avec dégradé bleu institutionnel, logo Mibeko et titre.
  */
 @Composable
-private fun HomeHeader(onNotificationsClick: () -> Unit = {}) {
+private fun HomeHeader(
+    onNotificationsClick: () -> Unit = {},
+    onHistoryClick: () -> Unit = {}
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
                     colors = listOf(MibekoBluePrimary, MibekoBlueDark)
-                )
+                ),
+                shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
             )
             .statusBarsPadding()
-            .padding(vertical = 32.dp),
+            .padding(top = 16.dp, bottom = 48.dp), // Extra padding at bottom for overlap
         contentAlignment = Alignment.Center
     ) {
+        // History Icon (Top Left)
+        IconButton(
+            onClick = onHistoryClick,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 16.dp, top = 0.dp)
+        ) {
+            Surface(
+                color = Color.White.copy(alpha = 0.1f),
+                shape = CircleShape
+            ) {
+                Icon(
+                    imageVector = Icons.Default.History,
+                    contentDescription = "Historique",
+                    tint = Color.White,
+                    modifier = Modifier.padding(8.dp).size(20.dp)
+                )
+            }
+        }
+
         // Notification Icon (Top Right)
         IconButton(
             onClick = onNotificationsClick,
@@ -200,207 +218,149 @@ private fun HomeHeader(onNotificationsClick: () -> Unit = {}) {
                 .align(Alignment.TopEnd)
                 .padding(end = 16.dp, top = 0.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = "Notifications",
-                tint = Color.White
-            )
+            Surface(
+                color = Color.White.copy(alpha = 0.1f),
+                shape = CircleShape
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = "Notifications",
+                    tint = Color.White,
+                    modifier = Modifier.padding(8.dp).size(20.dp)
+                )
+            }
         }
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo
-            Icon(
-                painter = painterResource(Res.drawable.logo),
-                contentDescription = "Mibeko Logo",
-                tint = Color.Unspecified,
-                modifier = Modifier.size(64.dp)
-            )
+            // Logo inside white rounded square
+            Surface(
+                color = Color.White,
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = 4.dp,
+                modifier = Modifier.size(72.dp)
+            ) {
+                androidx.compose.foundation.Image(
+                    painter = painterResource(Res.drawable.logo),
+                    contentDescription = "Mibeko Logo",
+                    modifier = Modifier.fillMaxSize().padding(12.dp)
+                )
+            }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
             // Title
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "Mibeko",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Text(
-                    text = "Mobile",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MibekoGold,
-                    fontWeight = FontWeight.SemiBold
-                )
+                text = "Mobile",
+                style = MaterialTheme.typography.labelSmall,
+                color = MibekoGoldDark,
+                fontWeight = FontWeight.Bold
+            )
             }
         }
     }
 }
 
 /**
- * Bouton déguisé en barre de recherche.
- * Naviguer vers SearchResultsScreen au clic.
+ * Carte de saisie pour discuter avec l'IA.
+ * Remplace l'ancien bouton de recherche.
  */
 @Composable
-private fun SearchTriggerButton(onClick: () -> Unit) {
+private fun AiChatInputCard(onSend: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+
     Surface(
-        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .offset(y = (-20).dp)
-            .padding(horizontal = 24.dp),
-        shape = RoundedCornerShape(16.dp),
+            .offset(y = (-30).dp)
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 8.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            Icon(
-                Icons.Default.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
-            )
-            
-            Spacer(modifier = Modifier.width(12.dp))
-            
-            Text(
-                text = "Rechercher un article, une loi...",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            Surface(
-                color = MibekoBluePrimary,
-                shape = RoundedCornerShape(20.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.AutoAwesome,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        "IA",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Carte pour afficher un code populaire.
- * Design Premium avec dégradé et icône institutionnelle.
- */
-@Composable
-private fun PopularCodeCard(title: String, onClick: () -> Unit) {
-    val cardColor = remember(title) {
-        when {
-            title.contains("Civil", ignoreCase = true) -> Color(0xFFC62828) // Deep Red
-            title.contains("Pénal", ignoreCase = true) -> Color(0xFF2E7D32) // Forest Green
-            title.contains("Famille", ignoreCase = true) -> Color(0xFFEF6C00) // Deep Orange
-            title.contains("Travail", ignoreCase = true) -> Color(0xFF4527A0) // Deep Purple
-            title.contains("Constitution", ignoreCase = true) -> Color(0xFF1565C0) // Deep Blue
-            else -> MibekoBluePrimary
-        }
-    }
-
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.size(width = 120.dp, height = 170.dp),
-        shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp, topStart = 4.dp, bottomStart = 4.dp), // Book shape
-        color = cardColor,
-        shadowElevation = 6.dp
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Book Spine Effect (Left Side)
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(12.dp)
-                    .align(Alignment.CenterStart)
-                    .background(Color.Black.copy(alpha = 0.2f))
-            )
-
-            // Texture/Pattern Overlay
-            Icon(
-                Icons.Default.AccountBalance,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.15f),
-                modifier = Modifier
-                    .size(100.dp)
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 30.dp, y = 30.dp)
-            )
-
-            Column(
-                modifier = Modifier
-                    .padding(start = 16.dp, top = 16.dp, end = 12.dp, bottom = 12.dp)
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Top Badge
-                Surface(
-                    color = Color.White.copy(alpha = 0.25f),
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier.align(Alignment.Start)
-                ) {
-                    Text(
-                        text = "OFFICIEL",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 8.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                    )
-                }
-
-                // Title
-                Text(
-                    text = title.replace("Code ", "").replace("de la", ""), // Shorten for cover
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold, // Extra bold for cover look
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 20.sp,
-                    letterSpacing = 0.5.sp
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = "IA",
+                    tint = MibekoBluePrimary,
+                    modifier = Modifier.padding(top = 8.dp).size(24.dp)
                 )
-
-                // Bottom Icon
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.align(Alignment.End)
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    placeholder = {
+                        Text(
+                            text = "Discutez avec l'IA juridique pour vos recherches...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    },
+                    modifier = Modifier.weight(1f).heightIn(min = 80.dp),
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent
+                    ),
+                    maxLines = 4
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { /* TODO: Attach file */ }) {
+                        Icon(
+                            imageVector = Icons.Default.AttachFile,
+                            contentDescription = "Joindre un fichier",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                    IconButton(onClick = { /* TODO: Voice input */ }) {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "Saisie vocale",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+                
+                IconButton(
+                    onClick = { onSend(text) },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(MibekoBlueDark, CircleShape)
                 ) {
-                     Text(
-                        text = "Voir",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontSize = 10.sp
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Envoyer",
                         tint = Color.White,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(20.dp).offset(x = 2.dp) // slight offset for send icon
                     )
                 }
             }
@@ -409,78 +369,95 @@ private fun PopularCodeCard(title: String, onClick: () -> Unit) {
 }
 
 /**
- * Élément de liste pour un document récent.
+ * Carte pour afficher un document du Journal Officiel.
+ * Design basé sur la maquette.
  */
 @Composable
-private fun RecentDocumentItem(title: String, date: String, onClick: () -> Unit) {
+private fun JournalOfficielCard(title: String, date: String, excerpt: String, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+        modifier = Modifier.width(280.dp),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
+        shadowElevation = 0.dp,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(16.dp)
         ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = MibekoBluePrimary.copy(alpha = 0.1f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Description,
-                        contentDescription = null,
-                        tint = MibekoBluePrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
+            Row(verticalAlignment = Alignment.Top) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.background(MibekoBluePrimary.copy(alpha = 0.05f))) {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = null,
+                            tint = MibekoBluePrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
-            }
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Schedule,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(12.dp)
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 20.sp
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = date,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                text = excerpt,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 20.sp
             )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "CONSULTER",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MibekoBluePrimary
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
     }
-
-
-/**
- * Blue gradient header with Mibeko logo and title
- */
 }

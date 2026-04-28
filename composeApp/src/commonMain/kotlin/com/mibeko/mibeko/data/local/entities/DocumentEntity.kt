@@ -9,5 +9,7 @@ data class DocumentEntity(
     val title: String,
     val type_code: String,
     val last_updated: Long,
-    val is_downloaded: Boolean = false
+    val is_downloaded: Boolean = false,
+    val institution_name: String? = null,
+    val date_signature: String? = null
 )
