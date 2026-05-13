@@ -27,7 +27,7 @@ jobs:
         GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
       run: |
         if [ -z "$GOOGLE_SERVICES_JSON" ]; then
-          echo '{"project_info":{"project_number":"123","project_id":"mock"},"client":[{"client_info":{"mobilesdk_app_id":"1:123:android:abc","android_client_info":{"package_name":"com.mibeko.mibeko"}},"api_key":[{"current_key":"mock"}]}],"configuration_version":"1"}' > composeApp/google-services.json
+          echo '{"project_info":{"project_number":"123","project_id":"mock"},"client":[{"client_info":{"mobilesdk_app_id":"1:123:android:abc","android_client_info":{"package_name":"cg.mibeko.app"}},"api_key":[{"current_key":"mock"}]}],"configuration_version":"1"}' > composeApp/google-services.json
         else
           echo "$GOOGLE_SERVICES_JSON" | base64 -di > composeApp/google-services.json
         fi
