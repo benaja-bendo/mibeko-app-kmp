@@ -2,7 +2,7 @@ package com.mibeko.mibeko.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.interop.UIKitView
+import androidx.compose.ui.viewinterop.UIKitView
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.CoreGraphics.CGRectMake
 import platform.Foundation.NSURL
@@ -25,9 +25,7 @@ actual fun PdfViewer(url: String, modifier: Modifier) {
         },
         update = { webView ->
             val nsUrl = NSURL(string = url)
-            if (nsUrl != null) {
-                webView.loadRequest(NSURLRequest(uRL = nsUrl))
-            }
+            webView.loadRequest(NSURLRequest(uRL = nsUrl))
         }
     )
 }

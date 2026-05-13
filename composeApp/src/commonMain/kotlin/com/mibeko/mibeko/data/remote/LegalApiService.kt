@@ -14,6 +14,7 @@ class LegalApiService(
     private val client: HttpClient,
     private val baseUrl: String
 ) {
+    private val json = Json { ignoreUnknownKeys = true }
     
     /**
      * Fetch the global catalog status.
@@ -136,14 +137,14 @@ class LegalApiService(
         val response = client.get("$baseUrl/v1/official-journals/$id")
         val bodyAsText = response.bodyAsText()
         
-        val jsonElement = Json { ignoreUnknownKeys = true }.parseToJsonElement(bodyAsText)
+        val jsonElement = json.parseToJsonElement(bodyAsText)
         return if (jsonElement is JsonObject && jsonElement.containsKey("data")) {
             // It's wrapped in a "data" field
-            Json { ignoreUnknownKeys = true }.decodeFromJsonElement<RemoteOfficialJournalSingleResponse>(jsonElement).data 
+            json.decodeFromJsonElement<RemoteOfficialJournalSingleResponse>(jsonElement).data 
                 ?: throw Exception("Data object is null in response")
         } else {
             // It's the object directly
-            Json { ignoreUnknownKeys = true }.decodeFromJsonElement<RemoteOfficialJournal>(jsonElement)
+            json.decodeFromJsonElement<RemoteOfficialJournal>(jsonElement)
         }
     }
 

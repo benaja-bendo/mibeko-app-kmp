@@ -35,12 +35,13 @@ kotlin {
     
     listOf(
         iosArm64(),
+        iosX64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
-            freeCompilerArgs += "-Xbinary=bundleId=com.mibeko.mibeko"
+            freeCompilerArgs += "-Xbinary=bundleId=cg.mibeko.app"
         }
         // Force include KSP generated sources for iOS targets
         iosTarget.compilations.getByName("main").defaultSourceSet.kotlin.srcDir("build/generated/ksp/${iosTarget.name}/${iosTarget.name}Main/kotlin")
@@ -109,16 +110,17 @@ kotlin {
         
         // Add KSP generated sources to the source set
         getByName("iosArm64Main").kotlin.srcDir("build/generated/ksp/iosArm64/iosArm64Main/kotlin")
+        getByName("iosX64Main").kotlin.srcDir("build/generated/ksp/iosX64/iosX64Main/kotlin")
         getByName("iosSimulatorArm64Main").kotlin.srcDir("build/generated/ksp/iosSimulatorArm64/iosSimulatorArm64Main/kotlin")
     }
 }
 
 android {
-    namespace = "com.mibeko.mibeko"
+    namespace = "cg.mibeko.app"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.mibeko.mibeko"
+        applicationId = "cg.mibeko.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
@@ -192,6 +194,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     add("kspAndroid", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
+    add("kspIosX64", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
 }
 
@@ -200,7 +203,7 @@ room {
 }
 
 buildConfig {
-    packageName("com.mibeko.mibeko.common")
+    packageName("cg.mibeko.app.common")
     
     val isRelease = project.gradle.startParameter.taskNames.any { 
         it.contains("Release", ignoreCase = true) 

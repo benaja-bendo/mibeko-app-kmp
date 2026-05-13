@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -682,7 +683,7 @@ private fun RecentCard(item: RecentlyViewedItem, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.MenuBook, contentDescription = null, tint = MibekoBluePrimary, modifier = Modifier.size(16.dp))
+                Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = MibekoBluePrimary, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = item.typeCode,

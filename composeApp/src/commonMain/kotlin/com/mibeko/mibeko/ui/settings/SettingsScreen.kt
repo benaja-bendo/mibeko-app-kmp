@@ -760,7 +760,7 @@ fun SettingsLinkItem(
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
         Icon(
-            Icons.Filled.OpenInNew,
+            Icons.AutoMirrored.Filled.OpenInNew,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(18.dp)

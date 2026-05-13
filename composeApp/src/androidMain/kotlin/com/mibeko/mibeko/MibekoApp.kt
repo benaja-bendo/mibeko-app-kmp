@@ -7,7 +7,7 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import com.mibeko.mibeko.di.commonModule
 
-import com.mibeko.mibeko.common.BuildConfig
+import cg.mibeko.app.common.BuildConfig
 
 class MibekoApp : Application() {
     companion object {

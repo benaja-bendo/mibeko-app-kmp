@@ -17,8 +17,8 @@ import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Instant as DateTimeInstant
 import com.mibeko.mibeko.getCurrentTimeMillis
+import kotlin.time.Instant as DateTimeInstant
 
 /**
  * Sealed class representing the result of a search operation.

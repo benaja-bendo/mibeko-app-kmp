@@ -50,7 +50,9 @@ fun ReportErrorDialog(
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                         },
                         colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                        modifier = Modifier
+                            .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
+                            .fillMaxWidth()
                     )
                     ExposedDropdownMenu(
                         expanded = expanded,

@@ -40,7 +40,7 @@ fun ProfileSetupScreen() {
             topBar = {
                 CenterAlignedTopAppBar(
                     title = { Text("Information additionnelle") },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background
                     )
                 )
@@ -128,4 +128,3 @@ fun ProfileSetupScreen() {
             }
         }
     }
-

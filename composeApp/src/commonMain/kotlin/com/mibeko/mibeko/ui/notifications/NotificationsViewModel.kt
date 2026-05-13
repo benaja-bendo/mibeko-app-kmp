@@ -4,9 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlinx.datetime.Instant as DateTimeInstant
+import kotlin.time.Instant as DateTimeInstant
 import com.mibeko.mibeko.data.repository.NotificationRepository
 import com.mibeko.mibeko.getCurrentTimeMillis
 

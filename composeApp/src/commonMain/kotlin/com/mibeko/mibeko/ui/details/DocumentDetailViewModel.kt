@@ -145,7 +145,7 @@ class DocumentDetailViewModel(
         val doc = _uiState.value.document ?: return
         val text = buildString {
             appendLine(doc.title)
-            appendLine(doc.type ?: "Document Juridique")
+            appendLine(doc.type)
             appendLine()
             appendLine("Retrouvez ce document complet sur Mibeko.")
             appendLine()
@@ -161,7 +161,7 @@ class DocumentDetailViewModel(
         
         val message = buildString {
             appendLine("📚 ${doc.title}")
-            appendLine(doc.type ?: "Document Juridique")
+            appendLine(doc.type)
             appendLine()
             appendLine("Consultez ce document sur Mibeko :")
             appendLine("https://mibeko.cg/document/${doc.id}")

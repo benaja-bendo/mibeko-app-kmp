@@ -9,8 +9,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -98,7 +98,7 @@ fun ChatScreen(
                 title = { Text("Mibeko IA") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
                 }
             )
@@ -169,7 +169,7 @@ fun ChatScreen(
                         .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50))
                 ) {
                     Icon(
-                        Icons.Default.Send,
+                        Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Envoyer",
                         tint = MaterialTheme.colorScheme.onPrimary
                     )

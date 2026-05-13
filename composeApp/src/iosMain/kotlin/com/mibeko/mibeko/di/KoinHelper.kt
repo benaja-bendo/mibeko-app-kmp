@@ -3,7 +3,7 @@ package com.mibeko.mibeko.di
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
 import org.koin.mp.KoinPlatform
-import com.mibeko.mibeko.common.BuildConfig
+import cg.mibeko.app.common.BuildConfig
 
 fun initKoin() {
     // Guard against double initialization

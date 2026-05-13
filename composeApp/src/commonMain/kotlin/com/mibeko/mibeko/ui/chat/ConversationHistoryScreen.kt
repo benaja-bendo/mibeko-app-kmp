@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -28,9 +28,9 @@ import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.util.formatIsoDate
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +54,7 @@ fun ConversationHistoryScreen() {
                     datePickerState.selectedDateMillis?.let { millis ->
                         val instant = Instant.fromEpochMilliseconds(millis)
                         val localDate = instant.toLocalDateTime(TimeZone.UTC).date
-                        val formattedDate = "${localDate.year}-${localDate.monthNumber.toString().padStart(2, '0')}-${localDate.dayOfMonth.toString().padStart(2, '0')}"
+                        val formattedDate = "${localDate.year}-${localDate.month.toString().padStart(2, '0')}-${localDate.day.toString().padStart(2, '0')}"
                         filterDate = formattedDate
                     }
                     showDatePicker = false
@@ -144,7 +144,7 @@ fun ConversationHistoryScreen() {
                 title = { Text("Historique des conversations") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
                 },
                 actions = {

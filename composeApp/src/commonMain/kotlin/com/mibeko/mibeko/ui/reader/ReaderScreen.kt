@@ -150,7 +150,7 @@ fun ReaderScreen(articleId: String) {
             return
         }
 
-        val currentArticle = article!!
+        val currentArticle = article
 
         Scaffold(
             topBar = {
