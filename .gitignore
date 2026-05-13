@@ -30,3 +30,4 @@ GoogleService-Info.plist
 ./composeApp/google-services.json
 
 .trae 
+AuthKey_*.p8
