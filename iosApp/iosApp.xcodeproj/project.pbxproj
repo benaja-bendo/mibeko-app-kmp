@@ -152,7 +152,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\n\n# Configure Java for Xcode Cloud\nif [ -d \"/Library/Java/JavaVirtualMachines/openjdk-17.jdk/Contents/Home\" ]; then\n  export JAVA_HOME=\"/Library/Java/JavaVirtualMachines/openjdk-17.jdk/Contents/Home\"\n  export PATH=\"$JAVA_HOME/bin:$PATH\"\nfi\n\ncd \"$SRCROOT/..\"\n./gradlew :composeApp:embedAndSignAppleFrameworkForXcode\n";
+			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\n\n# Configure Java for Xcode Cloud\n# Chercher Homebrew selon l'architecture (Apple Silicon ou Intel)\nif [ -d \"/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home\" ]; then\n  export JAVA_HOME=\"/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home\"\n  export PATH=\"$JAVA_HOME/bin:$PATH\"\nelif [ -d \"/usr/local/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home\" ]; then\n  export JAVA_HOME=\"/usr/local/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home\"\n  export PATH=\"$JAVA_HOME/bin:$PATH\"\nfi\n\ncd \"$SRCROOT/..\"\n./gradlew :composeApp:embedAndSignAppleFrameworkForXcode\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
