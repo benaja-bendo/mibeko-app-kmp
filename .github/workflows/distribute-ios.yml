@@ -52,32 +52,34 @@ jobs:
 
         # Appliquer le profil de provisionnement
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-        # On extrait l'UUID du profil pour le nommer correctement, ce que Xcode préfère
         UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i $PP_PATH))
         cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+        
+        # AJOUT : Sauvegarder l'UUID dans l'environnement pour l'utiliser dans xcodebuild
+        echo "PP_UUID=$UUID" >> $GITHUB_ENV
 
     - name: Build and Archive iOS App
       run: |
         cd iosApp
         
-        # NOTE : Si vous utilisez CocoaPods, décommentez "pod install" et remplacez "-project iosApp.xcodeproj" par "-workspace iosApp.xcworkspace"
-        # pod install
-        
-        # Archive l'application
+        # Archive l'application en utilisant l'UUID dynamique
         xcodebuild archive \
           -project iosApp.xcodeproj \
           -scheme iosApp \
           -configuration Release \
           -archivePath $RUNNER_TEMP/iosApp.xcarchive \
           CODE_SIGN_STYLE=Manual \
-          PROVISIONING_PROFILE_SPECIFIER="iOS Team Store Provisioning Profile: cg.mibeko.app" \
+          PROVISIONING_PROFILE_SPECIFIER="${{ env.PP_UUID }}" \
           CODE_SIGN_IDENTITY="Apple Distribution"
 
     - name: Export IPA
       run: |
         cd iosApp
+        
+        # Remplacer dynamiquement le nom du profil par l'UUID dans ExportOptions.plist
+        /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:cg.mibeko.app ${{ env.PP_UUID }}" ExportOptions.plist
+        
         # Exporte l'archive en fichier .ipa pour TestFlight
-        # Un fichier ExportOptions.plist doit être présent dans le dossier iosApp/
         xcodebuild -exportArchive \
           -archivePath $RUNNER_TEMP/iosApp.xcarchive \
           -exportOptionsPlist ExportOptions.plist \
