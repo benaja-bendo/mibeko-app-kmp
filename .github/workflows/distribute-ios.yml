@@ -46,9 +46,11 @@ jobs:
     - name: Set iOS Build Number
       run: |
         cd iosApp
-        # Utiliser le numéro de run GitHub Actions comme numéro de build
-        # On peut aussi utiliser PlistBuddy pour être plus direct
-        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" iosApp/Info.plist
+        # On ajoute 20 au numéro de run GitHub pour être sûr de dépasser les anciens builds
+        BUILD_NUM=$((${{ github.run_number }} + 20))
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" iosApp/Info.plist
+        # Optionnel: Mettre aussi à jour le fichier pbxproj si Xcode l'utilise pour la version
+        agvtool new-version -all $BUILD_NUM
 
     - name: Install Apple Certificate and Provisioning Profile
       env:
