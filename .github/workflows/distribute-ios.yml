@@ -52,7 +52,9 @@ jobs:
 
         # Appliquer le profil de provisionnement
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-        cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+        # On extrait l'UUID du profil pour le nommer correctement, ce que Xcode préfère
+        UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i $PP_PATH))
+        cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
 
     - name: Build and Archive iOS App
       run: |
@@ -68,7 +70,7 @@ jobs:
           -configuration Release \
           -archivePath $RUNNER_TEMP/iosApp.xcarchive \
           CODE_SIGN_STYLE=Manual \
-          PROVISIONING_PROFILE_SPECIFIER="Mibeko App Store Profile" \
+          PROVISIONING_PROFILE_SPECIFIER="iOS Team Store Provisioning Profile: cg.mibeko.app" \
           CODE_SIGN_IDENTITY="Apple Distribution"
 
     - name: Export IPA
