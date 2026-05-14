@@ -31,3 +31,5 @@ GoogleService-Info.plist
 
 .trae 
 AuthKey_*.p8
+*.p12
+*.mobileprovision
