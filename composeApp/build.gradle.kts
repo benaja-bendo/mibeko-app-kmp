@@ -207,7 +207,8 @@ buildConfig {
     
     val isRelease = project.gradle.startParameter.taskNames.any { 
         it.contains("Release", ignoreCase = true) 
-    }
+    } || System.getenv("CONFIGURATION")?.equals("Release", ignoreCase = true) == true
+    
     val baseUrl = if (isRelease) {
         "https://app.mibeko.benaja-bendo.fr/api"
     } else {
