@@ -122,6 +122,8 @@ jobs:
         echo "$APP_STORE_CONNECT_API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
         
         # Uploader l'application vers TestFlight
+        # On utilise set -e pour s'assurer que si altool échoue, l'étape GitHub Actions échouera aussi
+        set -e
         xcrun altool --upload-app -f $RUNNER_TEMP/export/mibeko.ipa -t ios \
           --apiKey "$APP_STORE_CONNECT_KEY_ID" \
           --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
