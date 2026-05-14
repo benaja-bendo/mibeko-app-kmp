@@ -44,13 +44,13 @@ jobs:
       run: chmod +x gradlew
 
     - name: Set iOS Build Number
+      id: build_number
       run: |
-        cd iosApp
-        # On ajoute 20 au numéro de run GitHub pour être sûr de dépasser les anciens builds
-        BUILD_NUM=$((${{ github.run_number }} + 20))
-        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" iosApp/Info.plist
-        # Optionnel: Mettre aussi à jour le fichier pbxproj si Xcode l'utilise pour la version
-        agvtool new-version -all $BUILD_NUM
+        # On calcule le numéro de build basé sur le run de GitHub + un décalage
+        # pour s'assurer d'être supérieur aux anciens builds manuels.
+        BUILD_NUM=$((${{ github.run_number }} + 25))
+        echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
+        echo "Build number set to: $BUILD_NUM"
 
     - name: Install Apple Certificate and Provisioning Profile
       env:
@@ -62,33 +62,26 @@ jobs:
         PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
         KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-        # Décoder le certificat et le profil de provisionnement depuis la Base64
         echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
         echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
-        # Créer un trousseau d'accès (keychain) temporaire
         security create-keychain -p "actions" $KEYCHAIN_PATH
         security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
         security unlock-keychain -p "actions" $KEYCHAIN_PATH
 
-        # Importer le certificat dans le trousseau
         security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "actions" $KEYCHAIN_PATH
         security list-keychain -d user -s $KEYCHAIN_PATH
 
-        # Appliquer le profil de provisionnement
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
         UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i $PP_PATH))
         cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
-        
-        # AJOUT : Sauvegarder l'UUID dans l'environnement pour l'utiliser dans xcodebuild
         echo "PP_UUID=$UUID" >> $GITHUB_ENV
 
     - name: Build and Archive iOS App
       run: |
         cd iosApp
-        
-        # Archive l'application en utilisant l'UUID dynamique
+        # On injecte CURRENT_PROJECT_VERSION ici pour forcer le numéro de build
         xcodebuild archive \
           -project iosApp.xcodeproj \
           -scheme iosApp \
@@ -96,16 +89,14 @@ jobs:
           -archivePath $RUNNER_TEMP/iosApp.xcarchive \
           CODE_SIGN_STYLE=Manual \
           PROVISIONING_PROFILE_SPECIFIER="${{ env.PP_UUID }}" \
-          CODE_SIGN_IDENTITY="Apple Distribution"
+          CODE_SIGN_IDENTITY="Apple Distribution" \
+          CURRENT_PROJECT_VERSION="${{ env.BUILD_NUM }}"
 
     - name: Export IPA
       run: |
         cd iosApp
-        
-        # Remplacer dynamiquement le nom du profil par l'UUID dans ExportOptions.plist
         /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:cg.mibeko.app ${{ env.PP_UUID }}" ExportOptions.plist
         
-        # Exporte l'archive en fichier .ipa pour TestFlight
         xcodebuild -exportArchive \
           -archivePath $RUNNER_TEMP/iosApp.xcarchive \
           -exportOptionsPlist ExportOptions.plist \
@@ -117,13 +108,13 @@ jobs:
         APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
       run: |
-        # Sauvegarder la clé API .p8 dans le dossier attendu par altool
         mkdir -p ~/.appstoreconnect/private_keys
         echo "$APP_STORE_CONNECT_API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
         
-        # Uploader l'application vers TestFlight
-        # On utilise set -e pour s'assurer que si altool échoue, l'étape GitHub Actions échouera aussi
         set -e
-        xcrun altool --upload-app -f $RUNNER_TEMP/export/mibeko.ipa -t ios \
+        # Utilisation de la syntaxe moderne recommandée pour l'upload
+        xcrun altool --upload-app \
+          -f $RUNNER_TEMP/export/mibeko.ipa \
+          -t ios \
           --apiKey "$APP_STORE_CONNECT_KEY_ID" \
           --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
