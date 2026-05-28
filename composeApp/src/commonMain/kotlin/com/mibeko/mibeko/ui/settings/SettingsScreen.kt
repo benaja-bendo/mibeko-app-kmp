@@ -550,7 +550,7 @@ fun SettingsScreen() {
                             Text("Se connecter", style = MaterialTheme.typography.labelLarge)
                         }
                         Button(
-                            onClick = { uriHandler.openUri("https://app.mibeko.benaja-bendo.fr/register") },
+                            onClick = { uriHandler.openUri("https://api.mibeko.fr/register") },
                             modifier = Modifier.weight(1f).height(48.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,

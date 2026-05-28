@@ -210,9 +210,9 @@ buildConfig {
     } || System.getenv("CONFIGURATION")?.equals("Release", ignoreCase = true) == true
     
     val baseUrl = if (isRelease) {
-        "https://app.mibeko.benaja-bendo.fr/api"
+        "https://api.mibeko.fr/api"
     } else {
-        //"https://app.mibeko.benaja-bendo.fr/api"
+        //"https://api.mibeko.fr/api"
         "http://192.168.0.78:8000/api"
         //"http://10.60.104.35:8000/api"
     }
