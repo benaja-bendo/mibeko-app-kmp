@@ -5,7 +5,7 @@ data class LawCodeSpec(
     val title: String,
     val type: String, // Added for filtering
     val icon: String, // Simple identifier for icon selection
-    val lastUpdated: String,
+    val lastUpdated: Long,
     val isDownloaded: Boolean = false,
     val institutionName: String? = null,
     val dateSignature: String? = null

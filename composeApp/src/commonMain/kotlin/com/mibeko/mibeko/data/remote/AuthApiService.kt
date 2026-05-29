@@ -67,7 +67,7 @@ data class RemoteMobileProfile(
 
 @Serializable
 data class ProfileUpdateRequest(
-    val name: String,
+    val name: String? = null,
     val phone: String,
     val profession: String,
     val company: String

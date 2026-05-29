@@ -30,7 +30,7 @@ class ProfileSetupViewModel(
             _setupState.value = ProfileSetupState.Loading
             try {
                 val request = ProfileUpdateRequest(
-                    name = "", // Nom déjà capturé ou optionnel
+                    name = null,
                     phone = phone,
                     profession = profession,
                     company = company
@@ -38,7 +38,7 @@ class ProfileSetupViewModel(
                 val response = authApiService.updateProfile(request)
                 
                 if (response.success) {
-                    userPreferences.setOnboardingCompleted()
+                    userPreferences.setProfileSetupCompleted(true)
                     _setupState.value = ProfileSetupState.Success
                 } else {
                     _setupState.value = ProfileSetupState.Error(response.message ?: "Une erreur est survenue.")

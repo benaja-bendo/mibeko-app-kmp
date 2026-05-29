@@ -9,7 +9,7 @@ fun DocumentEntity.toLawCodeSpec(): LawCodeSpec {
         title = title,
         type = type_code,
         icon = type_code, // Using type_code as icon identifier as per plan
-        lastUpdated = last_updated.toString(), // Simple conversion for now
+        lastUpdated = last_updated,
         isDownloaded = is_downloaded,
         institutionName = institution_name,
         dateSignature = date_signature

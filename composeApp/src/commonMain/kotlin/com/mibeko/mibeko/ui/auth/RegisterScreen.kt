@@ -40,8 +40,13 @@ fun RegisterScreen() {
 
     LaunchedEffect(registerState) {
         if (registerState is RegisterState.Success) {
-            navController.navigate(Screen.ProfileSetup) {
-                popUpTo(Screen.Login) { inclusive = true }
+            val destination = if ((registerState as RegisterState.Success).requiresProfileSetup) {
+                Screen.ProfileSetup
+            } else {
+                Screen.Home
+            }
+            navController.navigate(destination) {
+                popUpTo(Screen.Register) { inclusive = true }
             }
         }
     }

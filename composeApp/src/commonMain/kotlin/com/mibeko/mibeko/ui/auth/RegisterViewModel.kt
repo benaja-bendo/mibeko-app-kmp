@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 sealed class RegisterState {
     object Idle : RegisterState()
     object Loading : RegisterState()
-    object Success : RegisterState()
+    data class Success(val requiresProfileSetup: Boolean) : RegisterState()
     data class Error(val message: String) : RegisterState()
 }
 
@@ -96,12 +96,18 @@ class RegisterViewModel(
                 
                 if (response.success && response.data != null) {
                     userPreferences.setAuthToken(response.data.token)
+                    val profileComplete = response.data.user?.mobile_profile?.let { profile ->
+                        !profile.phone.isNullOrBlank() &&
+                            !profile.profession.isNullOrBlank() &&
+                            !profile.company.isNullOrBlank()
+                    } ?: false
+                    userPreferences.setProfileSetupCompleted(profileComplete)
                     if (response.data.user != null) {
                         userPreferences.setUserInfo(response.data.user.name, response.data.user.email)
                     } else {
                         userPreferences.setUserInfo(name, email) // Fallback
                     }
-                    _registerState.value = RegisterState.Success
+                    _registerState.value = RegisterState.Success(requiresProfileSetup = !profileComplete)
                 } else {
                     // Extract the first error message if available
                     val errorMessage = response.errors?.values?.firstOrNull()?.firstOrNull()

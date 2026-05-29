@@ -38,6 +38,7 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_NAME = "user_name"
+        private const val KEY_PROFILE_SETUP_COMPLETED = "profile_setup_completed"
     }
 
     /**
@@ -212,6 +213,14 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
         settings.putBoolean(KEY_ONBOARDING_COMPLETED, true)
     }
 
+    fun isProfileSetupCompleted(): Boolean {
+        return settings.getBoolean(KEY_PROFILE_SETUP_COMPLETED, false)
+    }
+
+    fun setProfileSetupCompleted(completed: Boolean) {
+        settings.putBoolean(KEY_PROFILE_SETUP_COMPLETED, completed)
+    }
+
     /**
      * Resets the onboarding state (useful for testing or settings reset).
      */
@@ -275,6 +284,7 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
         settings.remove(KEY_AUTH_TOKEN)
         settings.remove(KEY_USER_NAME)
         settings.remove(KEY_USER_EMAIL)
+        settings.remove(KEY_PROFILE_SETUP_COMPLETED)
         _isLoggedIn.value = false
     }
 

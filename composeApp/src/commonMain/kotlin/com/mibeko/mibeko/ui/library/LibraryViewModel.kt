@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.mibeko.mibeko.util.parseRemoteDateToEpochMillis
+import com.mibeko.mibeko.util.yearFromEpochMillis
+import com.mibeko.mibeko.util.yearFromRemoteDate
 
 import com.mibeko.mibeko.data.preferences.RecentlyViewedItem
 import com.mibeko.mibeko.data.preferences.RecentlyViewedManager
@@ -52,14 +55,24 @@ class LibraryViewModel(
         loadDocumentTypes()
     }
 
+    fun refresh() {
+        observeDocuments()
+        loadStats()
+        loadDocumentTypes()
+    }
+
     private fun observeDocuments() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             repository.getLawCodes().collect { codes ->
-                val sortedCodes = codes.sortedByDescending { it.lastUpdated }
+                val sortedCodes = codes.sortedByDescending {
+                    parseRemoteDateToEpochMillis(it.dateSignature) ?: it.lastUpdated
+                }
                 
                 val institutions = codes.mapNotNull { it.institutionName }.distinct().sorted()
-                val years = codes.mapNotNull { it.dateSignature?.take(4) }.distinct().sortedDescending()
+                val years = codes.mapNotNull {
+                    yearFromRemoteDate(it.dateSignature) ?: yearFromEpochMillis(it.lastUpdated)
+                }.distinct().sortedDescending()
                 
                 _uiState.value = _uiState.value.copy(
                     documents = codes,
@@ -88,7 +101,9 @@ class LibraryViewModel(
             filtered = filtered.filter { it.institutionName == state.selectedInstitution }
         }
         if (state.selectedYear != null) {
-            filtered = filtered.filter { it.dateSignature?.take(4) == state.selectedYear }
+            filtered = filtered.filter {
+                (yearFromRemoteDate(it.dateSignature) ?: yearFromEpochMillis(it.lastUpdated)) == state.selectedYear
+            }
         }
 
         if (state.searchQuery.isNotBlank()) {
@@ -101,7 +116,7 @@ class LibraryViewModel(
         }
         
         // Default sort for the vertical list (e.g., most recent first)
-        filtered = filtered.sortedByDescending { it.dateSignature ?: it.lastUpdated }
+        filtered = filtered.sortedByDescending { parseRemoteDateToEpochMillis(it.dateSignature) ?: it.lastUpdated }
 
         _uiState.value = state.copy(filteredDocuments = filtered)
     }

@@ -41,7 +41,12 @@ fun LoginScreen() {
 
     LaunchedEffect(loginState) {
         if (loginState is LoginState.Success) {
-            navController.navigate(Screen.ProfileSetup) {
+            val destination = if ((loginState as LoginState.Success).requiresProfileSetup) {
+                Screen.ProfileSetup
+            } else {
+                Screen.Home
+            }
+            navController.navigate(destination) {
                 popUpTo(Screen.Login) { inclusive = true }
             }
         }
@@ -209,4 +214,3 @@ fun LoginScreen() {
             }
         }
     }
-

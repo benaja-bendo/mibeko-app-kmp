@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 sealed class LoginState {
     object Idle : LoginState()
     object Loading : LoginState()
-    object Success : LoginState()
+    data class Success(val requiresProfileSetup: Boolean) : LoginState()
     data class Error(val message: String) : LoginState()
 }
 
@@ -60,12 +60,18 @@ class LoginViewModel(
                 
                 if (response.success && response.data != null) {
                     userPreferences.setAuthToken(response.data.token)
+                    val profileComplete = response.data.user?.mobile_profile?.let { profile ->
+                        !profile.phone.isNullOrBlank() &&
+                            !profile.profession.isNullOrBlank() &&
+                            !profile.company.isNullOrBlank()
+                    } ?: false
+                    userPreferences.setProfileSetupCompleted(profileComplete)
                     if (response.data.user != null) {
                         userPreferences.setUserInfo(response.data.user.name, response.data.user.email)
                     } else {
                         userPreferences.setUserInfo(email, email) // Fallback
                     }
-                    _loginState.value = LoginState.Success
+                    _loginState.value = LoginState.Success(requiresProfileSetup = !profileComplete)
                 } else {
                     // Extract the first error message if available
                     val errorMessage = response.errors?.values?.firstOrNull()?.firstOrNull()

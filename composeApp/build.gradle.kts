@@ -212,8 +212,8 @@ buildConfig {
     val baseUrl = if (isRelease) {
         "https://api.mibeko.fr/api"
     } else {
-        "https://api.mibeko.fr/api"
-        //"http://192.168.0.78:8000/api"
+        //"https://api.mibeko.fr/api"
+        "http://192.168.0.78:8000/api"
         //"http://10.60.104.35:8000/api"
     }
     

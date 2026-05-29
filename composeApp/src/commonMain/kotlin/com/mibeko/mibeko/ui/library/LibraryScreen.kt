@@ -10,9 +10,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +30,10 @@ import com.mibeko.mibeko.ui.components.HighlightedText
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.ui.theme.*
+import com.mibeko.mibeko.util.formatEpochMillisDate
+import com.mibeko.mibeko.util.formatRemoteDateForUi
+import com.mibeko.mibeko.util.yearFromEpochMillis
+import com.mibeko.mibeko.util.yearFromRemoteDate
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,89 +76,119 @@ fun LibraryScreen() {
             )
             
             // Body Content
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
+            val isRefreshing = libraryState.isLoading
+            val pullRefreshState = rememberPullToRefreshState()
+            
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { libraryViewModel.refresh() },
+                state = pullRefreshState,
+                modifier = Modifier.fillMaxSize()
             ) {
-                // Only show "Nouveautés" and "Récents" if NO filters are active
-                if (libraryState.selectedType == null && libraryState.selectedInstitution == null && libraryState.selectedYear == null && libraryState.searchQuery.isEmpty()) {
-                    item {
-                        if (libraryState.latestDocuments.isNotEmpty()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    val isFiltering = libraryState.selectedType != null || 
+                                      libraryState.selectedInstitution != null || 
+                                      libraryState.selectedYear != null || 
+                                      libraryState.searchQuery.isNotEmpty()
+
+                    if (!isFiltering) {
+                        // 1. NOS CODES
+                        item {
+                            val codes = libraryState.documents.filter { it.type.contains("Code", ignoreCase = true) }
+                            if (codes.isNotEmpty()) {
+                                SectionTitle(
+                                    title = "NOS CODES",
+                                    actionText = "Voir tout",
+                                    onActionClick = { libraryViewModel.updateTypeFilter("Code") }
+                                )
+                                
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(codes.take(10)) { code ->
+                                        CodeCard(
+                                            document = code,
+                                            onClick = { navController.navigate(Screen.DocumentDetail(code.id)) }
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                        }
+                        
+                        // 2. CONTINUER LA LECTURE
+                        item {
+                            if (recentItems.isNotEmpty()) {
+                                SectionTitle(
+                                    title = "CONTINUER LA LECTURE"
+                                )
+                                
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(recentItems) { item ->
+                                        RecentCard(
+                                            item = item,
+                                            onClick = { navController.navigate(Screen.Reader(item.id)) } 
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                        }
+
+                        // 3. NOUVEAUTÉS LÉGISLATIVES (Vertical list)
+                        item {
                             SectionTitle(
                                 title = "NOUVEAUTÉS LÉGISLATIVES",
-                                badgeText = "NOUVELLES ALERTES",
                                 showDot = true
                             )
-                            
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(libraryState.latestDocuments) { doc ->
-                                    NouveauteCard(
-                                        title = doc.title,
-                                        subtitle = "Mise à jour récente des textes applicables.",
-                                        tag = doc.type,
-                                        onClick = { navController.navigate(Screen.DocumentDetail(doc.id)) },
-                                        onAiSummary = { navController.navigate(Screen.Chat(initialPrompt = "Fais-moi un résumé de: ${doc.title}")) }
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
                         }
-                    }
-                    
-                    item {
-                        if (recentItems.isNotEmpty()) {
-                            SectionTitle(
-                                title = "RÉCEMMENT CONSULTÉS",
-                                actionText = "VOIR TOUT",
-                                onActionClick = { navController.navigate(Screen.ConversationHistory) } 
-                            )
-                            
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(recentItems) { item ->
-                                    RecentCard(
-                                        item = item,
-                                        onClick = { navController.navigate(Screen.Reader(item.id)) } 
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                    }
-                }
 
-                item {
-                    val titleText = if (libraryState.searchQuery.isNotEmpty()) {
-                        "RÉSULTATS DE LA RECHERCHE"
-                    } else if (libraryState.selectedType != null || libraryState.selectedInstitution != null || libraryState.selectedYear != null) {
-                        "RÉSULTATS FILTRÉS"
+                        val recentDocs = libraryState.latestDocuments
+                        items(recentDocs) { doc ->
+                            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                NouveauteVerticalCard(
+                                    document = doc,
+                                    onClick = { navController.navigate(Screen.DocumentDetail(doc.id)) },
+                                    onAiSummary = { navController.navigate(Screen.Chat(initialPrompt = "Fais-moi un résumé de: ${doc.title}")) }
+                                )
+                            }
+                        }
                     } else {
-                        "TOUS LES DOCUMENTS"
-                    }
-                    SectionTitle(title = titleText)
-                }
+                        // Filtering state
+                        item {
+                            val titleText = if (libraryState.searchQuery.isNotEmpty()) {
+                                "RÉSULTATS DE LA RECHERCHE"
+                            } else {
+                                "RÉSULTATS FILTRÉS"
+                            }
+                            SectionTitle(title = titleText)
+                        }
 
-                items(libraryState.filteredDocuments) { doc ->
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                        DocumentVerticalCard(
-                            document = doc,
-                            onClick = { navController.navigate(Screen.DocumentDetail(doc.id)) }
-                        )
-                    }
-                }
+                        items(libraryState.filteredDocuments) { doc ->
+                            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                DocumentVerticalCard(
+                                    document = doc,
+                                    onClick = { navController.navigate(Screen.DocumentDetail(doc.id)) }
+                                )
+                            }
+                        }
 
-                if (libraryState.filteredDocuments.isEmpty() && !libraryState.isLoading) {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text(
-                                text = if (libraryState.searchQuery.isNotEmpty()) "Aucun document ne correspond à votre recherche" else "Aucun document ne correspond à vos critères", 
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        if (libraryState.filteredDocuments.isEmpty() && !libraryState.isLoading) {
+                            item {
+                                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = if (libraryState.searchQuery.isNotEmpty()) "Aucun document ne correspond à votre recherche" else "Aucun document ne correspond à vos critères", 
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -321,6 +358,8 @@ fun DocumentVerticalCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val year = yearFromRemoteDate(document.dateSignature) ?: yearFromEpochMillis(document.lastUpdated)
+
                 if (!document.institutionName.isNullOrEmpty()) {
                     Icon(
                         Icons.Default.AccountBalance,
@@ -339,7 +378,7 @@ fun DocumentVerticalCard(
                     )
                 }
                 
-                if (!document.institutionName.isNullOrEmpty() && !document.dateSignature.isNullOrEmpty()) {
+                if (!document.institutionName.isNullOrEmpty()) {
                     Text(
                         text = " • ",
                         style = MaterialTheme.typography.labelSmall,
@@ -347,20 +386,18 @@ fun DocumentVerticalCard(
                     )
                 }
                 
-                if (!document.dateSignature.isNullOrEmpty()) {
-                    Icon(
-                        Icons.Default.CalendarToday,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = document.dateSignature.take(4), // Display year
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Icon(
+                    Icons.Default.CalendarToday,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = year,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -402,16 +439,21 @@ private fun LibraryHeader(
                     letterSpacing = 1.sp
                 )
                 
-                IconButton(onClick = onNotificationsClick) {
-                    BadgedBox(
-                        badge = {
-                            Badge(containerColor = LegalRepealed)
-                        }
+                // Country Selector (Congo)
+                Surface(
+                    color = Color.White.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.clickable { /* TODO: Change country */ }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications",
-                            tint = Color.White
+                        Text(
+                            text = "CG",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -579,23 +621,96 @@ private fun SectionTitle(title: String, badgeText: String? = null, showDot: Bool
 }
 
 @Composable
-private fun NouveauteCard(
-    title: String,
-    subtitle: String,
-    tag: String,
+private fun CodeCard(
+    document: LawCodeSpec,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.width(240.dp).clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 2.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = LegalRepealed.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = "CODE",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = LegalRepealed,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+                Icon(Icons.Default.BookmarkBorder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                text = document.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "Législation encadrant les règles relatives à...", // Or some generic text/description
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 16.sp
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                      text = "Mis à jour: ${formatEpochMillisDate(document.lastUpdated)}",
+                      style = MaterialTheme.typography.labelSmall,
+                      color = MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
+             }
+         }
+     }
+ }
+
+@Composable
+private fun NouveauteVerticalCard(
+    document: LawCodeSpec,
     onClick: () -> Unit,
     onAiSummary: () -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Surface(
-        modifier = Modifier.width(300.dp).clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-        shadowElevation = 2.dp
+        shadowElevation = 1.dp
     ) {
-        Column {
-            // Top Red Border Indicator
-            Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(LegalRepealed))
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            // Left vertical bar
+            Box(modifier = Modifier.fillMaxHeight().width(4.dp).background(MibekoBlueDark))
             
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -603,28 +718,64 @@ private fun NouveauteCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(
-                        color = LegalRepealed.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            color = MibekoBluePrimary.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = document.type.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MibekoBluePrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "RÉCENT • $tag",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = LegalRepealed,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
+                             text = "Publié le ${formatRemoteDateForUi(document.dateSignature) ?: formatEpochMillisDate(document.lastUpdated)}",
+                             style = MaterialTheme.typography.labelSmall,
+                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                         )
                     }
-                    Icon(Icons.Default.BookmarkBorder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Télécharger") },
+                                onClick = { showMenu = false },
+                                leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Ajouter au dossier") },
+                                onClick = { showMenu = false },
+                                leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Partager") },
+                                onClick = { showMenu = false },
+                                leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
+                            )
+                        }
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 Text(
-                    text = title,
+                    text = document.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MibekoBlueDark,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -632,39 +783,38 @@ private fun NouveauteCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = subtitle,
+                    text = "Ajustements et nouvelles dispositions applicables...", // Replace with actual description if available
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 18.sp
+                    overflow = TextOverflow.Ellipsis
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
-                        onClick = onAiSummary,
+                        onClick = onClick,
                         colors = ButtonDefaults.buttonColors(containerColor = MibekoBlueDark),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.weight(1f).height(40.dp),
                         contentPadding = PaddingValues(0.dp)
                     ) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("RÉSUMÉ IA", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text("Lire", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     }
                     
                     OutlinedButton(
-                        onClick = { /* Dismiss */ },
+                        onClick = onAiSummary,
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.weight(1f).height(40.dp),
                         contentPadding = PaddingValues(0.dp),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("IGNORER", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Résumé IA", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -675,41 +825,54 @@ private fun NouveauteCard(
 @Composable
 private fun RecentCard(item: RecentlyViewedItem, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.width(200.dp).clickable { onClick() },
+        modifier = Modifier.width(260.dp).clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-        shadowElevation = 1.dp
+        shadowElevation = 2.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = MibekoBluePrimary, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = item.typeCode,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold
-                )
+                Surface(
+                    color = MibekoBluePrimary.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = MibekoBluePrimary, modifier = Modifier.size(24.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.typeCode.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            Text(
-                text = "Consulté récemment",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            // Progress bar
+            LinearProgressIndicator(
+                progress = { 0.35f }, // Simulated progress to match design
+                modifier = Modifier.fillMaxWidth().height(4.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
             )
         }
     }
