@@ -276,6 +276,42 @@ private fun HomeHeader(
 @Composable
 private fun AiChatInputCard(onSend: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
+    var showPremiumDialog by remember { mutableStateOf(false) }
+    val maxLength = 1000
+
+    if (showPremiumDialog) {
+        AlertDialog(
+            onDismissRequest = { showPremiumDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = MibekoGold,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Fonctionnalité Pro",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            text = {
+                Text(
+                    text = "Cette fonctionnalité premium sera bientôt disponible pour nos abonnés professionnels. Préparez-vous à une nouvelle dimension dans votre pratique juridique !",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showPremiumDialog = false }) {
+                    Text("J'ai hâte !", color = MibekoBluePrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
 
     Surface(
         modifier = Modifier
@@ -299,14 +335,18 @@ private fun AiChatInputCard(onSend: (String) -> Unit) {
                     imageVector = Icons.Default.AutoAwesome,
                     contentDescription = "IA",
                     tint = MibekoBluePrimary,
-                    modifier = Modifier.padding(top = 8.dp).size(24.dp)
+                    modifier = Modifier.padding(top = 12.dp).size(24.dp)
                 )
                 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 
                 OutlinedTextField(
                     value = text,
-                    onValueChange = { text = it },
+                    onValueChange = { 
+                        if (it.length <= maxLength) {
+                            text = it
+                        }
+                    },
                     placeholder = {
                         Text(
                             text = "Discutez avec l'IA juridique pour vos recherches...",
@@ -314,34 +354,31 @@ private fun AiChatInputCard(onSend: (String) -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                     },
-                    modifier = Modifier.weight(1f).heightIn(min = 80.dp),
+                    modifier = Modifier.weight(1f).heightIn(min = 80.dp, max = 150.dp),
                     textStyle = MaterialTheme.typography.bodyMedium,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color.Transparent,
                         unfocusedBorderColor = Color.Transparent,
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent
-                    ),
-                    maxLines = 4
+                    )
                 )
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
-            
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { /* TODO: Attach file */ }) {
+                    IconButton(onClick = { showPremiumDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.AttachFile,
                             contentDescription = "Joindre un fichier",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                     }
-                    IconButton(onClick = { /* TODO: Voice input */ }) {
+                    IconButton(onClick = { showPremiumDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = "Saisie vocale",
@@ -350,18 +387,28 @@ private fun AiChatInputCard(onSend: (String) -> Unit) {
                     }
                 }
                 
-                IconButton(
-                    onClick = { onSend(text) },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(MibekoBlueDark, CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Envoyer",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp).offset(x = 2.dp) // slight offset for send icon
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${text.length}/$maxLength",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (text.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(end = 12.dp)
                     )
+                    
+                    IconButton(
+                        onClick = { onSend(text) },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(if (text.isNotBlank()) MibekoBlueDark else MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                        enabled = text.isNotBlank()
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Envoyer",
+                            tint = if (text.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp).offset(x = 2.dp)
+                        )
+                    }
                 }
             }
         }

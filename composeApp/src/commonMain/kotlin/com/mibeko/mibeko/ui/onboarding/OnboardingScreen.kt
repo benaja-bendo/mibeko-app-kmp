@@ -13,9 +13,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.FolderSpecial
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,19 +47,19 @@ data class OnboardingPage(
  */
 private val pages = listOf(
     OnboardingPage(
-        icon = Icons.Filled.CloudOff,
-        title = "Tout le droit congolais",
-        description = "Accessible hors-ligne, même sans connexion internet. Téléchargez une fois, consultez partout."
+        icon = Icons.Filled.AutoAwesome,
+        title = "Votre Assistant IA Juridique",
+        description = "Obtenez des réponses précises et sourcées. Notre IA analyse la législation pour vous accompagner dans vos démarches."
     ),
     OnboardingPage(
-        icon = Icons.Filled.Search,
-        title = "Recherche intelligente",
-        description = "Trouvez rapidement par numéro d'article ou par thématique. La loi n'a jamais été aussi accessible."
+        icon = Icons.AutoMirrored.Filled.MenuBook,
+        title = "Bibliothèque Hors-Ligne",
+        description = "Accédez aux codes, lois et journaux officiels où que vous soyez. Téléchargez les textes pour une consultation sans internet."
     ),
     OnboardingPage(
-        icon = Icons.Filled.Folder,
-        title = "Organisez vos dossiers",
-        description = "Sauvegardez vos articles favoris et organisez vos recherches juridiques efficacement."
+        icon = Icons.Filled.FolderSpecial,
+        title = "Espace de Travail Pro",
+        description = "Créez vos dossiers thématiques, sauvegardez vos textes favoris et organisez vos recherches en toute simplicité."
     )
 )
 
@@ -99,7 +99,8 @@ fun OnboardingScreen() {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .height(64.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     contentAlignment = Alignment.CenterEnd
                 ) {
                     androidx.compose.animation.AnimatedVisibility(
@@ -189,7 +190,7 @@ fun OnboardingScreen() {
             // Icon container
             Box(
                 modifier = Modifier
-                    .size(140.dp)
+                    .size(120.dp)
                     .background(
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
                         shape = CircleShape
@@ -198,7 +199,7 @@ fun OnboardingScreen() {
             ) {
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(80.dp)
                         .background(
                             color = MaterialTheme.colorScheme.primaryContainer,
                             shape = CircleShape
@@ -209,32 +210,34 @@ fun OnboardingScreen() {
                         imageVector = page.icon,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Title
             Text(
                 text = page.title,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Description
-            Text(
-                text = page.description,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                lineHeight = 24.sp
-            )
+            Box(modifier = Modifier.height(100.dp), contentAlignment = Alignment.TopCenter) {
+                Text(
+                    text = page.description,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+                    textAlign = TextAlign.Center,
+                    lineHeight = 26.sp
+                )
+            }
         }
     }
 

@@ -90,7 +90,7 @@ fun DisclaimerScreen() {
                             .verticalScroll(rememberScrollState())
                     ) {
                         Text(
-                            text = "Mibeko est un outil d'assistance et de consultation. Bien que nous nous efforcions de maintenir les textes à jour, cette application ne remplace en aucun cas le Journal Officiel de la République du Congo, qui demeure la seule source juridique faisant foi.",
+                            text = "Mibeko est un outil d'assistance et de consultation. Bien que nous nous efforcions de maintenir les textes à jour, cette application ne remplace en aucun cas les publications des journaux officiels nationaux, qui demeurent les seules sources juridiques faisant foi.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -105,7 +105,7 @@ fun DisclaimerScreen() {
                         Text(
                             text = "1. Les textes fournis le sont à titre informatif.\n\n" +
                                    "2. Les développeurs et éditeurs de Mibeko déclinent toute responsabilité en cas de préjudice direct ou indirect résultant d'une erreur, d'une omission ou d'un retard de mise à jour dans les textes.\n\n" +
-                                   "3. Pour toute procédure judiciaire ou acte officiel, il est impératif de se référer au document papier original du Journal Officiel.",
+                                   "3. Pour toute procédure judiciaire ou acte officiel, il est impératif de se référer au document papier original ou à la publication officielle de l'État concerné.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -132,7 +132,7 @@ fun DisclaimerScreen() {
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "J'ai lu et je reconnais la primauté juridique du Journal Officiel sur cette application.",
+                            text = "J'ai lu et je reconnais la primauté juridique des publications officielles sur cette application.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onBackground
                         )

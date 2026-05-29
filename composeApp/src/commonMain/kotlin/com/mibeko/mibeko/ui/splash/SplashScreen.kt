@@ -114,7 +114,7 @@ fun SplashScreen() {
 
                 // Baseline
                 Text(
-                    text = "Le droit congolais dans votre poche",
+                    text = "Votre plateforme LegalTech de référence",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,

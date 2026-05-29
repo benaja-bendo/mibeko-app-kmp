@@ -88,7 +88,7 @@ fun LoginScreen() {
                 )
 
                 Text(
-                    text = "Le droit congolais, accessible partout.",
+                    text = "L'intelligence juridique à votre portée.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
