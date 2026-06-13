@@ -23,17 +23,6 @@ data class ArticleSpec(
     val isDownloaded: Boolean = false
 )
 
-data class ExplorerNode(
-    val id: String,
-    val title: String,
-    val type: NodeType,
-    val children: List<ExplorerNode> = emptyList()
-)
-
-enum class NodeType {
-    CODE, BOOK, TITLE, CHAPTER, ARTICLE
-}
-
 @kotlinx.serialization.Serializable
 data class NotificationRemote(
     val id: String,

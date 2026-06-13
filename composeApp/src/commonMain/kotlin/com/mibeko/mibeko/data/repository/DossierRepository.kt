@@ -1,36 +1,68 @@
 package com.mibeko.mibeko.data.repository
 
 import com.mibeko.mibeko.data.local.dao.DossierArticleWithDetails
+import com.mibeko.mibeko.data.local.dao.DossierWithCount
 import com.mibeko.mibeko.data.local.dao.MibekoDao
 import com.mibeko.mibeko.data.local.entities.DossierArticleEntity
 import com.mibeko.mibeko.data.local.entities.DossierEntity
 import com.mibeko.mibeko.data.local.entities.DossierTag
-import kotlinx.coroutines.flow.*
+import com.mibeko.mibeko.data.local.entities.PendingDossierDeletionEntity
+import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.data.remote.DossierApiService
+import com.mibeko.mibeko.data.remote.DossierExportItem
+import com.mibeko.mibeko.data.remote.DossierExportRequest
+import com.mibeko.mibeko.data.remote.DossierSyncRequest
+import com.mibeko.mibeko.data.remote.LegalApiService
+import com.mibeko.mibeko.data.remote.RemoteDossier
+import com.mibeko.mibeko.data.remote.RemoteDossierArticle
 import com.mibeko.mibeko.getCurrentTimeMillis
+import com.mibeko.mibeko.util.NetworkConnectivityChecker
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/** État de la synchronisation des dossiers, exposé à l'interface. */
+sealed class DossierSyncState {
+    data object Idle : DossierSyncState()
+    data object Syncing : DossierSyncState()
+    data class Synced(val at: Long) : DossierSyncState()
+    data class Offline(val lastSyncAt: Long?) : DossierSyncState()
+    data class Error(val message: String) : DossierSyncState()
+}
+
 /**
  * Repository pour la gestion des dossiers.
- * Fournit une abstraction au-dessus du DAO pour la logique métier.
+ *
+ * Local-first : toutes les lectures/écritures passent par Room, donc tout
+ * fonctionne hors-ligne. Lorsque l'utilisateur est connecté et que le réseau
+ * est disponible, l'état complet est poussé vers `POST /v1/dossiers/sync` et
+ * l'état fusionné renvoyé par le serveur est appliqué localement.
  */
 class DossierRepository(
     private val dao: MibekoDao,
-    private val apiService: com.mibeko.mibeko.data.remote.LegalApiService
+    private val legalApiService: LegalApiService,
+    private val dossierApiService: DossierApiService,
+    private val preferences: UserPreferencesRepository,
+    private val connectivity: NetworkConnectivityChecker
 ) {
+
+    private val syncMutex = Mutex()
+
+    private val _syncState = MutableStateFlow<DossierSyncState>(DossierSyncState.Idle)
+    val syncState: StateFlow<DossierSyncState> = _syncState.asStateFlow()
 
     // ========== DOSSIERS ==========
 
-    fun getAllDossiers(): Flow<List<DossierWithCount>> {
-        return dao.getAllDossiers().map { dossiers ->
-            dossiers.map { dossier ->
-                DossierWithCount(
-                    dossier = dossier,
-                    articleCount = 0 // Will be computed separately
-                )
-            }
-        }
-    }
+    fun getAllDossiers(): Flow<List<DossierEntity>> = dao.getAllDossiers()
+
+    fun getDossiersWithCount(): Flow<List<DossierWithCount>> = dao.getDossiersWithCount()
 
     fun getDossiersByTag(tag: DossierTag): Flow<List<DossierEntity>> {
         return dao.getDossiersByTag(tag)
@@ -44,21 +76,27 @@ class DossierRepository(
         return dao.searchDossiers(query)
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     suspend fun getOrCreateFavoritesDossier(): DossierEntity {
         val favorisList = dao.getDossiersByTag(DossierTag.FAVORIS).first()
         if (favorisList.isNotEmpty()) {
             return favorisList.first()
         }
-        
-        // Create it
-        val dossierId = createDossier(
+
+        val dossierId = Uuid.random().toString()
+        val now = getCurrentTimeMillis()
+        val dossier = DossierEntity(
+            id = dossierId,
             name = "Mes Favoris",
-            legalDomain = "Général",
+            legal_domain = "Général",
             tag = DossierTag.FAVORIS,
             description = "Collection automatique de vos articles favoris",
-            color = "#D32F2F" // Red
+            color = "#8F4C31",
+            created_at = now,
+            updated_at = now
         )
-        return dao.getDossierById(dossierId).first()!!
+        dao.insertDossier(dossier)
+        return dossier
     }
 
     @OptIn(ExperimentalUuidApi::class)
@@ -67,7 +105,7 @@ class DossierRepository(
         legalDomain: String,
         tag: DossierTag = DossierTag.EN_COURS,
         description: String? = null,
-        color: String = "#1565C0"
+        color: String = "#1B3D2F"
     ): String {
         val dossierId = Uuid.random().toString()
         val now = getCurrentTimeMillis()
@@ -93,23 +131,24 @@ class DossierRepository(
         description: String?,
         color: String
     ) {
-        val dossier = dao.getDossierById(dossierId).first()
-        dossier?.let {
-            dao.updateDossier(
-                it.copy(
-                    name = name,
-                    legal_domain = legalDomain,
-                    tag = tag,
-                    description = description,
-                    color = color,
-                    updated_at = getCurrentTimeMillis()
-                )
+        val dossier = dao.getDossierById(dossierId).first() ?: return
+        dao.updateDossier(
+            dossier.copy(
+                name = name,
+                legal_domain = legalDomain,
+                tag = tag,
+                description = description,
+                color = color,
+                updated_at = getCurrentTimeMillis()
             )
-        }
+        )
     }
 
     suspend fun deleteDossier(dossierId: String) {
         dao.deleteDossierById(dossierId)
+        dao.insertPendingDossierDeletion(
+            PendingDossierDeletionEntity(id = dossierId, deletedAt = getCurrentTimeMillis())
+        )
     }
 
     // ========== ARTICLES IN DOSSIERS ==========
@@ -123,65 +162,154 @@ class DossierRepository(
     }
 
     suspend fun addArticleToDossier(dossierId: String, articleId: String, note: String? = null) {
-        val dossierArticle = DossierArticleEntity(
-            dossierId = dossierId,
-            articleId = articleId,
-            personalNote = note,
-            addedAt = getCurrentTimeMillis()
+        dao.addArticleToDossier(
+            DossierArticleEntity(
+                dossierId = dossierId,
+                articleId = articleId,
+                personalNote = note,
+                addedAt = getCurrentTimeMillis()
+            )
         )
-        dao.addArticleToDossier(dossierArticle)
-        
-        // Update dossier's updated_at timestamp
-        val dossier = dao.getDossierById(dossierId).first()
-        dossier?.let {
-            dao.updateDossier(it.copy(updated_at = getCurrentTimeMillis()))
-        }
+        touchDossier(dossierId)
     }
 
     suspend fun removeArticleFromDossier(dossierId: String, articleId: String) {
         dao.removeArticleFromDossier(dossierId, articleId)
+        touchDossier(dossierId)
     }
 
     suspend fun updatePersonalNote(dossierId: String, articleId: String, note: String?) {
         dao.updatePersonalNote(dossierId, articleId, note)
+        touchDossier(dossierId)
     }
 
     fun getDossiersContainingArticle(articleId: String): Flow<List<String>> {
         return dao.getDossiersContainingArticle(articleId)
     }
 
-    // ========== EXPORT ==========
+    /**
+     * Rafraîchit `updated_at` : la fusion serveur (last-write-wins) considère
+     * la version la plus récente comme autoritaire, liste d'articles incluse.
+     */
+    private suspend fun touchDossier(dossierId: String) {
+        val dossier = dao.getDossierById(dossierId).first() ?: return
+        dao.updateDossier(dossier.copy(updated_at = getCurrentTimeMillis()))
+    }
+
+    // ========== SYNC ==========
 
     /**
-     * Génère le contenu texte du dossier pour le partage.
-     * @deprecated Use exportDossierPdf instead
+     * Synchronise l'état local avec le serveur si l'utilisateur est connecté
+     * et que le réseau est disponible. Sans connexion, l'app reste utilisable :
+     * l'état local fait foi jusqu'à la prochaine synchronisation.
      */
-    suspend fun generateTextExport(dossierId: String): String {
-        val builder = StringBuilder()
-        
-        val dossier = dao.getDossierById(dossierId).first()
-        dossier?.let {
-            builder.appendLine("=== ${it.name} ===")
-            builder.appendLine("Domaine: ${it.legal_domain}")
-            builder.appendLine("Statut: ${it.tag.name}")
-            it.description?.let { desc -> builder.appendLine("Description: $desc") }
-            builder.appendLine()
-            builder.appendLine("--- Articles ---")
+    suspend fun syncNow() {
+        if (!preferences.isLoggedIn()) {
+            return
         }
-        
-        val articles = dao.getDossierArticles(dossierId).first()
-        articles.forEachIndexed { index, article ->
-            builder.appendLine()
-            builder.appendLine("${index + 1}. Article ${article.article.number}")
-            builder.appendLine("   ${article.node_title}")
-            builder.appendLine("   ${(article.article.content ?: "").take(200)}...")
-            article.personal_note?.let { note ->
-                builder.appendLine("   [Note personnelle]: $note")
+        if (!connectivity.isNetworkAvailable() || preferences.isOfflineModeEnabled()) {
+            _syncState.value = DossierSyncState.Offline(
+                preferences.getDossierLastSyncAt().takeIf { it > 0 }
+            )
+            return
+        }
+
+        syncMutex.withLock {
+            _syncState.value = DossierSyncState.Syncing
+            try {
+                guardAccountSwitch()
+
+                val pendingDeletions = dao.getPendingDossierDeletions()
+                val request = DossierSyncRequest(
+                    dossiers = buildLocalSnapshot(),
+                    deleted_ids = pendingDeletions.map { it.id }
+                )
+
+                val response = dossierApiService.sync(request)
+                val data = response.data
+                if (!response.success || data == null) {
+                    _syncState.value = DossierSyncState.Error(
+                        response.message.ifBlank { "Synchronisation impossible" }
+                    )
+                    return
+                }
+
+                dao.applyDossierSyncState(
+                    dossiers = data.dossiers.map { it.toEntity() },
+                    linksByDossier = data.dossiers.associate { dossier ->
+                        dossier.id to dossier.articles.map { it.toEntity(dossier.id) }
+                    },
+                    deletedIds = data.deleted_ids
+                )
+                dao.clearPendingDossierDeletions(pendingDeletions.map { it.id })
+
+                val syncedAt = data.synced_at.takeIf { it > 0 } ?: getCurrentTimeMillis()
+                preferences.setDossierLastSyncAt(syncedAt)
+                _syncState.value = DossierSyncState.Synced(syncedAt)
+            } catch (e: Exception) {
+                _syncState.value = DossierSyncState.Error(e.message ?: "Erreur réseau")
             }
         }
-        
-        return builder.toString()
     }
+
+    /**
+     * Si l'utilisateur connecté n'est pas celui dont les dossiers sont en base
+     * locale, on repart de zéro pour ne pas mélanger deux comptes.
+     */
+    private suspend fun guardAccountSwitch() {
+        val currentAccount = preferences.getUserEmail() ?: return
+        val syncedAccount = preferences.getDossierSyncAccount()
+        if (syncedAccount != null && syncedAccount != currentAccount) {
+            dao.clearDossiers()
+            dao.clearDossierArticles()
+            dao.clearAllPendingDossierDeletions()
+            preferences.setDossierLastSyncAt(0L)
+        }
+        preferences.setDossierSyncAccount(currentAccount)
+    }
+
+    private suspend fun buildLocalSnapshot(): List<RemoteDossier> {
+        val linksByDossier = dao.getDossierArticlesOnce().groupBy { it.dossierId }
+        return dao.getDossiersOnce().map { dossier ->
+            RemoteDossier(
+                id = dossier.id,
+                name = dossier.name,
+                legal_domain = dossier.legal_domain,
+                tag = dossier.tag.name,
+                description = dossier.description,
+                color = dossier.color,
+                created_at = dossier.created_at,
+                updated_at = dossier.updated_at,
+                articles = linksByDossier[dossier.id].orEmpty().map { link ->
+                    RemoteDossierArticle(
+                        article_id = link.articleId,
+                        personal_note = link.personalNote,
+                        added_at = link.addedAt
+                    )
+                }
+            )
+        }
+    }
+
+    private fun RemoteDossier.toEntity() = DossierEntity(
+        id = id,
+        name = name,
+        legal_domain = legal_domain,
+        tag = runCatching { DossierTag.valueOf(tag) }.getOrDefault(DossierTag.EN_COURS),
+        description = description,
+        color = color,
+        created_at = created_at,
+        updated_at = updated_at
+    )
+
+    private fun RemoteDossierArticle.toEntity(dossierId: String) = DossierArticleEntity(
+        dossierId = dossierId,
+        articleId = article_id,
+        personalNote = personal_note,
+        addedAt = added_at
+    )
+
+    // ========== EXPORT ==========
 
     /**
      * Call backend to generate PDF for the dossier.
@@ -190,11 +318,11 @@ class DossierRepository(
         val dossier = dao.getDossierById(dossierId).first() ?: throw Exception("Dossier non trouvé")
         val articles = dao.getDossierArticles(dossierId).first()
 
-        val request = com.mibeko.mibeko.data.remote.DossierExportRequest(
+        val request = DossierExportRequest(
             title = dossier.name,
             description = dossier.description,
             items = articles.map {
-                com.mibeko.mibeko.data.remote.DossierExportItem(
+                DossierExportItem(
                     type = "article",
                     id = it.article.id,
                     note = it.personal_note
@@ -202,14 +330,6 @@ class DossierRepository(
             }
         )
 
-        return apiService.exportDossierPdf(request)
+        return legalApiService.exportDossierPdf(request)
     }
 }
-
-/**
- * Dossier avec le comptage d'articles pour l'affichage dans la liste.
- */
-data class DossierWithCount(
-    val dossier: DossierEntity,
-    val articleCount: Int
-)

@@ -1,14 +1,21 @@
 package com.mibeko.mibeko.di
 
+import com.mibeko.mibeko.data.local.AppDatabase
 import com.mibeko.mibeko.data.local.getDatabaseBuilder
+import com.mibeko.mibeko.data.preferences.RecentlyViewedManager
 import com.mibeko.mibeko.data.preferences.SearchHistoryManager
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.getContentSharer
+import com.mibeko.mibeko.util.ContentSharer
 import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.remote.AiApiService
+import com.mibeko.mibeko.data.remote.DossierApiService
 import com.mibeko.mibeko.data.remote.LegalApiService
+import com.mibeko.mibeko.data.remote.LibraryApiService
 import com.mibeko.mibeko.data.repository.DossierRepository
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.repository.NotificationRepository
+import com.mibeko.mibeko.ui.auth.ForgotPasswordViewModel
 import com.mibeko.mibeko.ui.auth.LoginViewModel
 import com.mibeko.mibeko.ui.auth.RegisterViewModel
 import com.mibeko.mibeko.ui.auth.ProfileSetupViewModel
@@ -46,7 +53,7 @@ val commonModule = module {
     // User Preferences
     single { UserPreferencesRepository() }
     single { SearchHistoryManager() }
-    single { com.mibeko.mibeko.data.preferences.RecentlyViewedManager() }
+    single { RecentlyViewedManager() }
     single {
         Json {
             ignoreUnknownKeys = true
@@ -79,15 +86,17 @@ val commonModule = module {
         }
     }
 
-    single {  
+    single {
         getDatabaseBuilder().build()
     }
 
-    single { get<com.mibeko.mibeko.data.local.AppDatabase>().mibekoDao() }
+    single { get<AppDatabase>().mibekoDao() }
 
     single { LegalApiService(get(), get<AppConfig>().baseUrl) }
+    single { LibraryApiService(get(), get<AppConfig>().baseUrl) }
     single { AuthApiService(get(), get<AppConfig>().baseUrl) }
     single { AiApiService(get(), get<AppConfig>().baseUrl) }
+    single { DossierApiService(get(), get<AppConfig>().baseUrl) }
 
     // Network connectivity checker (platform-specific implementation)
     single<NetworkConnectivityChecker> { getNetworkConnectivityChecker() }
@@ -96,15 +105,16 @@ val commonModule = module {
     single<NotificationManager> { getNotificationManager() }
 
     // Content Sharer (platform-specific implementation)
-    single<com.mibeko.mibeko.util.ContentSharer> { com.mibeko.mibeko.getContentSharer() }
+    single<ContentSharer> { getContentSharer() }
 
     // Repositories
     single { LocalLegalRepository(get(), get(), get(), get()) }
-    single { DossierRepository(get(), get()) }
+    single { DossierRepository(get(), get(), get(), get(), get()) }
     single { NotificationRepository(get(), get<AppConfig>().baseUrl) }
 
     viewModel { LoginViewModel(get(), get()) }
     viewModel { RegisterViewModel(get(), get()) }
+    viewModel { ForgotPasswordViewModel(get()) }
     viewModel { ProfileSetupViewModel(get(), get()) }
 
     viewModel { HomeViewModel(get(), get(), get()) }
@@ -114,7 +124,7 @@ val commonModule = module {
     viewModel { FavoritesViewModel(get()) }
     viewModel { SettingsViewModel(get(), get(), get(), get(), get()) }
     viewModel { OfficialJournalViewModel(get(), get()) }
-    viewModel { LibraryViewModel(get(), get()) }
+    viewModel { LibraryViewModel(get(), get(), get(), get(), get()) }
     viewModel { DownloadsViewModel(get()) }
     viewModel { NotificationsViewModel(get()) }
     viewModel { DossierViewModel(get()) }

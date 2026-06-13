@@ -16,6 +16,7 @@ import com.mibeko.mibeko.data.remote.RemoteNode
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import com.mibeko.mibeko.getCurrentTimeMillis
 import kotlin.time.Instant as DateTimeInstant
@@ -60,8 +61,8 @@ class LocalLegalRepository(
             // Get currently downloaded IDs to preserve state
             val downloadedIds = mibekoDao.getDownloadedDocumentIds().toSet()
             // Get favorite and offline IDs to preserve them
-            val favoriteIds = mibekoDao.getFavoriteArticles().first().map { it.article.id }.toSet()
-            val offlineIds = mibekoDao.getOfflineArticles().first().map { it.article.id }.toSet()
+            val favoriteIds = mibekoDao.getFavoriteArticles().firstOrNull()?.map { it.article.id }?.toSet() ?: emptySet()
+            val offlineIds = mibekoDao.getOfflineArticles().firstOrNull()?.map { it.article.id }?.toSet() ?: emptySet()
 
             for (remoteDoc in response.data) {
                 // Map document
@@ -96,7 +97,33 @@ class LocalLegalRepository(
         favoriteIds: Set<String> = emptySet(),
         offlineIds: Set<String> = emptySet()
     ) {
-        nodes.forEach { node ->
+        // Actes courts (arrêtés/décrets issus d'un JO) : l'API renvoie leurs
+        // articles comme pseudo-nœuds `type == "ARTICLE"` à la racine. On les
+        // regroupe sous un nœud racine synthétique, sinon la structure locale
+        // reste vide et l'écran retombe sur le PDF.
+        val orphanArticles = nodes.filter { it.type == "ARTICLE" }
+        if (orphanArticles.isNotEmpty()) {
+            val rootId = syntheticRootNodeId(documentId)
+            outNodes.add(NodeEntity(
+                id = rootId,
+                document_id = documentId,
+                parent_id = null,
+                title = "",
+                sort_order = 0
+            ))
+            orphanArticles.forEach { node ->
+                outArticles.add(ArticleEntity(
+                    id = node.id,
+                    node_id = rootId,
+                    number = node.number ?: "",
+                    content = node.content ?: "",
+                    is_favorite = favoriteIds.contains(node.id),
+                    is_offline = offlineIds.contains(node.id)
+                ))
+            }
+        }
+
+        nodes.filter { it.type != "ARTICLE" }.forEach { node ->
             outNodes.add(NodeEntity(
                 id = node.id,
                 document_id = documentId,
@@ -117,6 +144,9 @@ class LocalLegalRepository(
             }
         }
     }
+
+    /** Nœud local porteur des articles sans structure (un par document). */
+    private fun syntheticRootNodeId(documentId: String) = "root_$documentId"
 
     private fun parseIsoDate(isoString: String?): Long {
         if (isoString == null) return 0L
@@ -147,12 +177,26 @@ class LocalLegalRepository(
                 title = node.title ?: "",
                 sort_order = node.order
             )
+        }.toMutableList()
+
+        // Les articles sans structure (actes courts) sont rattachés à un nœud
+        // racine synthétique : `node_id = ""` violerait la clé étrangère vers
+        // `nodes` et ferait échouer l'insertion de tout le lot.
+        val rootId = syntheticRootNodeId(documentId)
+        if (data.articles.any { it.parent_node_id == null }) {
+            nodes.add(NodeEntity(
+                id = rootId,
+                document_id = documentId,
+                parent_id = null,
+                title = "",
+                sort_order = 0
+            ))
         }
 
         val articles = data.articles.map { article ->
             ArticleEntity(
                 id = article.id,
-                node_id = article.parent_node_id ?: "",
+                node_id = article.parent_node_id ?: rootId,
                 number = article.number,
                 content = article.content ?: "",
                 is_favorite = favoriteIds.contains(article.id),
@@ -297,7 +341,7 @@ class LocalLegalRepository(
 
     suspend fun updateArticleFavoriteStatus(articleId: String, isFavorite: Boolean) {
         // If the article doesn't exist locally (from network search), we need to create a shell
-        val existing = mibekoDao.getArticleById(articleId).first()
+        val existing = mibekoDao.getArticleById(articleId).firstOrNull()
         if (existing == null) {
             // This is a rare case where we favorite a network result not yet in DB
             // We'll need more info from ArticleSpec, but ViewModel handles it for now
@@ -384,8 +428,8 @@ class LocalLegalRepository(
     /**
      * Fetch paginated list of Official Journals directly from API
      */
-    suspend fun getOfficialJournals(page: Int = 1, number: String? = null, year: Int? = null): com.mibeko.mibeko.data.remote.RemoteOfficialJournalResponse {
-        return apiService.fetchOfficialJournals(page, number, year)
+    suspend fun getOfficialJournals(page: Int = 1, number: String? = null, year: Int? = null, perPage: Int = 15): com.mibeko.mibeko.data.remote.RemoteOfficialJournalResponse {
+        return apiService.fetchOfficialJournals(page, number, year, perPage)
     }
 
     /**
@@ -398,6 +442,36 @@ class LocalLegalRepository(
     fun getArticleById(id: String): Flow<ArticleSpec?> {
         return mibekoDao.getArticleById(id).map { result ->
             result?.toArticleSpec()
+        }
+    }
+
+    /**
+     * Garantit qu'un article est lisible localement. Un résultat de recherche
+     * peut pointer vers un document jamais téléchargé : on résout alors le
+     * document parent via l'API puis on stocke sa structure complète (ce qui
+     * alimente aussi la navigation précédent/suivant et le sommaire du lecteur).
+     *
+     * @return true si l'article est disponible dans le cache local à l'issue.
+     */
+    suspend fun ensureArticleAvailable(articleId: String): Boolean {
+        if (mibekoDao.getArticleById(articleId).firstOrNull() != null) {
+            return true
+        }
+
+        val canUseNetwork = networkChecker.isNetworkAvailable() &&
+            !userPreferencesRepository.isOfflineModeEnabled()
+        if (!canUseNetwork) {
+            return false
+        }
+
+        return try {
+            val context = apiService.fetchArticleContext(articleId) ?: return false
+            fetchAndStoreDocument(context.document_id)
+            fetchAndStoreDocumentStructure(context.document_id)
+            mibekoDao.getArticleById(articleId).firstOrNull() != null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 

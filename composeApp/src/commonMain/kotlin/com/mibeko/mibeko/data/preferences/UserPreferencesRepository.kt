@@ -23,6 +23,9 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
     private val _isDyslexiaFontEnabled = MutableStateFlow(isDyslexiaFontEnabled())
     val isDyslexiaFontEnabledFlow: StateFlow<Boolean> = _isDyslexiaFontEnabled.asStateFlow()
 
+    private val _readerTheme = MutableStateFlow(getReaderTheme())
+    val readerThemeFlow: StateFlow<ReaderTheme> = _readerTheme.asStateFlow()
+
     companion object {
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
         private const val KEY_OFFLINE_MODE = "offline_mode_enabled"
@@ -31,6 +34,7 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
         private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         private const val KEY_DISCLAIMER_ACCEPTED = "disclaimer_accepted"
         private const val KEY_TEXT_SIZE = "text_size"
+        private const val KEY_READER_THEME = "reader_theme"
         private const val KEY_DYSLEXIA_FONT = "dyslexia_font_enabled"
         private const val KEY_WIFI_ONLY_DOWNLOAD = "wifi_only_download"
         private const val KEY_LEGAL_MONITORING = "legal_monitoring_enabled"
@@ -39,6 +43,8 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_PROFILE_SETUP_COMPLETED = "profile_setup_completed"
+        private const val KEY_DOSSIER_SYNC_ACCOUNT = "dossier_sync_account"
+        private const val KEY_DOSSIER_LAST_SYNC = "dossier_last_sync"
     }
 
     /**
@@ -53,6 +59,13 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
      */
     enum class TextSize {
         SMALL, MEDIUM, LARGE
+    }
+
+    /**
+     * Thème de la liseuse (indépendant du thème de l'application).
+     */
+    enum class ReaderTheme {
+        PAPER, LIGHT, DARK
     }
 
     /**
@@ -93,6 +106,26 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
     fun setTextSize(size: TextSize) {
         settings.putString(KEY_TEXT_SIZE, size.name)
         _textSize.value = size
+    }
+
+    /**
+     * Gets the persisted reader theme (defaults to PAPER).
+     */
+    fun getReaderTheme(): ReaderTheme {
+        val name = settings.getString(KEY_READER_THEME, ReaderTheme.PAPER.name)
+        return try {
+            ReaderTheme.valueOf(name)
+        } catch (e: Exception) {
+            ReaderTheme.PAPER
+        }
+    }
+
+    /**
+     * Persists the reader theme.
+     */
+    fun setReaderTheme(theme: ReaderTheme) {
+        settings.putString(KEY_READER_THEME, theme.name)
+        _readerTheme.value = theme
     }
 
     /**
@@ -293,6 +326,32 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
      */
     fun clearAll() {
         settings.clear()
+    }
+
+    /**
+     * Compte (email) auquel appartiennent les dossiers synchronisés localement.
+     * Permet de détecter un changement d'utilisateur et d'éviter de mélanger
+     * les dossiers de deux comptes.
+     */
+    fun getDossierSyncAccount(): String? {
+        return settings.getStringOrNull(KEY_DOSSIER_SYNC_ACCOUNT)
+    }
+
+    fun setDossierSyncAccount(email: String?) {
+        if (email == null) {
+            settings.remove(KEY_DOSSIER_SYNC_ACCOUNT)
+        } else {
+            settings.putString(KEY_DOSSIER_SYNC_ACCOUNT, email)
+        }
+    }
+
+    /** Horodatage (epoch ms) de la dernière synchronisation réussie des dossiers. */
+    fun getDossierLastSyncAt(): Long {
+        return settings.getLong(KEY_DOSSIER_LAST_SYNC, 0L)
+    }
+
+    fun setDossierLastSyncAt(timestamp: Long) {
+        settings.putLong(KEY_DOSSIER_LAST_SYNC, timestamp)
     }
 
     /**
