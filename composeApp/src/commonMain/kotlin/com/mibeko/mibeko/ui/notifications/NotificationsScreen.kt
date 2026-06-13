@@ -21,8 +21,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.ui.navigation.LocalNavController
-import com.mibeko.mibeko.ui.theme.MibekoBluePrimary
-import com.mibeko.mibeko.ui.theme.MibekoGold
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,7 +51,7 @@ fun NotificationsScreen() {
                     actions = {
                         if (uiState.notifications.any { !it.isRead }) {
                             TextButton(onClick = { viewModel.markAllAsRead() }) {
-                                Text("Tout lire", color = MibekoBluePrimary)
+                                Text("Tout lire", color = MaterialTheme.colorScheme.primary)
                             }
                         }
                     },
@@ -70,7 +68,7 @@ fun NotificationsScreen() {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.align(Alignment.Center),
-                        color = MibekoBluePrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                 } else if (uiState.notifications.isEmpty()) {
                     EmptyNotificationsView()
@@ -105,9 +103,9 @@ fun NotificationsScreen() {
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
             shape = RoundedCornerShape(16.dp),
-            color = if (notification.isRead) MaterialTheme.colorScheme.surface else MibekoBluePrimary.copy(alpha = 0.05f),
+            color = if (notification.isRead) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
             shadowElevation = if (notification.isRead) 1.dp else 4.dp,
-            border = if (notification.isRead) null else androidx.compose.foundation.BorderStroke(1.dp, MibekoBluePrimary.copy(alpha = 0.1f))
+            border = if (notification.isRead) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
         ) {
             Row(
                 modifier = Modifier.padding(16.dp),
@@ -120,8 +118,8 @@ fun NotificationsScreen() {
                         .clip(CircleShape)
                         .background(
                             when (notification.type) {
-                                "legal_update" -> MibekoGold.copy(alpha = 0.1f)
-                                "dossier_alert" -> MibekoBluePrimary.copy(alpha = 0.1f)
+                                "legal_update" -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
+                                "dossier_alert" -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                                 else -> MaterialTheme.colorScheme.surfaceVariant
                             }
                         ),
@@ -135,8 +133,8 @@ fun NotificationsScreen() {
                         },
                         contentDescription = null,
                         tint = when (notification.type) {
-                            "legal_update" -> MibekoGold
-                            "dossier_alert" -> MibekoBluePrimary
+                            "legal_update" -> MaterialTheme.colorScheme.secondary
+                            "dossier_alert" -> MaterialTheme.colorScheme.primary
                             else -> MaterialTheme.colorScheme.onSurfaceVariant
                         },
                         modifier = Modifier.size(20.dp)
@@ -162,7 +160,7 @@ fun NotificationsScreen() {
                                 modifier = Modifier
                                     .size(8.dp)
                                     .clip(CircleShape)
-                                    .background(MibekoBluePrimary)
+                                    .background(MaterialTheme.colorScheme.primary)
                             )
                         }
                     }

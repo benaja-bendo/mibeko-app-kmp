@@ -210,8 +210,39 @@ class SettingsViewModel(
                 // Proceed to logout locally even if API fails
             } finally {
                 userPreferencesRepository.logout()
+                authApiService.invalidateTokenCache()
                 legalRepository.clearAllData()
                 onLogoutComplete()
+            }
+        }
+    }
+
+    /**
+     * Suppression du compte (droit à l'effacement, exigence Play Store /
+     * App Store). L'API exige le mot de passe courant ; en cas de succès,
+     * la session locale est entièrement nettoyée.
+     */
+    fun deleteAccount(
+        currentPassword: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response = authApiService.deleteAccount(currentPassword)
+                if (response.success) {
+                    userPreferencesRepository.logout()
+                    authApiService.invalidateTokenCache()
+                    legalRepository.clearAllData()
+                    onSuccess()
+                } else {
+                    val message = response.errors?.values?.firstOrNull()?.firstOrNull()
+                        ?: response.message
+                        ?: "La suppression du compte a échoué."
+                    onError(message)
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "La suppression du compte a échoué.")
             }
         }
     }

@@ -52,6 +52,7 @@ fun SettingsScreen() {
     var showPrivacy by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.profileUpdateMessage) {
         uiState.profileUpdateMessage?.let {
@@ -411,6 +412,77 @@ fun SettingsScreen() {
         )
     }
 
+    if (showDeleteAccountDialog) {
+        var deletePassword by remember { mutableStateOf("") }
+        var deleteError by remember { mutableStateOf<String?>(null) }
+        var isDeleting by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { if (!isDeleting) showDeleteAccountDialog = false },
+            title = { Text("Supprimer mon compte") },
+            text = {
+                Column {
+                    Text(
+                        "Cette action est définitive : votre compte, vos dossiers synchronisés et votre historique seront supprimés. " +
+                            "Confirmez avec votre mot de passe."
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = deletePassword,
+                        onValueChange = { deletePassword = it },
+                        label = { Text("Mot de passe actuel") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        singleLine = true,
+                        isError = deleteError != null,
+                        supportingText = deleteError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        isDeleting = true
+                        deleteError = null
+                        viewModel.deleteAccount(
+                            currentPassword = deletePassword,
+                            onSuccess = {
+                                showDeleteAccountDialog = false
+                                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Home) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            },
+                            onError = { message ->
+                                isDeleting = false
+                                deleteError = message
+                            }
+                        )
+                    },
+                    enabled = deletePassword.isNotBlank() && !isDeleting,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    if (isDeleting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onError
+                        )
+                    } else {
+                        Text("Supprimer définitivement")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAccountDialog = false }, enabled = !isDeleting) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
     if (showLogoutConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutConfirmDialog = false },
@@ -659,7 +731,20 @@ fun SettingsScreen() {
                     Spacer(Modifier.width(8.dp))
                     Text("Se déconnecter", fontWeight = FontWeight.Bold)
                 }
-                
+
+                TextButton(
+                    onClick = { showDeleteAccountDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        "Supprimer mon compte",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
             }
             

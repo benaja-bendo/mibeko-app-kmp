@@ -362,9 +362,9 @@ private fun AiAnswerCard(answer: String, viewModel: SearchViewModel) {
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MibekoBluePrimary.copy(alpha = 0.1f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
         shadowElevation = 2.dp
     ) {
         Column {
@@ -374,7 +374,7 @@ private fun AiAnswerCard(answer: String, viewModel: SearchViewModel) {
                     .fillMaxWidth()
                     .background(
                         Brush.horizontalGradient(
-                            colors = listOf(MibekoBluePrimary.copy(alpha = 0.05f), Color.Transparent)
+                            colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f), Color.Transparent)
                         )
                     )
                     .clickable { isExpanded = !isExpanded }
@@ -387,7 +387,7 @@ private fun AiAnswerCard(answer: String, viewModel: SearchViewModel) {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
-                            color = MibekoBluePrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             shape = CircleShape,
                             modifier = Modifier.size(32.dp)
                         ) {
@@ -395,7 +395,7 @@ private fun AiAnswerCard(answer: String, viewModel: SearchViewModel) {
                                 Icon(
                                     Icons.Filled.AutoAwesome,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -406,12 +406,12 @@ private fun AiAnswerCard(answer: String, viewModel: SearchViewModel) {
                                 text = "Assistant Juridique",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MibekoBluePrimary
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Text(
                                 text = "Analyse Mibeko AI",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MibekoBluePrimary.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                             )
                         }
                     }
@@ -422,18 +422,18 @@ private fun AiAnswerCard(answer: String, viewModel: SearchViewModel) {
                             // We can't easily show snackbar here without access to scaffold state
                             // but we can try to find it or just perform the action
                         }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.ContentCopy, null, tint = MibekoBluePrimary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.ContentCopy, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                         }
                         IconButton(onClick = { 
                             viewModel.shareAiAnswer(answer)
                         }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Share, null, tint = MibekoBluePrimary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                         }
                         IconButton(onClick = { isExpanded = !isExpanded }, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                 contentDescription = if (isExpanded) "Réduire" else "Développer",
-                                tint = MibekoBluePrimary
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -454,7 +454,7 @@ private fun AiAnswerCard(answer: String, viewModel: SearchViewModel) {
                     
                     // Disclaimer with Icon
                     Surface(
-                        color = MibekoGold.copy(alpha = 0.05f),
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.05f),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -465,14 +465,14 @@ private fun AiAnswerCard(answer: String, viewModel: SearchViewModel) {
                             Icon(
                                 Icons.Default.Info,
                                 contentDescription = null,
-                                tint = MibekoGold,
+                                tint = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Cette analyse est générée par IA. Veuillez vérifier avec les textes officiels ci-dessous.",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MibekoGold.copy(alpha = 0.8f)
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
                             )
                         }
                     }
@@ -558,14 +558,14 @@ private fun SearchResultCard(
                     
                     // Type Badge
                     Surface(
-                        color = if (isCode) MibekoBluePrimary.copy(alpha = 0.1f) else MibekoGold.copy(alpha = 0.1f),
+                        color = if (isCode) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
                             text = typeCode,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = if (isCode) MibekoBluePrimary else MibekoGoldDark,
+                            color = if (isCode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
@@ -588,7 +588,7 @@ private fun SearchResultCard(
                         Icon(
                             Icons.Filled.CheckCircle,
                             contentDescription = "Disponible hors-ligne",
-                            tint = LegalValid,
+                            tint = MibekoTheme.status.valid,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -600,7 +600,7 @@ private fun SearchResultCard(
                         Icon(
                             if (isFavorite) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
                             contentDescription = "Favori",
-                            tint = if (isFavorite) MibekoGold else MaterialTheme.colorScheme.outline,
+                            tint = if (isFavorite) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -619,7 +619,7 @@ private fun SearchResultCard(
                         text = "Article $articleNumber",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
-                        color = MibekoBluePrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         letterSpacing = 0.5.sp
                     )
                     
@@ -641,13 +641,13 @@ private fun SearchResultCard(
                         .align(Alignment.CenterVertically)
                         .padding(start = 12.dp)
                         .size(32.dp)
-                        .background(MibekoBluePrimary.copy(alpha = 0.05f), CircleShape),
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Voir l'article",
-                        tint = MibekoBluePrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -671,7 +671,7 @@ private fun EmptyResultsState(query: String) {
     ) {
         // Mibeko styled illustration
         Surface(
-            color = MibekoBluePrimary.copy(alpha = 0.05f),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
             shape = CircleShape,
             modifier = Modifier.size(120.dp)
         ) {
@@ -679,7 +679,7 @@ private fun EmptyResultsState(query: String) {
                 Icon(
                     Icons.Filled.SearchOff,
                     contentDescription = null,
-                    tint = MibekoBluePrimary.copy(alpha = 0.4f),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
                     modifier = Modifier.size(56.dp)
                 )
             }
@@ -710,7 +710,7 @@ private fun EmptyResultsState(query: String) {
         Text(
             text = "Essayez une thématique populaire :",
             style = MaterialTheme.typography.labelLarge,
-            color = MibekoBluePrimary,
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )
         
@@ -731,12 +731,12 @@ private fun EmptyResultsState(query: String) {
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                         ) 
                     },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(8.dp),
                     colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = MibekoBluePrimary.copy(alpha = 0.05f),
-                        labelColor = MibekoBluePrimary
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                        labelColor = MaterialTheme.colorScheme.primary
                     ),
-                    border = BorderStroke(1.dp, MibekoBluePrimary.copy(alpha = 0.1f))
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
                 )
             }
         }

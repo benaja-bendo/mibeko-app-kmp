@@ -239,7 +239,7 @@ private fun EmptyState(message: String, onNavigateToLibrary: () -> Unit = {}) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
             Surface(
                 modifier = Modifier.size(80.dp),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
                 Box(contentAlignment = Alignment.Center) {

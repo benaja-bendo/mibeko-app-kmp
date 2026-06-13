@@ -1,413 +1,350 @@
 package com.mibeko.mibeko.ui.home
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import com.mibeko.mibeko.ui.components.NetworkStatusBanner
+import com.mibeko.mibeko.ui.navigation.LocalNavController
+import com.mibeko.mibeko.ui.navigation.Screen
+import com.mibeko.mibeko.util.formatIsoDate
 import mibeko.composeapp.generated.resources.Res
 import mibeko.composeapp.generated.resources.logo
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
-import com.mibeko.mibeko.ui.navigation.LocalNavController
-import com.mibeko.mibeko.ui.navigation.Screen
-import com.mibeko.mibeko.ui.components.NetworkStatusBanner
-import com.mibeko.mibeko.ui.theme.MibekoGold
-import com.mibeko.mibeko.ui.theme.MibekoGoldDark
-import com.mibeko.mibeko.ui.theme.MibekoBluePrimary
-import com.mibeko.mibeko.ui.theme.MibekoBlueDark
-import com.mibeko.mibeko.util.formatIsoDate
 
+/**
+ * Accueil : l'assistant est intégré ici (pas d'onglet dédié) — champ hero en
+ * tête, suggestions au focus, puis l'actualité du Journal Officiel. Un accès
+ * secondaire clair mène à la Bibliothèque pour la recherche documentaire
+ * (les deux intentions — question en langage naturel / recherche d'un texte —
+ * restent séparées, comme sur le web).
+ */
 @Composable
 fun HomeScreen() {
-        val navController = LocalNavController.current
-        val viewModel = koinViewModel<HomeViewModel>()
-        
-        val uiState by viewModel.uiState.collectAsState()
-        val snackbarHostState = remember { SnackbarHostState() }
-        
-        var showContent by remember { mutableStateOf(false) }
-        
-        // Refresh data on resume
-        LaunchedEffect(Unit) {
-            // refreshNetworkStatus is handled internally or removed
-            showContent = true
-        }
+    val navController = LocalNavController.current
+    val viewModel = koinViewModel<HomeViewModel>()
 
-        LaunchedEffect(viewModel.uiEvent) {
-            viewModel.uiEvent.collect { message ->
-                snackbarHostState.showSnackbar(message)
+    val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(viewModel.uiEvent) {
+        viewModel.uiEvent.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    val askAssistant: (String) -> Unit = { prompt ->
+        if (prompt.isNotBlank()) {
+            if (uiState.isLoggedIn) {
+                navController.navigate(Screen.Chat(initialPrompt = prompt))
+            } else {
+                navController.navigate(Screen.Login)
             }
         }
+    }
 
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            containerColor = MaterialTheme.colorScheme.background
-        ) { padding ->
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                // Blue Header with Logo
-                item {
-                    HomeHeader(
-                        onNotificationsClick = {
-                            navController.navigate(Screen.Notifications)
-                        },
-                        onHistoryClick = {
-                            if (uiState.isLoggedIn) {
-                                navController.navigate(Screen.ConversationHistory)
-                            } else {
-                                navController.navigate(Screen.Login)
-                            }
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 80.dp)
+        ) {
+            item {
+                HomeTopBar(
+                    onHistoryClick = {
+                        if (uiState.isLoggedIn) {
+                            navController.navigate(Screen.ConversationHistory)
+                        } else {
+                            navController.navigate(Screen.Login)
                         }
-                    )
-                }
-                
-                // Search Trigger Button (navigates to Chat or Login)
-                item {
-                    AiChatInputCard(
-                        onSend = { query ->
-                            if (query.isNotBlank()) {
-                                if (uiState.isLoggedIn) {
-                                    navController.navigate(Screen.Chat(initialPrompt = query))
-                                } else {
-                                    navController.navigate(Screen.Login)
-                                }
-                            }
-                        }
-                    )
-                }
+                    },
+                    onNotificationsClick = { navController.navigate(Screen.Notifications) }
+                )
+            }
 
-                // Network Status Banner (FR3)
+            item {
+                AssistantHero(
+                    suggestions = uiState.aiSuggestions,
+                    onAsk = askAssistant
+                )
+            }
+
+            item {
+                NetworkStatusBanner(
+                    isNetworkAvailable = uiState.isNetworkAvailable,
+                    isSyncing = uiState.isSyncing
+                )
+            }
+
+            // Accès secondaire : la recherche documentaire (sans IA) vit dans la Bibliothèque.
+            item {
+                BrowseLibraryCard(onClick = {
+                    navController.navigate(Screen.Library) {
+                        popUpTo(Screen.Home)
+                        launchSingleTop = true
+                    }
+                })
+            }
+
+            // Journal Officiel — le flux d'actualité légale.
+            if (uiState.officialJournals.isNotEmpty()) {
                 item {
-                    NetworkStatusBanner(
-                        isNetworkAvailable = uiState.isNetworkAvailable,
-                        isSyncing = uiState.isSyncing
-                    )
-                }
-                
-                // Zone 1: Journal Officiel (Horizontal List)
-                item {
-                    AnimatedVisibility(
-                        visible = !uiState.isLoading && uiState.officialJournals.isNotEmpty(),
-                        enter = fadeIn() + slideInVertically { 30 }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.padding(top = 16.dp)) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Journal Officiel",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                TextButton(onClick = { navController.navigate(Screen.OfficialJournalList) }) {
-                                    Text(
-                                        text = "Voir plus",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MibekoBluePrimary,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-                            
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(uiState.officialJournals.take(5)) { journal ->
-                                    JournalOfficielCard(
-                                        title = journal.title,
-                                        date = "Publié le ${formatIsoDate(journal.publication_date)}",
-                                        excerpt = "Consulter le journal officiel et ses documents annexes...",
-                                        onClick = { navController.navigate(Screen.OfficialJournalDetail(journal.id)) }
-                                    )
-                                }
-                            }
+                        Text(
+                            text = "Journal Officiel",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        TextButton(onClick = { navController.navigate(Screen.OfficialJournalList) }) {
+                            Text(
+                                text = "Voir tout",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
                     }
                 }
 
-                // Empty state or Loading
-                if (uiState.isLoading) {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        }
+                items(uiState.officialJournals.take(6)) { journal ->
+                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)) {
+                        JournalRow(
+                            title = journal.title,
+                            date = formatIsoDate(journal.publication_date),
+                            onClick = { navController.navigate(Screen.OfficialJournalDetail(journal.id)) }
+                        )
+                    }
+                }
+            }
+
+            if (uiState.isLoading) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
         }
     }
- 
+}
 
-/**
- * En-tête avec dégradé bleu institutionnel, logo Mibeko et titre.
- */
+/** En-tête compact : identité discrète + raccourcis historique / notifications. */
 @Composable
-private fun HomeHeader(
-    onNotificationsClick: () -> Unit = {},
-    onHistoryClick: () -> Unit = {}
+private fun HomeTopBar(
+    onHistoryClick: () -> Unit,
+    onNotificationsClick: () -> Unit
 ) {
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(MibekoBluePrimary, MibekoBlueDark)
-                ),
-                shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
-            )
             .statusBarsPadding()
-            .padding(top = 16.dp, bottom = 48.dp), // Extra padding at bottom for overlap
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // History Icon (Top Left)
-        IconButton(
-            onClick = onHistoryClick,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 16.dp, top = 0.dp)
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Surface(
-                color = Color.White.copy(alpha = 0.1f),
-                shape = CircleShape
+                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.size(36.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.History,
-                    contentDescription = "Historique",
-                    tint = Color.White,
-                    modifier = Modifier.padding(8.dp).size(20.dp)
-                )
-            }
-        }
-
-        // Notification Icon (Top Right)
-        IconButton(
-            onClick = onNotificationsClick,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 16.dp, top = 0.dp)
-        ) {
-            Surface(
-                color = Color.White.copy(alpha = 0.1f),
-                shape = CircleShape
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = "Notifications",
-                    tint = Color.White,
-                    modifier = Modifier.padding(8.dp).size(20.dp)
-                )
-            }
-        }
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Logo inside white rounded square
-            Surface(
-                color = Color.White,
-                shape = RoundedCornerShape(16.dp),
-                shadowElevation = 4.dp,
-                modifier = Modifier.size(72.dp)
-            ) {
-                androidx.compose.foundation.Image(
+                Image(
                     painter = painterResource(Res.drawable.logo),
-                    contentDescription = "Mibeko Logo",
-                    modifier = Modifier.fillMaxSize().padding(12.dp)
+                    contentDescription = "Mibeko",
+                    modifier = Modifier.padding(6.dp)
                 )
             }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Title
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "Mibeko",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                text = "Mobile",
-                style = MaterialTheme.typography.labelSmall,
-                color = MibekoGoldDark,
-                fontWeight = FontWeight.Bold
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "Mibeko",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
             )
+        }
+
+        Row {
+            IconButton(onClick = onHistoryClick) {
+                Icon(
+                    Icons.Default.History,
+                    contentDescription = "Historique des conversations",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onNotificationsClick) {
+                Icon(
+                    Icons.Default.Notifications,
+                    contentDescription = "Notifications",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
 }
 
 /**
- * Carte de saisie pour discuter avec l'IA.
- * Remplace l'ancien bouton de recherche.
+ * Champ assistant « hero » : une ligne, envoi direct ; au focus, les
+ * suggestions s'affichent pour guider la première question. La conversation
+ * s'ouvre en plein écran (pas de bottom sheet : clavier + streaming).
  */
 @Composable
-private fun AiChatInputCard(onSend: (String) -> Unit) {
+private fun AssistantHero(
+    suggestions: List<String>,
+    onAsk: (String) -> Unit
+) {
     var text by remember { mutableStateOf("") }
-    var showPremiumDialog by remember { mutableStateOf(false) }
-    val maxLength = 1000
 
-    if (showPremiumDialog) {
-        AlertDialog(
-            onDismissRequest = { showPremiumDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = MibekoGold,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Fonctionnalité Pro",
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            },
-            text = {
-                Text(
-                    text = "Cette fonctionnalité premium sera bientôt disponible pour nos abonnés professionnels. Préparez-vous à une nouvelle dimension dans votre pratique juridique !",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { showPremiumDialog = false }) {
-                    Text("J'ai hâte !", color = MibekoBluePrimary, fontWeight = FontWeight.Bold)
-                }
-            },
-            shape = RoundedCornerShape(16.dp),
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    }
-
-    Surface(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .offset(y = (-30).dp)
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp,
+            .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+        Text(
+            text = "Bonjour 👋",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = "Posez votre question juridique à l'assistant IA de Mibeko, spécialisé en droit congolais et OHADA.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = "IA",
-                    tint = MibekoBluePrimary,
-                    modifier = Modifier.padding(top = 12.dp).size(24.dp)
-                )
-                
-                Spacer(modifier = Modifier.width(8.dp))
-                
+            Column(modifier = Modifier.padding(8.dp)) {
                 OutlinedTextField(
                     value = text,
-                    onValueChange = { 
-                        if (it.length <= maxLength) {
-                            text = it
-                        }
-                    },
+                    onValueChange = { if (it.length <= 1000) text = it },
                     placeholder = {
                         Text(
-                            text = "Discutez avec l'IA juridique pour vos recherches...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            "Rechercher ou poser une question...",
+                            style = MaterialTheme.typography.bodyLarge
                         )
                     },
-                    modifier = Modifier.weight(1f).heightIn(min = 80.dp, max = 150.dp),
-                    textStyle = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent
-                    )
+                        focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                        focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent
+                    ),
+                    maxLines = 4,
+                    minLines = 2,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { onAsk(text) })
                 )
-            }
-            
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { showPremiumDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.AttachFile,
-                            contentDescription = "Joindre un fichier",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, end = 8.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FilledIconButton(
+                        onClick = { onAsk(text) },
+                        enabled = text.isNotBlank(),
+                        modifier = Modifier.size(48.dp),
+                        shape = CircleShape,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
-                    }
-                    IconButton(onClick = { showPremiumDialog = true }) {
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.Mic,
-                            contentDescription = "Saisie vocale",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Envoyer",
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${text.length}/$maxLength",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (text.length >= maxLength) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.padding(end = 12.dp)
-                    )
-                    
-                    IconButton(
-                        onClick = { onSend(text) },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(if (text.isNotBlank()) MibekoBlueDark else MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-                        enabled = text.isNotBlank()
+            }
+        }
+
+        if (suggestions.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Suggestions",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(end = 16.dp)
+            ) {
+                items(suggestions) {
+                    suggestion ->
+                    Surface(
+                        onClick = { onAsk(suggestion) },
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                        modifier = Modifier.width(200.dp).heightIn(min = 80.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Envoyer",
-                            tint = if (text.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.size(20.dp).offset(x = 2.dp)
-                        )
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = suggestion,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -415,96 +352,109 @@ private fun AiChatInputCard(onSend: (String) -> Unit) {
     }
 }
 
-/**
- * Carte pour afficher un document du Journal Officiel.
- * Design basé sur la maquette.
- */
+/** Entrée claire vers la recherche documentaire (sans IA) de la Bibliothèque. */
 @Composable
-private fun JournalOfficielCard(title: String, date: String, excerpt: String, onClick: () -> Unit) {
+private fun BrowseLibraryCard(onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.width(280.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 0.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.Top) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.background(MibekoBluePrimary.copy(alpha = 0.05f))) {
-                        Icon(
-                            imageVector = Icons.Default.Description,
-                            contentDescription = null,
-                            tint = MibekoBluePrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.width(12.dp))
-                
-                Column {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 20.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = date,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = excerpt,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 20.sp
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+            Surface(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                shape = CircleShape,
+                modifier = Modifier.size(40.dp)
             ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.MenuBook,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "CONSULTER",
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "Parcourir les textes",
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MibekoBluePrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                    modifier = Modifier.size(16.dp)
+                Text(
+                    text = "Codes, lois, décrets — recherche plein-texte",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** Une parution du Journal Officiel dans le flux d'accueil. */
+@Composable
+private fun JournalRow(title: String, date: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Description,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Publié le $date",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
         }
     }
 }

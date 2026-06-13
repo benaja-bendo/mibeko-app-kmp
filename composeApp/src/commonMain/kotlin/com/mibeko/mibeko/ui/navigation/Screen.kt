@@ -16,6 +16,9 @@ sealed class Screen {
     data object Register : Screen()
 
     @Serializable
+    data object ForgotPassword : Screen()
+
+    @Serializable
     data object ProfileSetup : Screen()
 
     @Serializable
