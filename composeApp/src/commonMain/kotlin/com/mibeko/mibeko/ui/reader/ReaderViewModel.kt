@@ -14,13 +14,30 @@ import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.repository.DossierRepository
 import kotlinx.coroutines.flow.asStateFlow
 
+/** Entrée du sommaire : un article dans l'ordre du document. */
+data class ReaderTocEntry(
+    val id: String,
+    val number: String,
+    val nodeTitle: String
+)
+
 data class ReaderUiState(
     val isLoading: Boolean = true,
     val article: ArticleSpec? = null,
     val documentTitle: String? = null,
     val documentType: String? = null,
+    /** Articles du document dans l'ordre de lecture (navigation + sommaire). */
+    val articleSequence: List<ReaderTocEntry> = emptyList(),
     val error: String? = null
-)
+) {
+    val currentIndex: Int
+        get() = article?.let { current -> articleSequence.indexOfFirst { it.id == current.id } } ?: -1
+    val previousArticleId: String?
+        get() = currentIndex.takeIf { it > 0 }?.let { articleSequence[it - 1].id }
+    val nextArticleId: String?
+        get() = currentIndex.takeIf { it >= 0 && it < articleSequence.size - 1 }
+            ?.let { articleSequence[it + 1].id }
+}
 
 class ReaderViewModel(
     private val repository: LocalLegalRepository,
@@ -35,6 +52,7 @@ class ReaderViewModel(
 
     val textSize: StateFlow<UserPreferencesRepository.TextSize> = userPreferencesRepository.textSizeFlow
     val isDyslexiaFontEnabled: StateFlow<Boolean> = userPreferencesRepository.isDyslexiaFontEnabledFlow
+    val readerTheme: StateFlow<UserPreferencesRepository.ReaderTheme> = userPreferencesRepository.readerThemeFlow
 
     private val _isSharing = MutableStateFlow(false)
     val isSharing: StateFlow<Boolean> = _isSharing.asStateFlow()
@@ -108,8 +126,14 @@ class ReaderViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val articleResult = repository.getArticleById(id).firstOrNull()
-                
+                var articleResult = repository.getArticleById(id).firstOrNull()
+
+                // Résultat de recherche d'un document jamais téléchargé : on
+                // récupère le document parent depuis l'API puis on relit.
+                if (articleResult == null && repository.ensureArticleAvailable(id)) {
+                    articleResult = repository.getArticleById(id).firstOrNull()
+                }
+
                 if (articleResult != null) {
                     val docResult = repository.getLawCodeById(articleResult.codeId).firstOrNull()
                     _uiState.value = _uiState.value.copy(
@@ -119,7 +143,9 @@ class ReaderViewModel(
                         documentType = docResult?.type,
                         error = null
                     )
-                    
+
+                    loadArticleSequence(articleResult.codeId)
+
                     // Log to recently viewed
                     recentlyViewedManager.addRecentlyViewed(
                         id = articleResult.id,
@@ -129,7 +155,7 @@ class ReaderViewModel(
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = "Article non trouvé. Veuillez télécharger ce document."
+                        error = "Article indisponible. Vérifiez votre connexion internet puis réessayez."
                     )
                 }
             } catch (e: Exception) {
@@ -142,12 +168,47 @@ class ReaderViewModel(
         }
     }
 
+    /**
+     * Construit la séquence ordonnée des articles du document (même ordre que
+     * la table des matières : nœuds par sort_order, articles par numéro).
+     * Alimente la navigation précédent / suivant et le sommaire.
+     */
+    private var sequenceDocumentId: String? = null
+
+    private suspend fun loadArticleSequence(documentId: String) {
+        if (sequenceDocumentId == documentId && _uiState.value.articleSequence.isNotEmpty()) return
+        try {
+            val structure = repository.getStructure(documentId).firstOrNull() ?: return
+            val sequence = structure.keys
+                .sortedBy { it.sort_order }
+                .flatMap { node ->
+                    (structure[node] ?: emptyList())
+                        .sortedBy { article -> article.number.filter { it.isDigit() }.toIntOrNull() ?: 0 }
+                        .map { article ->
+                            ReaderTocEntry(
+                                id = article.id,
+                                number = article.number,
+                                nodeTitle = node.title
+                            )
+                        }
+                }
+            sequenceDocumentId = documentId
+            _uiState.value = _uiState.value.copy(articleSequence = sequence)
+        } catch (e: Exception) {
+            // Pas bloquant : la lecture fonctionne sans navigation séquentielle.
+        }
+    }
+
     fun refreshPreferences() {
         // Obsolete now that we use reactive Flow
     }
 
     fun setTextSize(size: UserPreferencesRepository.TextSize) {
         userPreferencesRepository.setTextSize(size)
+    }
+
+    fun setReaderTheme(theme: UserPreferencesRepository.ReaderTheme) {
+        userPreferencesRepository.setReaderTheme(theme)
     }
 
     fun setDyslexiaFontEnabled(enabled: Boolean) {

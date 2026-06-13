@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import com.mibeko.mibeko.data.local.entities.ArticleEntity
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -24,18 +25,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
+import com.mibeko.mibeko.ui.theme.MibekoTheme
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
 import com.mibeko.mibeko.ui.components.ReportErrorDialog
 
 import org.koin.compose.viewmodel.koinViewModel
-import com.mibeko.mibeko.ui.reader.ReaderScreen
+import com.mibeko.mibeko.ui.components.PdfViewer
+import com.mibeko.mibeko.di.AppConfig
+import org.koin.compose.koinInject
 
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.text.style.TextAlign
@@ -46,6 +48,7 @@ import kotlinx.coroutines.launch
 fun DocumentDetailScreen(documentId: String) {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val viewModel = koinViewModel<DocumentDetailViewModel>()
+        val appConfig = koinInject<AppConfig>()
         
         val uiState by viewModel.uiState.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -168,13 +171,13 @@ fun DocumentDetailScreen(documentId: String) {
                             onClick = { viewModel.toggleOffline() },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (uiState.document?.isDownloaded == true) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary
+                                containerColor = if (uiState.document?.isDownloaded == true) MibekoTheme.status.valid else MaterialTheme.colorScheme.primary
                             ),
                             shape = RoundedCornerShape(12.dp),
                             enabled = !uiState.isDownloading
                         ) {
                             if (uiState.isDownloading) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                             } else {
                                 Icon(
                                     if (uiState.document?.isDownloaded == true) Icons.Default.CloudDone else Icons.Default.CloudDownload,
@@ -226,7 +229,7 @@ fun DocumentDetailScreen(documentId: String) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                             Surface(
                                 modifier = Modifier.size(80.dp),
-                                shape = RoundedCornerShape(40.dp),
+                                shape = CircleShape,
                                 color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
                             ) {
                                 Icon(
@@ -260,8 +263,22 @@ fun DocumentDetailScreen(documentId: String) {
                     }
                 }
                 uiState.structure.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                        Text("Aucun contenu disponible pour ce document.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                    Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .padding(16.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            shadowElevation = 2.dp,
+                            color = MaterialTheme.colorScheme.surface
+                        ) {
+                            val pdfUrl = "${appConfig.baseUrl}/v1/legal-documents/${documentId}/pdf"
+                            PdfViewer(
+                                url = pdfUrl,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
                 else -> {
@@ -325,20 +342,24 @@ fun DocumentDetailScreen(documentId: String) {
                         }
                         
                         sortedNodes.forEach { node ->
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.background)
-                                        .padding(horizontal = 24.dp, vertical = 16.dp)
-                                ) {
-                                    Text(
-                                        text = node.title,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        letterSpacing = 1.sp
-                                    )
+                            // Le nœud racine synthétique (actes courts sans
+                            // structure) n'a pas de titre : pas d'en-tête.
+                            if (node.title.isNotBlank()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(MaterialTheme.colorScheme.background)
+                                            .padding(horizontal = 24.dp, vertical = 16.dp)
+                                    ) {
+                                        Text(
+                                            text = node.title,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            letterSpacing = 1.sp
+                                        )
+                                    }
                                 }
                             }
                             

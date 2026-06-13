@@ -6,6 +6,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -54,13 +56,19 @@ fun ReaderScreen(articleId: String) {
         val snackbarMessage by viewModel.snackbarMessage.collectAsState()
         
         val snackbarHostState = remember { SnackbarHostState() }
-        
-        // Reading theme state (Internal for MVP, could be in VM)
-        var readerTheme by remember { mutableStateOf("paper") } // "white", "paper", "dark"
+
+        // Thème de lecture persisté (préférences), indépendant du thème de l'app.
+        val readerThemePref by viewModel.readerTheme.collectAsState()
+        val readerTheme = when (readerThemePref) {
+            UserPreferencesRepository.ReaderTheme.PAPER -> "paper"
+            UserPreferencesRepository.ReaderTheme.LIGHT -> "white"
+            UserPreferencesRepository.ReaderTheme.DARK -> "dark"
+        }
         var showSettings by remember { mutableStateOf(false) }
         var showShareSheet by remember { mutableStateOf(false) }
         var showReportDialog by remember { mutableStateOf(false) }
         var showDossierSelection by remember { mutableStateOf(false) }
+        var showToc by remember { mutableStateOf(false) }
 
         val listState = rememberLazyListState()
 
@@ -78,6 +86,11 @@ fun ReaderScreen(articleId: String) {
         LaunchedEffect(articleId) {
             viewModel.loadArticle(articleId)
             viewModel.refreshPreferences()
+        }
+
+        // Revenir en haut quand on passe à un autre article (suivant/précédent).
+        LaunchedEffect(uiState.article?.id) {
+            listState.scrollToItem(0)
         }
 
         // Apply colors based on reader theme
@@ -257,13 +270,46 @@ fun ReaderScreen(articleId: String) {
                 }
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            containerColor = backgroundColor
+            containerColor = backgroundColor,
+            bottomBar = {
+                // Navigation séquentielle : précédent / position (ouvre le
+                // sommaire) / suivant — même logique que le lecteur web.
+                if (uiState.articleSequence.size > 1) {
+                    ArticleNavigationBar(
+                        currentIndex = uiState.currentIndex,
+                        total = uiState.articleSequence.size,
+                        textColor = textColor,
+                        backgroundColor = backgroundColor,
+                        onPrevious = { uiState.previousArticleId?.let { viewModel.loadArticle(it) } },
+                        onNext = { uiState.nextArticleId?.let { viewModel.loadArticle(it) } },
+                        onOpenToc = { showToc = true },
+                        hasPrevious = uiState.previousArticleId != null,
+                        hasNext = uiState.nextArticleId != null
+                    )
+                }
+            }
         ) { padding ->
+            // Swipe horizontal : passer à l'article suivant / précédent.
+            var dragTotal by remember { mutableStateOf(0f) }
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(bottom = 100.dp)
+                    .padding(padding)
+                    .pointerInput(uiState.currentIndex, uiState.articleSequence.size) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { dragTotal = 0f },
+                            onDragEnd = {
+                                when {
+                                    dragTotal < -150f -> uiState.nextArticleId?.let { viewModel.loadArticle(it) }
+                                    dragTotal > 150f -> uiState.previousArticleId?.let { viewModel.loadArticle(it) }
+                                }
+                                dragTotal = 0f
+                            },
+                            onHorizontalDrag = { _, dragAmount -> dragTotal += dragAmount }
+                        )
+                    },
+                state = listState,
+                contentPadding = PaddingValues(bottom = 24.dp)
             ) {
                 // Article title in caps
                 item {
@@ -327,6 +373,22 @@ fun ReaderScreen(articleId: String) {
                 }
             }
 
+        if (showToc) {
+            ModalBottomSheet(
+                onDismissRequest = { showToc = false },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                ReaderTocSheet(
+                    entries = uiState.articleSequence,
+                    currentArticleId = uiState.article?.id,
+                    onSelect = { id ->
+                        showToc = false
+                        viewModel.loadArticle(id)
+                    }
+                )
+            }
+        }
+
         if (showReportDialog) {
             ReportErrorDialog(
                 onDismiss = { showReportDialog = false },
@@ -355,7 +417,15 @@ fun ReaderScreen(articleId: String) {
                         currentTextSize = textSize,
                         onTextSizeChange = { viewModel.setTextSize(it) },
                         currentTheme = readerTheme,
-                        onThemeChange = { readerTheme = it },
+                        onThemeChange = { selected ->
+                            viewModel.setReaderTheme(
+                                when (selected) {
+                                    "white" -> UserPreferencesRepository.ReaderTheme.LIGHT
+                                    "dark" -> UserPreferencesRepository.ReaderTheme.DARK
+                                    else -> UserPreferencesRepository.ReaderTheme.PAPER
+                                }
+                            )
+                        },
                         isDyslexiaEnabled = isDyslexiaFontEnabled,
                         onDyslexiaChange = { viewModel.setDyslexiaFontEnabled(it) }
                      )
@@ -396,6 +466,156 @@ fun ReaderScreen(articleId: String) {
             }
         }
  
+
+/**
+ * Barre de navigation séquentielle du lecteur : article précédent / position
+ * dans le document (ouvre le sommaire) / article suivant.
+ */
+@Composable
+private fun ArticleNavigationBar(
+    currentIndex: Int,
+    total: Int,
+    textColor: Color,
+    backgroundColor: Color,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onOpenToc: () -> Unit,
+    hasPrevious: Boolean,
+    hasNext: Boolean
+) {
+    Surface(color = backgroundColor) {
+        Column {
+            HorizontalDivider(color = textColor.copy(alpha = 0.08f))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onPrevious, enabled = hasPrevious) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = null,
+                        tint = if (hasPrevious) textColor else textColor.copy(alpha = 0.3f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        "Précédent",
+                        color = if (hasPrevious) textColor else textColor.copy(alpha = 0.3f),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+
+                // Position courante : un appui ouvre le sommaire du document.
+                Surface(
+                    onClick = onOpenToc,
+                    shape = RoundedCornerShape(8.dp),
+                    color = textColor.copy(alpha = 0.06f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.List,
+                            contentDescription = "Sommaire",
+                            tint = textColor.copy(alpha = 0.8f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "${currentIndex + 1} / $total",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = textColor.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+
+                TextButton(onClick = onNext, enabled = hasNext) {
+                    Text(
+                        "Suivant",
+                        color = if (hasNext) textColor else textColor.copy(alpha = 0.3f),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = if (hasNext) textColor else textColor.copy(alpha = 0.3f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Sommaire du document : articles groupés par section, article courant marqué. */
+@Composable
+private fun ReaderTocSheet(
+    entries: List<ReaderTocEntry>,
+    currentArticleId: String?,
+    onSelect: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+        Text(
+            text = "Sommaire",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+        )
+
+        LazyColumn(modifier = Modifier.heightIn(max = 480.dp)) {
+            var lastNode: String? = null
+            entries.forEach { entry ->
+                if (entry.nodeTitle != lastNode) {
+                    lastNode = entry.nodeTitle
+                    item(key = "node_${entry.nodeTitle}_${entry.id}") {
+                        Text(
+                            text = entry.nodeTitle,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+                item(key = entry.id) {
+                    val isCurrent = entry.id == currentArticleId
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(entry.id) }
+                            .background(
+                                if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                                else Color.Transparent
+                            )
+                            .padding(horizontal = 32.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Article ${entry.number}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isCurrent) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
+                        )
+                        if (isCurrent) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = "Article affiché",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun ReaderSettingsSheet(

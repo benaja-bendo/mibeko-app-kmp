@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.ui.navigation.LocalNavController
+import com.mibeko.mibeko.ui.theme.MibekoTheme
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -33,8 +34,8 @@ fun DocumentListScreen(typeCode: String, typeName: String) {
         val viewModel = koinViewModel<LibraryViewModel>()
         val uiState by viewModel.uiState.collectAsState()
         
-        // Filter documents by type using the newly added 'type' property in LawCodeSpec
-        val documentsOfType = uiState.documents.filter { doc ->
+        // Filtre par type sur les documents de la base locale.
+        val documentsOfType = uiState.localCodes.filter { doc ->
             doc.type.contains(typeCode, ignoreCase = true) ||
             doc.type.contains(typeName, ignoreCase = true) ||
             doc.title.contains(typeName.split(" ").lastOrNull() ?: "", ignoreCase = true)
@@ -205,13 +206,13 @@ private fun DocumentListItem(
                             Icons.Default.CheckCircle,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = Color(0xFF2E7D32)
+                            tint = MibekoTheme.status.valid
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             "Disponible hors-ligne",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF2E7D32)
+                            color = MibekoTheme.status.valid
                         )
                     }
                 }

@@ -13,10 +13,44 @@ import kotlinx.coroutines.launch
 data class OfficialJournalUiState(
     val isLoading: Boolean = false,
     val isDownloadingPdf: Boolean = false,
+    /** Catalogue complet, trié du plus récent au plus ancien (ordre serveur). */
     val journals: List<RemoteOfficialJournal> = emptyList(),
+    val searchQuery: String = "",
+    val selectedYear: Int? = null,
     val currentJournal: RemoteOfficialJournal? = null,
     val error: String? = null
-)
+) {
+    /** Filtrage local : le catalogue est petit, le ressenti doit être instantané. */
+    val filteredJournals: List<RemoteOfficialJournal>
+        get() = journals.filter { journal ->
+            val matchesYear = selectedYear == null || journal.year == selectedYear
+            val q = searchQuery.trim()
+            val matchesQuery = q.isEmpty() ||
+                journal.title.contains(q, ignoreCase = true) ||
+                (journal.number?.contains(q, ignoreCase = true) ?: false)
+            matchesYear && matchesQuery
+        }
+
+    val availableYears: List<Int>
+        get() = journals.mapNotNull { it.year }.distinct().sortedDescending()
+
+    /** Position dans le kiosque pour la navigation précédent / suivant. */
+    val currentIndex: Int
+        get() = currentJournal?.let { current -> journals.indexOfFirst { it.id == current.id } } ?: -1
+
+    /** JO plus récent (la liste est triée par date décroissante). */
+    val previousJournalId: String?
+        get() = currentIndex.takeIf { it > 0 }?.let { journals[it - 1].id }
+
+    /** JO plus ancien. */
+    val nextJournalId: String?
+        get() = currentIndex.takeIf { it >= 0 && it < journals.size - 1 }
+            ?.let { journals[it + 1].id }
+}
+
+/** Année de publication extraite de la date ISO (« 2026-06-12T… » → 2026). */
+val RemoteOfficialJournal.year: Int?
+    get() = publication_date.take(4).toIntOrNull()
 
 class OfficialJournalViewModel(
     private val repository: LocalLegalRepository,
@@ -26,27 +60,30 @@ class OfficialJournalViewModel(
     private val _uiState = MutableStateFlow(OfficialJournalUiState())
     val uiState: StateFlow<OfficialJournalUiState> = _uiState.asStateFlow()
 
-    private var currentFilterNumber: String? = null
-    private var currentFilterYear: Int? = null
-
-    fun loadJournals(page: Int = 1, number: String? = currentFilterNumber, year: Int? = currentFilterYear) {
-        currentFilterNumber = number
-        currentFilterYear = year
+    /**
+     * Charge le catalogue complet des JO (quelques dizaines de numéros) :
+     * le filtrage et le regroupement par mois se font ensuite localement.
+     */
+    fun loadJournals() {
+        if (_uiState.value.journals.isNotEmpty()) return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val response = repository.getOfficialJournals(page, number, year)
-                if (response.success) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        journals = response.data
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = response.message
-                    )
-                }
+                val all = mutableListOf<RemoteOfficialJournal>()
+                var page = 1
+                var lastPage: Int
+                do {
+                    val response = repository.getOfficialJournals(page = page, perPage = 100)
+                    if (!response.success) {
+                        _uiState.value = _uiState.value.copy(isLoading = false, error = response.message)
+                        return@launch
+                    }
+                    all += response.data
+                    lastPage = response.meta?.last_page ?: 1
+                    page++
+                } while (page <= lastPage && page <= 5)
+
+                _uiState.value = _uiState.value.copy(isLoading = false, journals = all)
             } catch (e: Exception) {
                 e.printStackTrace()
                 _uiState.value = _uiState.value.copy(
@@ -55,6 +92,14 @@ class OfficialJournalViewModel(
                 )
             }
         }
+    }
+
+    fun onSearchQueryChange(query: String) {
+        _uiState.value = _uiState.value.copy(searchQuery = query)
+    }
+
+    fun onYearSelected(year: Int?) {
+        _uiState.value = _uiState.value.copy(selectedYear = year)
     }
 
     fun loadJournalDetail(id: String) {
@@ -74,6 +119,9 @@ class OfficialJournalViewModel(
                 )
             }
         }
+        // Le catalogue alimente la navigation JO précédent / suivant, y compris
+        // quand on arrive directement depuis l'accueil.
+        loadJournals()
     }
 
     fun getPdfUrl(id: String): String {
