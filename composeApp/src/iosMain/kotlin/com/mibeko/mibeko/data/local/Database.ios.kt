@@ -22,6 +22,7 @@ actual fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase> {
         name = dbFilePath,
         factory = { AppDatabaseConstructor.initialize() }
     ).setDriver(androidx.sqlite.driver.bundled.BundledSQLiteDriver())
+     .addMigrations(*ALL_MIGRATIONS)
      .fallbackToDestructiveMigration(true)
 }
 

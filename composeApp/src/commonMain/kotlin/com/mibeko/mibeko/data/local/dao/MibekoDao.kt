@@ -8,6 +8,7 @@ import com.mibeko.mibeko.data.local.entities.DossierArticleEntity
 import com.mibeko.mibeko.data.local.entities.DossierEntity
 import com.mibeko.mibeko.data.local.entities.DossierTag
 import com.mibeko.mibeko.data.local.entities.NodeEntity
+import com.mibeko.mibeko.data.local.entities.PendingDossierDeletionEntity
 import com.mibeko.mibeko.data.local.entities.TagEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -163,6 +164,15 @@ interface MibekoDao {
     @Query("SELECT * FROM dossiers ORDER BY updated_at DESC")
     fun getAllDossiers(): Flow<List<DossierEntity>>
 
+    @Query("""
+        SELECT dossiers.*, COUNT(dossier_articles.article_id) AS articleCount
+        FROM dossiers
+        LEFT JOIN dossier_articles ON dossiers.id = dossier_articles.dossier_id
+        GROUP BY dossiers.id
+        ORDER BY dossiers.updated_at DESC
+    """)
+    fun getDossiersWithCount(): Flow<List<DossierWithCount>>
+
     @Query("SELECT * FROM dossiers WHERE tag = :tag ORDER BY updated_at DESC")
     fun getDossiersByTag(tag: DossierTag): Flow<List<DossierEntity>>
 
@@ -206,6 +216,66 @@ interface MibekoDao {
     @Query("SELECT dossier_id FROM dossier_articles WHERE article_id = :articleId")
     fun getDossiersContainingArticle(articleId: String): Flow<List<String>>
 
+    // ========== DOSSIER SYNC ==========
+
+    @Query("SELECT * FROM dossiers")
+    suspend fun getDossiersOnce(): List<DossierEntity>
+
+    @Query("SELECT * FROM dossier_articles")
+    suspend fun getDossierArticlesOnce(): List<DossierArticleEntity>
+
+    @Upsert
+    suspend fun upsertDossiers(dossiers: List<DossierEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDossierArticles(links: List<DossierArticleEntity>)
+
+    @Query("DELETE FROM dossier_articles WHERE dossier_id = :dossierId")
+    suspend fun clearDossierArticlesFor(dossierId: String)
+
+    @Query("DELETE FROM dossiers WHERE id IN (:ids)")
+    suspend fun deleteDossiersByIds(ids: List<String>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPendingDossierDeletion(deletion: PendingDossierDeletionEntity)
+
+    @Query("SELECT * FROM pending_dossier_deletions")
+    suspend fun getPendingDossierDeletions(): List<PendingDossierDeletionEntity>
+
+    @Query("DELETE FROM pending_dossier_deletions WHERE id IN (:ids)")
+    suspend fun clearPendingDossierDeletions(ids: List<String>)
+
+    @Query("DELETE FROM pending_dossier_deletions")
+    suspend fun clearAllPendingDossierDeletions()
+
+    /**
+     * Applique l'état renvoyé par le serveur après fusion.
+     *
+     * Un dossier local modifié pendant la requête (updated_at strictement plus
+     * récent que la version serveur) est conservé : il sera poussé à la
+     * prochaine synchronisation.
+     */
+    @Transaction
+    suspend fun applyDossierSyncState(
+        dossiers: List<DossierEntity>,
+        linksByDossier: Map<String, List<DossierArticleEntity>>,
+        deletedIds: List<String>
+    ) {
+        if (deletedIds.isNotEmpty()) {
+            deleteDossiersByIds(deletedIds)
+        }
+        val localById = getDossiersOnce().associateBy { it.id }
+        for (dossier in dossiers) {
+            val local = localById[dossier.id]
+            if (local != null && local.updated_at > dossier.updated_at) {
+                continue
+            }
+            insertDossier(dossier)
+            clearDossierArticlesFor(dossier.id)
+            linksByDossier[dossier.id]?.let { insertDossierArticles(it) }
+        }
+    }
+
     // ========== CLEAR DATA ==========
 
     @Query("DELETE FROM documents")
@@ -238,6 +308,7 @@ interface MibekoDao {
         clearArticleTags()
         clearDossiers()
         clearDossierArticles()
+        clearAllPendingDossierDeletions()
     }
 }
 
@@ -256,4 +327,12 @@ data class DossierArticleWithDetails(
     val node_title: String,
     val personal_note: String?,
     val added_at: Long
+)
+
+/**
+ * Dossier accompagné du nombre d'articles qu'il contient.
+ */
+data class DossierWithCount(
+    @Embedded val dossier: DossierEntity,
+    val articleCount: Int
 )
