@@ -1,22 +1,20 @@
 package com.mibeko.mibeko.ui.dossier
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,107 +22,106 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.mibeko.mibeko.data.local.dao.DossierWithCount
 import com.mibeko.mibeko.data.local.entities.DossierEntity
 import com.mibeko.mibeko.data.local.entities.DossierTag
+import com.mibeko.mibeko.data.repository.DossierSyncState
+import com.mibeko.mibeko.getCurrentTimeMillis
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen as NavScreen
-import com.mibeko.mibeko.getCurrentTimeMillis
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DossierScreen() {
-        val navController = LocalNavController.current
-        val viewModel = koinViewModel<DossierViewModel>()
-        val uiState by viewModel.uiState.collectAsState()
-        val showCreateDialog by viewModel.showCreateDialog.collectAsState()
-        val editingDossier by viewModel.editingDossier.collectAsState()
-        var showSearch by remember { mutableStateOf(false) }
+    val navController = LocalNavController.current
+    val viewModel = koinViewModel<DossierViewModel>()
+    val uiState by viewModel.uiState.collectAsState()
+    val syncState by viewModel.syncState.collectAsState()
+    val showCreateDialog by viewModel.showCreateDialog.collectAsState()
+    val editingDossier by viewModel.editingDossier.collectAsState()
+    var showSearch by remember { mutableStateOf(false) }
 
-        Scaffold(
-            topBar = {
-                // Search Bar integrated in Top Bar
-                if (uiState.searchQuery.isNotEmpty() || showSearch) {
-                    Surface(
-                        modifier = Modifier.statusBarsPadding(),
-                        color = MaterialTheme.colorScheme.surface
-                    ) {
-                        @Suppress("DEPRECATION")
-                        DockedSearchBar(
-                            query = uiState.searchQuery,
-                            onQueryChange = { viewModel.searchDossiers(it) },
-                            onSearch = { showSearch = false },
-                            active = false,
-                            onActiveChange = { },
-                            placeholder = { Text("Rechercher un dossier...") },
-                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                            trailingIcon = {
-                                if (uiState.searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { viewModel.searchDossiers("") }) {
-                                        Icon(Icons.Filled.Close, contentDescription = "Effacer")
-                                    }
-                                } else {
-                                    IconButton(onClick = { showSearch = false }) {
-                                        Icon(Icons.Filled.Close, contentDescription = "Fermer")
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) { }
-                    }
-                } else {
-                    TopAppBar(
-                        title = { Text("Mes Dossiers", fontWeight = FontWeight.Bold) },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            titleContentColor = MaterialTheme.colorScheme.onSurface,
-                            actionIconContentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        actions = {
-                            IconButton(onClick = { showSearch = true }) {
-                                Icon(
-                                    Icons.Filled.Search,
-                                    contentDescription = "Rechercher"
-                                )
-                            }
-                            IconButton(onClick = { viewModel.toggleViewMode() }) {
-                                Icon(
-                                    if (uiState.isGridView) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView,
-                                    contentDescription = "Mode d'affichage"
-                                )
-                            }
-                        }
-                    )
-                }
-            },
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { viewModel.showCreateDialog() },
-                    containerColor = MaterialTheme.colorScheme.primary
+    Scaffold(
+        topBar = {
+            if (uiState.searchQuery.isNotEmpty() || showSearch) {
+                Surface(
+                    modifier = Modifier.statusBarsPadding(),
+                    color = MaterialTheme.colorScheme.surface
                 ) {
-                    Icon(
-                        Icons.Filled.Add,
-                        contentDescription = "Créer un dossier",
-                        tint = MaterialTheme.colorScheme.onPrimary
+                    OutlinedTextField(
+                        value = uiState.searchQuery,
+                        onValueChange = { viewModel.searchDossiers(it) },
+                        placeholder = { Text("Rechercher un dossier…") },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                viewModel.searchDossiers("")
+                                showSearch = false
+                            }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Fermer")
+                            }
+                        },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
-            },
-            containerColor = MaterialTheme.colorScheme.background
-        ) { padding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = padding.calculateTopPadding())
+            } else {
+                TopAppBar(
+                    title = { Text("Mes Dossiers", style = MaterialTheme.typography.titleLarge) },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    actions = {
+                        IconButton(onClick = { viewModel.refresh() }) {
+                            Icon(Icons.Filled.Sync, contentDescription = "Synchroniser")
+                        }
+                        IconButton(onClick = { showSearch = true }) {
+                            Icon(Icons.Filled.Search, contentDescription = "Rechercher")
+                        }
+                        IconButton(onClick = { viewModel.toggleViewMode() }) {
+                            Icon(
+                                if (uiState.isGridView) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView,
+                                contentDescription = "Mode d'affichage"
+                            )
+                        }
+                    }
+                )
+            }
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { viewModel.showCreateDialog() },
+                containerColor = MaterialTheme.colorScheme.primary,
+                shape = RoundedCornerShape(8.dp)
             ) {
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = "Créer un dossier",
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = padding.calculateTopPadding())
+        ) {
+            DossierSyncStatusBar(syncState = syncState, onRetry = { viewModel.refresh() })
+
+            Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     uiState.isLoading -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     }
                     uiState.error != null -> {
                         Column(
@@ -140,13 +137,14 @@ fun DossierScreen() {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = uiState.error ?: "Erreur",
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }
                     uiState.dossiers.isEmpty() -> {
                         Column(
-                            modifier = Modifier.align(Alignment.Center),
+                            modifier = Modifier.align(Alignment.Center).padding(horizontal = 32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(
@@ -158,14 +156,15 @@ fun DossierScreen() {
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = "Aucun dossier",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 18.sp
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Créez votre premier dossier pour organiser vos recherches",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                fontSize = 14.sp
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
@@ -178,14 +177,14 @@ fun DossierScreen() {
                                 verticalArrangement = Arrangement.spacedBy(16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                items(uiState.dossiers) { dossier ->
+                                items(uiState.dossiers, key = { it.dossier.id }) { item ->
                                     DossierGridCard(
-                                        dossier = dossier,
+                                        item = item,
                                         onClick = {
-                                            navController.navigate(NavScreen.DossierDetail(dossier.id))
+                                            navController.navigate(NavScreen.DossierDetail(item.dossier.id))
                                         },
-                                        onEdit = { viewModel.showEditDialog(dossier) },
-                                        onDelete = { viewModel.deleteDossier(dossier.id) }
+                                        onEdit = { viewModel.showEditDialog(item.dossier) },
+                                        onDelete = { viewModel.deleteDossier(item.dossier.id) }
                                     )
                                 }
                             }
@@ -195,14 +194,14 @@ fun DossierScreen() {
                                 contentPadding = PaddingValues(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(uiState.dossiers) { dossier ->
+                                items(uiState.dossiers, key = { it.dossier.id }) { item ->
                                     DossierCard(
-                                        dossier = dossier,
+                                        item = item,
                                         onClick = {
-                                            navController.navigate(NavScreen.DossierDetail(dossier.id))
+                                            navController.navigate(NavScreen.DossierDetail(item.dossier.id))
                                         },
-                                        onEdit = { viewModel.showEditDialog(dossier) },
-                                        onDelete = { viewModel.deleteDossier(dossier.id) }
+                                        onEdit = { viewModel.showEditDialog(item.dossier) },
+                                        onDelete = { viewModel.deleteDossier(item.dossier.id) }
                                     )
                                 }
                             }
@@ -211,40 +210,107 @@ fun DossierScreen() {
                 }
             }
         }
+    }
 
-        // Create/Edit Dialog
-        if (showCreateDialog) {
-            CreateDossierDialog(
-                dossier = editingDossier,
-                onDismiss = { viewModel.dismissDialog() },
-                onConfirm = { name, domain, tag, desc, color ->
-                    if (editingDossier != null) {
-                        viewModel.updateDossier(editingDossier!!.id, name, domain, tag, desc, color)
-                    } else {
-                        viewModel.createDossier(name, domain, tag, desc, color)
-                    }
+    if (showCreateDialog) {
+        CreateDossierDialog(
+            dossier = editingDossier,
+            onDismiss = { viewModel.dismissDialog() },
+            onConfirm = { name, domain, tag, desc, color ->
+                val editing = editingDossier
+                if (editing != null) {
+                    viewModel.updateDossier(editing.id, name, domain, tag, desc, color)
+                } else {
+                    viewModel.createDossier(name, domain, tag, desc, color)
                 }
+            }
+        )
+    }
+}
+
+/**
+ * Bandeau discret indiquant l'état de synchronisation avec le compte Mibeko.
+ */
+@Composable
+private fun DossierSyncStatusBar(syncState: DossierSyncState, onRetry: () -> Unit) {
+    val (text, color) = when (syncState) {
+        is DossierSyncState.Idle -> return
+        is DossierSyncState.Syncing -> "Synchronisation…" to MaterialTheme.colorScheme.onSurfaceVariant
+        is DossierSyncState.Synced ->
+            "Synchronisé à ${formatTime(syncState.at)}" to MaterialTheme.colorScheme.onSurfaceVariant
+        is DossierSyncState.Offline -> {
+            val last = syncState.lastSyncAt
+            val suffix = if (last != null) " — dernière sync ${formatTime(last)}" else ""
+            "Hors-ligne, modifications enregistrées localement$suffix" to MaterialTheme.colorScheme.onSurfaceVariant
+        }
+        is DossierSyncState.Error -> "Échec de synchronisation" to MaterialTheme.colorScheme.error
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        when (syncState) {
+            is DossierSyncState.Syncing -> CircularProgressIndicator(
+                modifier = Modifier.size(12.dp),
+                strokeWidth = 1.5.dp
             )
+            is DossierSyncState.Synced -> Icon(
+                Icons.Filled.CloudDone,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(14.dp)
+            )
+            is DossierSyncState.Offline -> Icon(
+                Icons.Filled.CloudOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(14.dp)
+            )
+            is DossierSyncState.Error -> Icon(
+                Icons.Filled.CloudOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(14.dp)
+            )
+            else -> Unit
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            modifier = Modifier.weight(1f)
+        )
+        if (syncState is DossierSyncState.Error) {
+            TextButton(onClick = onRetry, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                Text("Réessayer", style = MaterialTheme.typography.labelMedium)
+            }
         }
     }
- 
+}
 
 @Composable
 fun DossierCard(
-    dossier: DossierEntity,
+    item: DossierWithCount,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val dossier = item.dossier
     var showMenu by remember { mutableStateOf(false) }
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier
@@ -252,48 +318,43 @@ fun DossierCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Folder Icon with color
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(parseColor(dossier.color).copy(alpha = 0.15f)),
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(parseColor(dossier.color).copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Filled.Folder,
                     contentDescription = null,
                     tint = parseColor(dossier.color),
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(28.dp)
                 )
             }
-            
+
             Spacer(modifier = Modifier.width(16.dp))
-            
-            // Content
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = dossier.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                
+
                 Spacer(modifier = Modifier.height(4.dp))
-                
+
                 Text(
-                    text = "${dossier.legal_domain} • ${formatDate(dossier.updated_at)}",
-                    fontSize = 12.sp,
+                    text = "${dossier.legal_domain} • ${item.articleCount} article${if (item.articleCount > 1) "s" else ""} • ${formatDate(dossier.updated_at)}",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
-                // Tag chip
+
                 DossierTagChip(tag = dossier.tag)
             }
-            
-            // Menu
+
             Box {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
@@ -342,42 +403,41 @@ fun DossierCard(
 fun DossierTagChip(tag: DossierTag) {
     val (backgroundColor, textColor, label) = when (tag) {
         DossierTag.EN_COURS -> Triple(
-            MaterialTheme.colorScheme.primaryContainer,
-            MaterialTheme.colorScheme.onPrimaryContainer,
-            "En Cours"
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+            MaterialTheme.colorScheme.primary,
+            "En cours"
         )
         DossierTag.URGENT -> Triple(
-            MaterialTheme.colorScheme.errorContainer,
-            MaterialTheme.colorScheme.onErrorContainer,
+            MaterialTheme.colorScheme.error.copy(alpha = 0.10f),
+            MaterialTheme.colorScheme.error,
             "Urgent"
         )
         DossierTag.ARCHIVE -> Triple(
-            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f),
             MaterialTheme.colorScheme.onSurfaceVariant,
             "Archivé"
         )
         DossierTag.FAVORIS -> Triple(
-            MaterialTheme.colorScheme.tertiaryContainer,
-            MaterialTheme.colorScheme.onTertiaryContainer,
+            MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f),
+            MaterialTheme.colorScheme.secondary,
             "Favoris"
         )
     }
-    
+
     Surface(
         color = backgroundColor,
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(4.dp)
     ) {
         Text(
             text = label,
             color = textColor,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateDossierDialog(
     dossier: DossierEntity?,
@@ -388,10 +448,10 @@ fun CreateDossierDialog(
     var legalDomain by remember { mutableStateOf(dossier?.legal_domain ?: "") }
     var selectedTag by remember { mutableStateOf(dossier?.tag ?: DossierTag.EN_COURS) }
     var description by remember { mutableStateOf(dossier?.description ?: "") }
-    var selectedColor by remember { mutableStateOf(dossier?.color ?: "#1565C0") }
+    var selectedColor by remember { mutableStateOf(dossier?.color ?: "#1B3D2F") }
     var expandedDomain by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
-    
+
     val legalDomains = listOf(
         "Droit de la Famille",
         "Droit des Affaires",
@@ -401,15 +461,21 @@ fun CreateDossierDialog(
         "Droit Administratif",
         "Général"
     )
-    
+
+    // Palette institutionnelle (vert forêt, terracotta, tons neutres).
+    val colorOptions = listOf(
+        "#1B3D2F", "#8F4C31", "#436556", "#73351D", "#142519", "#727974"
+    )
+
     val isEditing = dossier != null
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(8.dp),
         title = {
             Text(
-                text = if (isEditing) "Modifier le Dossier" else "Nouveau Dossier",
-                fontWeight = FontWeight.Bold
+                text = if (isEditing) "Modifier le dossier" else "Nouveau dossier",
+                style = MaterialTheme.typography.headlineSmall
             )
         },
         text = {
@@ -419,7 +485,6 @@ fun CreateDossierDialog(
                     .verticalScroll(scrollState),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Name field
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -429,8 +494,7 @@ fun CreateDossierDialog(
                     enabled = dossier?.tag != DossierTag.FAVORIS,
                     modifier = Modifier.fillMaxWidth()
                 )
-                
-                // Legal domain dropdown
+
                 ExposedDropdownMenuBox(
                     expanded = expandedDomain,
                     onExpandedChange = { expandedDomain = it }
@@ -460,26 +524,21 @@ fun CreateDossierDialog(
                         }
                     }
                 }
-                
-                // Tags
+
                 Text(
                     text = "Étiquette",
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.labelMedium
                 )
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DossierTag.entries.forEach { tag ->
                         FilterChip(
                             selected = selectedTag == tag,
                             onClick = { selectedTag = tag },
-                            label = { 
+                            shape = RoundedCornerShape(4.dp),
+                            label = {
                                 Text(
                                     when (tag) {
-                                        DossierTag.EN_COURS -> "En Cours"
+                                        DossierTag.EN_COURS -> "En cours"
                                         DossierTag.URGENT -> "Urgent"
                                         DossierTag.ARCHIVE -> "Archivé"
                                         DossierTag.FAVORIS -> "Favoris"
@@ -489,8 +548,33 @@ fun CreateDossierDialog(
                         )
                     }
                 }
-                
-                // Description
+
+                Text(
+                    text = "Couleur",
+                    style = MaterialTheme.typography.labelMedium
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    colorOptions.forEach { hex ->
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(parseColor(hex))
+                                .clickable { selectedColor = hex },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (selectedColor.equals(hex, ignoreCase = true)) {
+                                Icon(
+                                    Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
@@ -512,7 +596,8 @@ fun CreateDossierDialog(
                         selectedColor
                     )
                 },
-                enabled = name.isNotBlank()
+                enabled = name.isNotBlank(),
+                shape = RoundedCornerShape(4.dp)
             ) {
                 Text(if (isEditing) "Modifier" else "Créer")
             }
@@ -536,28 +621,35 @@ fun parseColor(hexColor: String): Color {
             blue = (colorLong and 0xFF) / 255f
         )
     } catch (e: Exception) {
-        Color(0xFF1565C0)
+        Color(0xFF1B3D2F)
     }
 }
 
 fun formatDate(timestamp: Long): String {
     val now = getCurrentTimeMillis()
     val diff = now - timestamp
-    
+
     if (diff < 60000L) return "À l'instant"
     if (diff < 3600000L) return "Il y a ${diff / 60000L} min"
     if (diff < 86400000L) return "Il y a ${diff / 3600000L}h"
     if (diff < 604800000L) return "Il y a ${diff / 86400000L} jours"
-    
-    return "Modifié hier"
+
+    return com.mibeko.mibeko.util.formatEpochMillisDate(timestamp)
 }
+
+private fun formatTime(timestamp: Long): String {
+    return com.mibeko.mibeko.util.formatEpochMillisDate(timestamp, includeTime = true)
+        .substringAfter("à ")
+}
+
 @Composable
 fun DossierGridCard(
-    dossier: DossierEntity,
+    item: DossierWithCount,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val dossier = item.dossier
     var showMenu by remember { mutableStateOf(false) }
 
     Card(
@@ -565,16 +657,16 @@ fun DossierGridCard(
             .fillMaxWidth()
             .aspectRatio(1f)
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = RoundedCornerShape(8.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Folder Icon
                 Icon(
                     Icons.Filled.Folder,
                     contentDescription = null,
@@ -586,16 +678,20 @@ fun DossierGridCard(
 
                 Text(
                     text = dossier.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    textAlign = TextAlign.Center,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = "${item.articleCount} article${if (item.articleCount > 1) "s" else ""}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            // Menu Icon Top Right
             Box(modifier = Modifier.align(Alignment.TopEnd)) {
                 IconButton(
                     onClick = { showMenu = true },
@@ -627,24 +723,21 @@ fun DossierGridCard(
                                 showMenu = false
                                 onDelete()
                             },
-                            leadingIcon = { 
+                            leadingIcon = {
                                 Icon(
-                                    Icons.Filled.Delete, 
-                                    contentDescription = null, 
+                                    Icons.Filled.Delete,
+                                    contentDescription = null,
                                     tint = MaterialTheme.colorScheme.error
-                                ) 
+                                )
                             }
                         )
                     }
                 }
             }
-            
-            // Tag Bottom Center
+
             Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-                 DossierTagChip(tag = dossier.tag)
+                DossierTagChip(tag = dossier.tag)
             }
         }
     }
-
-
 }

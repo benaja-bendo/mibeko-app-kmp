@@ -44,12 +44,12 @@ class DossierSelectionViewModel(
                 
                 val allDossiersFlow = dossierRepository.getAllDossiers()
                 val selectedDossiersFlow = dossierRepository.getDossiersContainingArticle(articleId)
-                
-                allDossiersFlow.combine(selectedDossiersFlow) { dossiersWithCount, selectedIds ->
-                    dossiersWithCount.map {
+
+                allDossiersFlow.combine(selectedDossiersFlow) { allDossiers, selectedIds ->
+                    allDossiers.map {
                         DossierWithSelection(
-                            dossier = it.dossier,
-                            isSelected = selectedIds.contains(it.dossier.id)
+                            dossier = it,
+                            isSelected = selectedIds.contains(it.id)
                         )
                     }
                 }.collect { dossiers ->
@@ -84,6 +84,7 @@ class DossierSelectionViewModel(
                 if (dossier?.tag == DossierTag.FAVORIS) {
                     localLegalRepository.updateArticleFavoriteStatus(articleId, isSelected)
                 }
+                dossierRepository.syncNow()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     error = "Erreur lors de la modification: ${e.message}"
@@ -104,6 +105,7 @@ class DossierSelectionViewModel(
                     color = color
                 )
                 dossierRepository.addArticleToDossier(dossierId, articleId)
+                dossierRepository.syncNow()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     error = "Erreur lors de la création du dossier: ${e.message}"

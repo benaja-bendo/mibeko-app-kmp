@@ -2,18 +2,58 @@ package com.mibeko.mibeko.ui.dossier
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mibeko.mibeko.data.local.dao.DossierWithCount
 import com.mibeko.mibeko.data.local.entities.DossierEntity
 import com.mibeko.mibeko.data.local.entities.DossierTag
 import com.mibeko.mibeko.data.repository.DossierRepository
-import kotlinx.coroutines.flow.*
+import com.mibeko.mibeko.data.repository.DossierSyncState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class DossierViewModel(
     private val repository: DossierRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DossierListUiState())
-    val uiState: StateFlow<DossierListUiState> = _uiState.asStateFlow()
+    private val searchQuery = MutableStateFlow("")
+    private val selectedTag = MutableStateFlow<DossierTag?>(null)
+    private val isGridView = MutableStateFlow(false)
+    private val error = MutableStateFlow<String?>(null)
+
+    /** État de synchronisation exposé à l'écran (bandeau / icône). */
+    val syncState: StateFlow<DossierSyncState> = repository.syncState
+
+    val uiState: StateFlow<DossierListUiState> = combine(
+        repository.getDossiersWithCount().catch { e ->
+            error.value = e.message ?: "Erreur inconnue"
+            emit(emptyList())
+        },
+        searchQuery,
+        selectedTag,
+        isGridView,
+        error
+    ) { dossiers, query, tag, grid, err ->
+        val filtered = dossiers
+            .filter { tag == null || it.dossier.tag == tag }
+            .filter { query.isBlank() || it.dossier.name.contains(query, ignoreCase = true) }
+        DossierListUiState(
+            isLoading = false,
+            dossiers = filtered,
+            error = err,
+            searchQuery = query,
+            selectedTag = tag,
+            isGridView = grid
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = DossierListUiState(isLoading = true)
+    )
 
     private val _showCreateDialog = MutableStateFlow(false)
     val showCreateDialog: StateFlow<Boolean> = _showCreateDialog.asStateFlow()
@@ -22,92 +62,27 @@ class DossierViewModel(
     val editingDossier: StateFlow<DossierEntity?> = _editingDossier.asStateFlow()
 
     init {
-        loadDossiers()
-        ensureFavoritesExist()
-    }
-
-    /**
-     * Vérifie si un dossier "Favoris" existe, sinon le crée par défaut.
-     */
-    private fun ensureFavoritesExist() {
         viewModelScope.launch {
-            repository.getAllDossiers().firstOrNull()?.let { dossiersWithCount ->
-                val dossiers = dossiersWithCount.map { it.dossier }
-                val exists = dossiers.any { 
-                    it.name.equals("Favoris", ignoreCase = true) || 
-                    it.name.equals("Favorites", ignoreCase = true) 
-                }
-                
-                if (!exists) {
-                    repository.createDossier(
-                        name = "Favoris",
-                        legalDomain = "Général",
-                        tag = DossierTag.FAVORIS,
-                        description = "Mes articles sauvegardés",
-                        color = "#FFD700" // Gold color
-                    )
-                    loadDossiers()
-                }
-            }
+            repository.getOrCreateFavoritesDossier()
+            repository.syncNow()
         }
     }
 
-    private fun loadDossiers() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            repository.getAllDossiers()
-                .catch { e ->
-                    _uiState.update { 
-                        it.copy(isLoading = false, error = e.message ?: "Erreur inconnue") 
-                    }
-                }
-                .collect { dossiersWithCount ->
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false,
-                            dossiers = dossiersWithCount.map { dwc -> dwc.dossier },
-                            error = null
-                        ) 
-                    }
-                }
-        }
+    /** Synchronisation manuelle (bouton rafraîchir). */
+    fun refresh() {
+        viewModelScope.launch { repository.syncNow() }
     }
 
     fun filterByTag(tag: DossierTag?) {
-        _uiState.update { it.copy(selectedTag = tag) }
-        viewModelScope.launch {
-            if (tag == null) {
-                loadDossiers()
-            } else {
-                repository.getDossiersByTag(tag)
-                    .collect { dossiers ->
-                        _uiState.update { it.copy(dossiers = dossiers) }
-                    }
-            }
-        }
+        selectedTag.value = tag
     }
 
     fun toggleViewMode() {
-        _uiState.update { it.copy(isGridView = !it.isGridView) }
+        isGridView.value = !isGridView.value
     }
 
     fun searchDossiers(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
-        viewModelScope.launch {
-            if (query.isBlank()) {
-                repository.getAllDossiers()
-                    .collect { dossiersWithCount ->
-                        _uiState.update {
-                            it.copy(dossiers = dossiersWithCount.map { dwc -> dwc.dossier })
-                        }
-                    }
-            } else {
-                repository.searchDossiers(query)
-                    .collect { dossiers ->
-                        _uiState.update { it.copy(dossiers = dossiers) }
-                    }
-            }
-        }
+        searchQuery.value = query
     }
 
     fun showCreateDialog() {
@@ -135,7 +110,7 @@ class DossierViewModel(
         viewModelScope.launch {
             repository.createDossier(name, legalDomain, tag, description, color)
             _showCreateDialog.value = false
-            loadDossiers()
+            repository.syncNow()
         }
     }
 
@@ -151,21 +126,21 @@ class DossierViewModel(
             repository.updateDossier(dossierId, name, legalDomain, tag, description, color)
             _showCreateDialog.value = false
             _editingDossier.value = null
-            loadDossiers()
+            repository.syncNow()
         }
     }
 
     fun deleteDossier(dossierId: String) {
         viewModelScope.launch {
             repository.deleteDossier(dossierId)
-            loadDossiers()
+            repository.syncNow()
         }
     }
 }
 
 data class DossierListUiState(
     val isLoading: Boolean = false,
-    val dossiers: List<DossierEntity> = emptyList(),
+    val dossiers: List<DossierWithCount> = emptyList(),
     val error: String? = null,
     val searchQuery: String = "",
     val selectedTag: DossierTag? = null,

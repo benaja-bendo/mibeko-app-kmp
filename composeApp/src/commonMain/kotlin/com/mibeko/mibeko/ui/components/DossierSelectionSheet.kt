@@ -17,6 +17,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mibeko.mibeko.ui.dossier.CreateDossierDialog
+// parseColor : construit la couleur par canaux (le constructeur Color(ULong)
+// attend une valeur packée et fait crasher le rendu avec un hex brut).
+import com.mibeko.mibeko.ui.dossier.parseColor
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -154,17 +157,3 @@ fun DossierSelectionItem(
     }
 }
 
-// Helper to parse hex color
-private fun parseColor(hexString: String): Color {
-    return try {
-        val cleanHex = if (hexString.startsWith("#")) hexString.substring(1) else hexString
-        val colorInt = cleanHex.toLong(16)
-        if (cleanHex.length == 6) {
-            Color((colorInt or 0xFF000000).toULong())
-        } else {
-            Color(colorInt.toULong())
-        }
-    } catch (e: Exception) {
-        Color.Gray
-    }
-}

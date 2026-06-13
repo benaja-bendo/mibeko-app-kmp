@@ -80,12 +80,14 @@ class DossierDetailViewModel(
         viewModelScope.launch {
             repository.updatePersonalNote(dossierId, articleId, note)
             _showNoteDialog.value = null
+            repository.syncNow()
         }
     }
 
     fun removeArticle(articleId: String) {
         viewModelScope.launch {
             repository.removeArticleFromDossier(dossierId, articleId)
+            repository.syncNow()
         }
     }
 
@@ -107,6 +109,7 @@ class DossierDetailViewModel(
         viewModelScope.launch {
             repository.updateDossier(dossierId, name, legalDomain, tag, description, color)
             _showEditDialog.value = false
+            repository.syncNow()
         }
     }
 

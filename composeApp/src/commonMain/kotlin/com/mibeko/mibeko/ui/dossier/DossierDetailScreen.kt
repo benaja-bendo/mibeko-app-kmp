@@ -148,7 +148,7 @@ fun DossierHeader(dossier: DossierEntity?, color: Color, count: Int) {
         modifier = Modifier.fillMaxWidth(),
         color = color,
         shadowElevation = 4.dp,
-        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+        shape = androidx.compose.ui.graphics.RectangleShape
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
