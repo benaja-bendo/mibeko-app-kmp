@@ -96,6 +96,7 @@ class RegisterViewModel(
                 
                 if (response.success && response.data != null) {
                     userPreferences.setAuthToken(response.data.token)
+                    authApiService.invalidateTokenCache()
                     val profileComplete = response.data.user?.mobile_profile?.let { profile ->
                         !profile.phone.isNullOrBlank() &&
                             !profile.profession.isNullOrBlank() &&

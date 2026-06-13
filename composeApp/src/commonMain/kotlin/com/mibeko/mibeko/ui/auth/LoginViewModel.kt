@@ -8,10 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.remote.LoginRequest
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.auth.GoogleAuthProvider
-import dev.gitlive.firebase.auth.OAuthProvider
-import dev.gitlive.firebase.auth.auth
+import com.mibeko.mibeko.data.remote.TwoFactorRequiredException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +17,9 @@ import kotlinx.coroutines.launch
 sealed class LoginState {
     object Idle : LoginState()
     object Loading : LoginState()
+
+    /** Le compte est protégé : afficher l'étape de saisie du code TOTP. */
+    data class TwoFactorRequired(val error: String? = null) : LoginState()
     data class Success(val requiresProfileSetup: Boolean) : LoginState()
     data class Error(val message: String) : LoginState()
 }
@@ -38,12 +38,27 @@ class LoginViewModel(
     var password by mutableStateOf("")
         private set
 
+    var twoFactorCode by mutableStateOf("")
+        private set
+
     fun onEmailChange(newEmail: String) {
         email = newEmail
     }
 
     fun onPasswordChange(newPassword: String) {
         password = newPassword
+    }
+
+    fun onTwoFactorCodeChange(newCode: String) {
+        if (newCode.length <= 6 && newCode.all { it.isDigit() }) {
+            twoFactorCode = newCode
+        }
+    }
+
+    /** Retour de l'étape 2FA vers le formulaire email / mot de passe. */
+    fun cancelTwoFactor() {
+        twoFactorCode = ""
+        _loginState.value = LoginState.Idle
     }
 
     fun loginWithEmail() {
@@ -55,11 +70,17 @@ class LoginViewModel(
         viewModelScope.launch {
             _loginState.value = LoginState.Loading
             try {
-                val request = LoginRequest(email, password, "Mobile Device")
+                val request = LoginRequest(
+                    email = email,
+                    password = password,
+                    device_name = "Mobile Device",
+                    code = twoFactorCode.ifBlank { null }
+                )
                 val response = authApiService.loginWithEmail(request)
-                
+
                 if (response.success && response.data != null) {
                     userPreferences.setAuthToken(response.data.token)
+                    authApiService.invalidateTokenCache()
                     val profileComplete = response.data.user?.mobile_profile?.let { profile ->
                         !profile.phone.isNullOrBlank() &&
                             !profile.profession.isNullOrBlank() &&
@@ -73,64 +94,22 @@ class LoginViewModel(
                     }
                     _loginState.value = LoginState.Success(requiresProfileSetup = !profileComplete)
                 } else {
-                    // Extract the first error message if available
                     val errorMessage = response.errors?.values?.firstOrNull()?.firstOrNull()
-                        ?: response.message 
+                        ?: response.message
                         ?: "Une erreur est survenue lors de la connexion."
-                    _loginState.value = LoginState.Error(errorMessage)
+                    // Un code TOTP invalide ramène à l'étape 2FA, pas au formulaire.
+                    _loginState.value = if (response.errors?.containsKey("code") == true) {
+                        LoginState.TwoFactorRequired(errorMessage)
+                    } else {
+                        LoginState.Error(errorMessage)
+                    }
                 }
+            } catch (e: TwoFactorRequiredException) {
+                twoFactorCode = ""
+                _loginState.value = LoginState.TwoFactorRequired()
             } catch (e: Exception) {
                 _loginState.value = LoginState.Error(e.message ?: "Une erreur est survenue lors de la connexion.")
             }
-        }
-    }
-
-    fun loginWithGoogle() {
-        viewModelScope.launch {
-            _loginState.value = LoginState.Error("La connexion avec Google n'est pas encore disponible dans cette version.")
-            /*
-            _loginState.value = LoginState.Loading
-            try {
-                // In a real scenario, you'd trigger the native Google sign-in flow here
-                // For KMP with gitlive firebase, this typically involves using the platform-specific Google Sign-In SDK
-                // and then signing in with the credential.
-                
-                val placeholderToken = "PLACEHOLDER_TOKEN"
-                val response = authApiService.loginWithFirebase(placeholderToken, "Android Device")
-                
-                userPreferences.setAuthToken(response.data.token)
-                if (response.data.user != null) {
-                    userPreferences.setUserInfo(response.data.user.name, response.data.user.email)
-                }
-                
-                _loginState.value = LoginState.Success
-            } catch (e: Exception) {
-                _loginState.value = LoginState.Error(e.message ?: "Une erreur est survenue lors de la connexion.")
-            }
-            */
-        }
-    }
-
-    fun loginWithApple() {
-        viewModelScope.launch {
-            _loginState.value = LoginState.Error("La connexion avec Apple n'est pas encore disponible dans cette version.")
-            /*
-            _loginState.value = LoginState.Loading
-            try {
-                // Similar to Google, but with OAuthProvider("apple.com")
-                val placeholderToken = "PLACEHOLDER_TOKEN"
-                val response = authApiService.loginWithFirebase(placeholderToken, "iOS Device")
-                
-                userPreferences.setAuthToken(response.data.token)
-                if (response.data.user != null) {
-                    userPreferences.setUserInfo(response.data.user.name, response.data.user.email)
-                }
-                
-                _loginState.value = LoginState.Success
-            } catch (e: Exception) {
-                _loginState.value = LoginState.Error(e.message ?: "Une erreur est survenue lors de la connexion.")
-            }
-            */
         }
     }
 }
