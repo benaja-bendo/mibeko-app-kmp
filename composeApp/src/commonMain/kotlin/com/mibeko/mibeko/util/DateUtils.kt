@@ -12,7 +12,7 @@ fun formatIsoDate(isoString: String): String {
         val instant = Instant.parse(isoString)
         val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
         val day = dateTime.day.toString().padStart(2, '0')
-        val month = dateTime.month.toString().padStart(2, '0')
+        val month = dateTime.monthNumber.toString().padStart(2, '0')
         val year = dateTime.year
         val hour = dateTime.hour.toString().padStart(2, '0')
         val minute = dateTime.minute.toString().padStart(2, '0')
@@ -22,12 +22,28 @@ fun formatIsoDate(isoString: String): String {
             // Try parsing as Date only (e.g. 2024-05-12)
             val date = LocalDate.parse(isoString)
             val day = date.day.toString().padStart(2, '0')
-            val month = date.month.toString().padStart(2, '0')
+            val month = date.monthNumber.toString().padStart(2, '0')
             val year = date.year
             return "$day/$month/$year"
         } catch (e2: Exception) {
             return isoString
         }
+    }
+}
+
+private val FRENCH_MONTHS = listOf(
+    "janvier", "février", "mars", "avril", "mai", "juin",
+    "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+)
+
+/** Date « éditoriale » sans heure : « 12 juin 2026 ». Pour les JO et textes. */
+fun formatIsoDateLong(isoString: String): String {
+    val dateOnly = isoString.take(10)
+    return try {
+        val date = LocalDate.parse(dateOnly)
+        "${date.day} ${FRENCH_MONTHS[date.monthNumber - 1]} ${date.year}"
+    } catch (e: Exception) {
+        isoString
     }
 }
 
