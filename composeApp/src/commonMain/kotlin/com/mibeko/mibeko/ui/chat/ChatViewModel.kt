@@ -4,17 +4,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.remote.AgentConversationMessage
 import com.mibeko.mibeko.data.remote.AiApiService
+import com.mibeko.mibeko.data.remote.AiChatReference
+import com.mibeko.mibeko.data.remote.AiMode
+import com.mibeko.mibeko.data.remote.AiStreamEvent
+import com.mibeko.mibeko.data.remote.AssistantReference
+import com.mibeko.mibeko.getCurrentTimeMillis
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import com.mibeko.mibeko.getCurrentTimeMillis
-
-import com.mibeko.mibeko.data.remote.AiStreamEvent
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 
 sealed class ChatState {
@@ -28,6 +31,14 @@ sealed class ChatState {
     ) : ChatState()
 }
 
+/** État du sélecteur de références « @ » (documents épinglés, max 5). */
+data class ReferencePickerState(
+    val isVisible: Boolean = false,
+    val query: String = "",
+    val suggestions: List<AssistantReference> = emptyList(),
+    val isLoading: Boolean = false
+)
+
 class ChatViewModel(
     private val aiApiService: AiApiService
 ) : ViewModel() {
@@ -35,9 +46,63 @@ class ChatViewModel(
     private val _chatState = MutableStateFlow<ChatState>(ChatState.Idle)
     val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
 
+    private val _mode = MutableStateFlow(AiMode.CONCISE)
+    val mode: StateFlow<AiMode> = _mode.asStateFlow()
+
+    private val _pinnedReferences = MutableStateFlow<List<AssistantReference>>(emptyList())
+    val pinnedReferences: StateFlow<List<AssistantReference>> = _pinnedReferences.asStateFlow()
+
+    private val _referencePicker = MutableStateFlow(ReferencePickerState())
+    val referencePicker: StateFlow<ReferencePickerState> = _referencePicker.asStateFlow()
+
     private var currentConversationId: String? = null
     private val currentMessages = mutableListOf<AgentConversationMessage>()
-    private var streamJob: kotlinx.coroutines.Job? = null
+    private var streamJob: Job? = null
+    private var referenceSearchJob: Job? = null
+
+    fun setMode(mode: AiMode) {
+        _mode.value = mode
+    }
+
+    fun openReferencePicker() {
+        _referencePicker.value = ReferencePickerState(isVisible = true, isLoading = true)
+        searchReferences("")
+    }
+
+    fun closeReferencePicker() {
+        referenceSearchJob?.cancel()
+        _referencePicker.value = ReferencePickerState()
+    }
+
+    fun searchReferences(query: String) {
+        _referencePicker.value = _referencePicker.value.copy(query = query, isLoading = true)
+        referenceSearchJob?.cancel()
+        referenceSearchJob = viewModelScope.launch {
+            delay(250) // debounce de frappe
+            try {
+                val results = aiApiService.searchReferences(query.ifBlank { null })
+                _referencePicker.value = _referencePicker.value.copy(
+                    suggestions = results,
+                    isLoading = false
+                )
+            } catch (e: Exception) {
+                _referencePicker.value = _referencePicker.value.copy(
+                    suggestions = emptyList(),
+                    isLoading = false
+                )
+            }
+        }
+    }
+
+    fun pinReference(reference: AssistantReference) {
+        val current = _pinnedReferences.value
+        if (current.size >= 5 || current.any { it.id == reference.id }) return
+        _pinnedReferences.value = current + reference
+    }
+
+    fun unpinReference(referenceId: String) {
+        _pinnedReferences.value = _pinnedReferences.value.filterNot { it.id == referenceId }
+    }
 
     fun initChat(conversationId: String?, initialPrompt: String?) {
         // Prevent re-initialization when navigating back from another screen (e.g. DocumentDetail)
@@ -112,6 +177,8 @@ class ChatViewModel(
                 aiApiService.sendMessageStream(
                     message = message,
                     conversationId = currentConversationId,
+                    mode = _mode.value,
+                    references = _pinnedReferences.value.map { AiChatReference(id = it.id) },
                     onConversationIdReceived = { id ->
                         currentConversationId = id
                     }

@@ -161,10 +161,16 @@ fun ConversationHistoryScreen() {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 is HistoryState.Error -> {
-                    Text(
-                        "Erreur de chargement de l'historique.",
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Erreur de chargement de l'historique.")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { viewModel.loadHistory() }) {
+                            Text("Réessayer")
+                        }
+                    }
                 }
                 is HistoryState.Content -> {
                     if (currentState.conversations.isEmpty()) {

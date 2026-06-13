@@ -11,9 +11,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,7 +30,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.data.remote.AgentConversationMessage
+import com.mibeko.mibeko.data.remote.AiMode
 import com.mibeko.mibeko.data.remote.ArticleSource
+import com.mibeko.mibeko.data.remote.AssistantReference
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
 import androidx.compose.ui.text.TextStyle
@@ -47,6 +53,9 @@ fun ChatScreen(
     val navController = LocalNavController.current
     val viewModel: ChatViewModel = koinViewModel()
     val chatState by viewModel.chatState.collectAsState()
+    val mode by viewModel.mode.collectAsState()
+    val pinnedReferences by viewModel.pinnedReferences.collectAsState()
+    val referencePicker by viewModel.referencePicker.collectAsState()
     val listState = rememberLazyListState()
 
     var textState by remember { mutableStateOf(TextFieldValue("")) }
@@ -95,10 +104,21 @@ fun ChatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mibeko IA") },
+                title = { Text("Assistant Mibeko", style = MaterialTheme.typography.titleLarge) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                ),
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                    if (navController.previousBackStackEntry != null) {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                        }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { navController.navigate(Screen.ConversationHistory) }) {
+                        Icon(Icons.Default.History, contentDescription = "Historique des conversations")
                     }
                 }
             )
@@ -142,11 +162,75 @@ fun ChatScreen(
                 }
             }
 
+            // Références épinglées (« @ ») restreignant le périmètre de l'IA
+            if (pinnedReferences.isNotEmpty()) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(pinnedReferences, key = { it.id }) { reference ->
+                        InputChip(
+                            selected = true,
+                            onClick = { viewModel.unpinReference(reference.id) },
+                            label = {
+                                Text(
+                                    reference.title,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.widthIn(max = 180.dp)
+                                )
+                            },
+                            trailingIcon = {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Retirer la référence",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                    }
+                }
+            }
+
+            // Sélecteur de mode + ajout de référence
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.height(32.dp)) {
+                    AiMode.entries.forEachIndexed { index, entry ->
+                        SegmentedButton(
+                            selected = mode == entry,
+                            onClick = { viewModel.setMode(entry) },
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = AiMode.entries.size,
+                                baseShape = RoundedCornerShape(4.dp)
+                            ),
+                            label = { Text(entry.label, style = MaterialTheme.typography.labelMedium) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(
+                    onClick = { viewModel.openReferencePicker() },
+                    enabled = pinnedReferences.size < 5
+                ) {
+                    Icon(Icons.Default.AlternateEmail, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Référence", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+
             // Input Area
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
@@ -154,7 +238,7 @@ fun ChatScreen(
                     onValueChange = { textState = it },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("Posez une question sur le droit...") },
-                    shape = RoundedCornerShape(24.dp)
+                    shape = RoundedCornerShape(4.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
@@ -166,7 +250,7 @@ fun ChatScreen(
                         }
                     },
                     modifier = Modifier
-                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Send,
@@ -176,11 +260,106 @@ fun ChatScreen(
                 }
             }
             Text(
-                text = "MIBEKO AI PEUT FAIRE DES ERREURS. VÉRIFIEZ LES SOURCES CITÉES.",
+                text = "MIBEKO IA PEUT FAIRE DES ERREURS. VÉRIFIEZ LES SOURCES CITÉES.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 16.dp)
             )
+        }
+    }
+
+    if (referencePicker.isVisible) {
+        ReferencePickerSheet(
+            state = referencePicker,
+            onQueryChange = { viewModel.searchReferences(it) },
+            onPick = {
+                viewModel.pinReference(it)
+                viewModel.closeReferencePicker()
+            },
+            onDismiss = { viewModel.closeReferencePicker() }
+        )
+    }
+}
+
+/**
+ * Feuille de sélection d'un document de référence (équivalent du « @ » web).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReferencePickerSheet(
+    state: ReferencePickerState,
+    onQueryChange: (String) -> Unit,
+    onPick: (AssistantReference) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(
+                text = "Épingler un texte de référence",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "L'assistant limitera ses recherches aux textes épinglés (5 max).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.query,
+                onValueChange = onQueryChange,
+                placeholder = { Text("Rechercher un code, une loi…") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                singleLine = true,
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            when {
+                state.isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    }
+                }
+                state.suggestions.isEmpty() -> {
+                    Text(
+                        text = "Aucun texte trouvé.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 24.dp)
+                    )
+                }
+                else -> {
+                    LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+                        items(state.suggestions, key = { it.id }) { suggestion ->
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        suggestion.title,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                supportingContent = suggestion.type_name?.let { name ->
+                                    { Text(name, style = MaterialTheme.typography.bodySmall) }
+                                },
+                                leadingContent = {
+                                    Icon(
+                                        Icons.Default.AlternateEmail,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                },
+                                modifier = Modifier.clickable { onPick(suggestion) }
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

@@ -33,35 +33,53 @@ class ConversationHistoryViewModel(
         currentFilterDate = date
         currentFilterTitle = title
         viewModelScope.launch {
-            _historyState.value = HistoryState.Loading
+            // Spinner plein écran uniquement au premier chargement : un
+            // rafraîchissement garde la liste affichée, sans saut visuel.
+            if (_historyState.value !is HistoryState.Content) {
+                _historyState.value = HistoryState.Loading
+            }
             try {
                 val response = aiApiService.getConversations(1, date, title)
                 _historyState.value = HistoryState.Content(response.data)
             } catch (e: Exception) {
-                _historyState.value = HistoryState.Error
+                if (_historyState.value !is HistoryState.Content) {
+                    _historyState.value = HistoryState.Error
+                }
             }
         }
     }
 
     fun updateConversationTitle(id: String, newTitle: String) {
+        // Mise à jour optimiste : le titre change immédiatement, le serveur
+        // est notifié en arrière-plan ; en cas d'échec on resynchronise.
+        val current = _historyState.value
+        if (current is HistoryState.Content) {
+            _historyState.value = HistoryState.Content(
+                current.conversations.map { if (it.id == id) it.copy(title = newTitle) else it }
+            )
+        }
         viewModelScope.launch {
             try {
                 aiApiService.updateConversationTitle(id, newTitle)
-                loadHistory()
             } catch (e: Exception) {
-                // Handle error
+                loadHistory()
             }
         }
     }
 
     fun deleteConversation(id: String) {
+        // Suppression optimiste : la ligne disparaît tout de suite.
+        val current = _historyState.value
+        if (current is HistoryState.Content) {
+            _historyState.value = HistoryState.Content(
+                current.conversations.filterNot { it.id == id }
+            )
+        }
         viewModelScope.launch {
             try {
                 aiApiService.deleteConversation(id)
-                // Recharge l'historique après la suppression réussie
-                loadHistory()
             } catch (e: Exception) {
-                // Optionnel: Gérer l'erreur (ex: afficher un message à l'utilisateur)
+                loadHistory()
             }
         }
     }
