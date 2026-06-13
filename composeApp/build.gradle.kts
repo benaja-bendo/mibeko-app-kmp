@@ -56,7 +56,6 @@ kotlin {
             implementation(project.dependencies.platform(libs.firebase.bom))
             implementation(libs.firebase.messaging)
             implementation(libs.firebase.analytics)
-            implementation(libs.firebase.auth)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -89,16 +88,12 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
 
-            // Voyager
-
             // Preferences
             implementation(libs.multiplatform.settings)
 
             // Date & Time
             implementation(libs.kotlinx.datetime)
 
-            // Firebase KMP
-            implementation(libs.firebase.kmp.auth)
             
             // Markdown
             implementation(libs.markdown.renderer.m3)
@@ -123,8 +118,9 @@ android {
         applicationId = "cg.mibeko.app"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        // Surchargables par la CI : ./gradlew bundleRelease -PversionCode=12 -PversionName=1.2.0
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
+        versionName = (project.findProperty("versionName") as String?) ?: "1.0.0"
     }
     
     buildFeatures {
@@ -144,7 +140,8 @@ android {
             if (keystorePropertiesFile.exists()) {
                 val keystoreProperties = Properties()
                 keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                // Chemin relatif résolu depuis la racine du projet (emplacement du .jks)
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
@@ -204,18 +201,25 @@ room {
 
 buildConfig {
     packageName("cg.mibeko.app.common")
-    
-    val isRelease = project.gradle.startParameter.taskNames.any { 
-        it.contains("Release", ignoreCase = true) 
+
+    // URL de production par défaut : impossible d'embarquer par accident une
+    // adresse de dev dans un binaire release. Pour pointer vers un serveur
+    // local en développement, ajouter dans local.properties :
+    //   mibeko.dev.baseUrl=http://192.168.0.78:8000/api
+    val prodBaseUrl = "https://api.mibeko.fr/api"
+
+    val isRelease = project.gradle.startParameter.taskNames.any {
+        it.contains("Release", ignoreCase = true)
     } || System.getenv("CONFIGURATION")?.equals("Release", ignoreCase = true) == true
-    
-    val baseUrl = if (isRelease) {
-        "https://api.mibeko.fr/api"
-    } else {
-        //"https://api.mibeko.fr/api"
-        "http://192.168.0.78:8000/api"
-        //"http://10.60.104.35:8000/api"
-    }
-    
+
+    val devBaseUrl = rootProject.file("local.properties")
+        .takeIf { it.exists() }
+        ?.let { file ->
+            Properties().apply { load(FileInputStream(file)) }
+                .getProperty("mibeko.dev.baseUrl")
+        }
+
+    val baseUrl = if (isRelease || devBaseUrl.isNullOrBlank()) prodBaseUrl else devBaseUrl
+
     buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
 }

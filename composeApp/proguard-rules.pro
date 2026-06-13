@@ -1,8 +1,12 @@
-# Ktor
+# =============================================================================
+# Mibeko — règles R8 (release)
+# =============================================================================
+
+# --- Ktor ---
 -keep class io.ktor.** { *; }
 -dontwarn io.ktor.**
 
-# KotlinX Serialization
+# --- KotlinX Serialization ---
 -keepattributes *Annotation*, InnerClasses
 -keepclassmembers class kotlinx.serialization.json.** {
     *** Companion;
@@ -10,23 +14,29 @@
 -keepclasseswithmembers class kotlinx.serialization.json.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
+# Serializers générés pour les modèles de l'application (réseau + navigation).
+-keep,includedescriptorclasses class com.mibeko.mibeko.**$$serializer { *; }
+-keepclassmembers class com.mibeko.mibeko.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.mibeko.mibeko.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
 
-# Room
+# --- Room ---
 -keep class androidx.room.** { *; }
 -dontwarn androidx.room.paging.**
 
-# ViewModels (for Koin/Voyager)
+# --- ViewModels (instanciés par Koin) ---
 -keepclassmembers class * extends androidx.lifecycle.ViewModel {
     <init>(...);
 }
 
-# Voyager
--keep class cafe.adriel.voyager.** { *; }
-
-# Data Classes (Generic fallback if R8 is too aggressive with serialization)
+# --- Modèles de données (champs lus par Room/serialization) ---
 -keepclassmembers class com.mibeko.mibeko.data.** {
     <fields>;
 }
 
-# Navigation / Screens (Prevent obfuscation to keep qualifiedName matching route)
+# --- Navigation type-safe ---
+# Les routes sont sérialisées et comparées par qualifiedName : ne pas renommer.
 -keep class com.mibeko.mibeko.ui.navigation.** { *; }
