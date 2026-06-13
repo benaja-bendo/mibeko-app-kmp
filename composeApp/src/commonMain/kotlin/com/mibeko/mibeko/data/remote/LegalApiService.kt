@@ -120,11 +120,21 @@ class LegalApiService(
     }
 
     /**
+     * Résout le document parent d'un article (lecture d'un résultat de
+     * recherche dont le document n'est pas en cache local).
+     */
+    suspend fun fetchArticleContext(articleId: String): RemoteArticleContext? {
+        return client.get("$baseUrl/v1/articles/$articleId/context")
+            .body<RemoteArticleContextResponse>().data
+    }
+
+    /**
      * Fetch paginated list of official journals.
      */
-    suspend fun fetchOfficialJournals(page: Int = 1, number: String? = null, year: Int? = null): RemoteOfficialJournalResponse {
+    suspend fun fetchOfficialJournals(page: Int = 1, number: String? = null, year: Int? = null, perPage: Int = 15): RemoteOfficialJournalResponse {
         return client.get("$baseUrl/v1/official-journals") {
             parameter("page", page)
+            parameter("per_page", perPage)
             if (number != null) parameter("filter[number]", number)
             if (year != null) parameter("filter[year]", year)
         }.body()

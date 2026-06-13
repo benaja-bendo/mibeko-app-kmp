@@ -3,6 +3,7 @@ package com.mibeko.mibeko.data.remote
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.auth.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
@@ -17,7 +18,23 @@ data class FirebaseLoginRequest(
 data class LoginRequest(
     val email: String,
     val password: String,
-    val device_name: String
+    val device_name: String,
+    /** Code TOTP exigé quand la double authentification est active. */
+    val code: String? = null,
+    val recovery_code: String? = null
+)
+
+@Serializable
+data class ForgotPasswordRequest(
+    val email: String
+)
+
+@Serializable
+data class ResetPasswordRequest(
+    val email: String,
+    val code: String,
+    val password: String,
+    val password_confirmation: String
 )
 
 @Serializable
@@ -43,18 +60,29 @@ data class AuthResponse(
     val errors: Map<String, List<String>>? = null
 )
 
+/**
+ * Réponse du login quand le compte exige la double authentification (HTTP 423,
+ * `errors.two_factor_required`). Les erreurs y sont un objet hétérogène, d'où
+ * un modèle dédié plutôt que la map de AuthResponse.
+ */
+@Serializable
+data class TwoFactorChallengeResponse(
+    val success: Boolean = false,
+    val message: String? = null,
+    val errors: TwoFactorErrors? = null
+) {
+    @Serializable
+    data class TwoFactorErrors(val two_factor_required: Boolean = false)
+}
+
 @Serializable
 data class RemoteUser(
     val id: String,
     val name: String,
     val email: String,
-    val roles: List<RemoteRole> = emptyList(),
+    // L'API normalise les rôles en tableau de chaînes (AuthController::formatUser).
+    val roles: List<String> = emptyList(),
     val mobile_profile: RemoteMobileProfile? = null
-)
-
-@Serializable
-data class RemoteRole(
-    val name: String
 )
 
 @Serializable
@@ -92,6 +120,17 @@ class AuthApiService(
     private val client: HttpClient,
     private val baseUrl: String
 ) {
+    /**
+     * Invalide le jeton mis en cache par le plugin Auth de Ktor.
+     * À appeler après connexion, inscription ou déconnexion : sinon le client
+     * continue d'utiliser l'ancien jeton (ou aucun) jusqu'au redémarrage.
+     */
+    fun invalidateTokenCache() {
+        client.authProviders
+            .filterIsInstance<io.ktor.client.plugins.auth.providers.BearerAuthProvider>()
+            .forEach { it.clearToken() }
+    }
+
     private suspend inline fun <reified T> safeApiCall(apiCall: () -> io.ktor.client.statement.HttpResponse): T {
         return try {
             apiCall().body()
@@ -134,10 +173,26 @@ class AuthApiService(
         }
     }
 
-    suspend fun loginWithEmail(request: LoginRequest): AuthResponse = safeApiCall {
-        client.post("$baseUrl/v1/login") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
+    /**
+     * @throws TwoFactorRequiredException si le compte exige un code TOTP (HTTP 423) :
+     * l'appelant doit représenter l'étape de saisie du code puis rappeler avec `code`.
+     */
+    suspend fun loginWithEmail(request: LoginRequest): AuthResponse {
+        return try {
+            safeApiCall {
+                client.post("$baseUrl/v1/login") {
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
+                }
+            }
+        } catch (e: ClientRequestException) {
+            if (e.response.status == HttpStatusCode.Locked) {
+                val challenge = runCatching { e.response.body<TwoFactorChallengeResponse>() }.getOrNull()
+                if (challenge?.errors?.two_factor_required == true) {
+                    throw TwoFactorRequiredException(challenge.message ?: "Code de double authentification requis.")
+                }
+            }
+            throw e
         }
     }
 
@@ -147,4 +202,28 @@ class AuthApiService(
             setBody(request)
         }
     }
+
+    suspend fun forgotPassword(email: String): AuthResponse = safeApiCall {
+        client.post("$baseUrl/v1/forgot-password") {
+            contentType(ContentType.Application.Json)
+            setBody(ForgotPasswordRequest(email))
+        }
+    }
+
+    suspend fun resetPassword(request: ResetPasswordRequest): AuthResponse = safeApiCall {
+        client.post("$baseUrl/v1/reset-password") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+    }
+
+    suspend fun deleteAccount(currentPassword: String): AuthResponse = safeApiCall {
+        client.delete("$baseUrl/v1/profile") {
+            contentType(ContentType.Application.Json)
+            setBody(mapOf("current_password" to currentPassword))
+        }
+    }
 }
+
+/** Le compte est protégé par double authentification : un code TOTP est requis. */
+class TwoFactorRequiredException(message: String) : Exception(message)

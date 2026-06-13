@@ -108,11 +108,14 @@ data class RemoteDocument(
     val reference: String? = null,
     val status: String,
     val type: RemoteDocumentType? = null,
+    val type_code: String? = null,
     val institution: RemoteInstitution? = null,
     val dates: RemoteDocumentDates? = null,
     val structure: List<RemoteNode> = emptyList(),
     val articles: List<RemoteArticle> = emptyList(),
     val relations: List<RemoteDocumentRelation> = emptyList(),
+    /** Renseigné quand le contrôleur fait un withCount (détail d'un JO). */
+    val articles_count: Int? = null,
     val updated_at: String
 )
 
@@ -156,7 +159,32 @@ data class RemoteNode(
     val number: String? = null,
     val title: String? = null,
     val order: Int,
-    val articles: List<RemoteArticleBrief> = emptyList()
+    val articles: List<RemoteArticleBrief> = emptyList(),
+    /**
+     * Présent uniquement pour les pseudo-nœuds `type == "ARTICLE"` : les actes
+     * courts (arrêtés/décrets issus d'un JO) n'ont pas de structure, l'API
+     * renvoie alors leurs articles directement à la racine de l'arbre.
+     */
+    val content: String? = null
+)
+
+@Serializable
+data class RemoteArticleContextResponse(
+    val success: Boolean = false,
+    val message: String = "",
+    val data: RemoteArticleContext? = null
+)
+
+/**
+ * Réponse de `GET /v1/articles/{id}/context` : résout le document parent d'un
+ * article isolé (résultat de recherche d'un document jamais téléchargé).
+ */
+@Serializable
+data class RemoteArticleContext(
+    val id: String,
+    val document_id: String,
+    val number: String = "",
+    val content: String? = null
 )
 
 @Serializable
@@ -275,6 +303,49 @@ data class DossierExportItem(
 )
 
 // =============================================================================
+// Dossier Sync Models
+// =============================================================================
+
+/**
+ * Dossier au format d'échange avec l'API (push et pull).
+ * Les horodatages sont en epoch millisecondes (horloge client).
+ */
+@Serializable
+data class RemoteDossier(
+    val id: String,
+    val name: String,
+    val legal_domain: String = "Général",
+    val tag: String = "EN_COURS",
+    val description: String? = null,
+    val color: String = "#1B3D2F",
+    val created_at: Long = 0L,
+    val updated_at: Long,
+    val articles: List<RemoteDossierArticle> = emptyList()
+)
+
+@Serializable
+data class RemoteDossierArticle(
+    val article_id: String,
+    val personal_note: String? = null,
+    val added_at: Long = 0L
+)
+
+/** Corps de la requête POST /dossiers/sync : état local complet. */
+@Serializable
+data class DossierSyncRequest(
+    val dossiers: List<RemoteDossier>,
+    val deleted_ids: List<String> = emptyList()
+)
+
+/** État autoritaire renvoyé par le serveur après fusion. */
+@Serializable
+data class DossierSyncData(
+    val dossiers: List<RemoteDossier> = emptyList(),
+    val deleted_ids: List<String> = emptyList(),
+    val synced_at: Long = 0L
+)
+
+// =============================================================================
 // Official Journal Models
 // =============================================================================
 
@@ -304,6 +375,8 @@ data class RemoteOfficialJournal(
     val is_published: Boolean,
     val pdf_url: String? = null,
     val file_size_bytes: Long? = null,
+    /** Nombre de textes publiés rattachés (présent sur la liste uniquement). */
+    val legal_documents_count: Int? = null,
     val legal_documents: List<RemoteDocument> = emptyList(),
     val created_at: String,
     val updated_at: String

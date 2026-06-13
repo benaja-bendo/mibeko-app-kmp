@@ -18,8 +18,37 @@ import kotlinx.serialization.json.decodeFromJsonElement
 @Serializable
 data class AiChatRequest(
     val message: String,
-    val stream: Boolean = false
+    val stream: Boolean = false,
+    val mode: String? = null,
+    val references: List<AiChatReference>? = null
 )
+
+/** Document épinglé (« @ ») restreignant le périmètre de recherche de l'IA. */
+@Serializable
+data class AiChatReference(
+    val id: String,
+    val type: String = "document"
+)
+
+/** Document proposé par l'autocomplétion du sélecteur de références. */
+@Serializable
+data class AssistantReference(
+    val id: String,
+    val title: String,
+    val type_code: String? = null,
+    val type_name: String? = null
+)
+
+@Serializable
+data class AssistantReferencesResponse(
+    val data: List<AssistantReference> = emptyList()
+)
+
+/** Modes de réponse supportés par l'assistant (alignés sur le web pro). */
+enum class AiMode(val apiValue: String, val label: String) {
+    CONCISE("concise", "Concis"),
+    ANALYSIS("analysis", "Analyse")
+}
 
 @Serializable
 data class ArticleSource(
@@ -49,21 +78,25 @@ data class MessageMeta(
 @Serializable
 data class AgentConversation(
     val id: String,
-    val user_id: String,
-    val title: String,
+    // La liste de l'historique est volontairement légère côté serveur :
+    // seuls id/title/created_at/updated_at sont garantis.
+    val user_id: String? = null,
+    val title: String = "Conversation",
     val summary: String? = null,
-    val created_at: String,
-    val updated_at: String,
+    val created_at: String = "",
+    val updated_at: String = "",
     val messages: List<AgentConversationMessage>? = null
 )
 
 @Serializable
 data class AgentConversationMessage(
     val id: String,
-    val conversation_id: String,
+    // Absent du détail d'une conversation (le serveur n'envoie que
+    // id/role/content/meta/created_at par message).
+    val conversation_id: String? = null,
     val role: String,
     val content: String,
-    val created_at: String,
+    val created_at: String = "",
     val meta: kotlinx.serialization.json.JsonElement? = null
 ) {
     fun getSources(): List<ArticleSource>? {
@@ -120,22 +153,43 @@ class AiApiService(
         client.delete("$baseUrl/v1/assistant/conversations/$id")
     }
 
-    suspend fun sendMessage(message: String, conversationId: String? = null): AiChatResponse {
+    /** Autocomplétion des documents épinglables dans le sélecteur « @ ». */
+    suspend fun searchReferences(query: String? = null): List<AssistantReference> {
+        return client.get("$baseUrl/v1/assistant/references") {
+            if (!query.isNullOrBlank()) parameter("q", query)
+        }.body<AssistantReferencesResponse>().data
+    }
+
+    suspend fun sendMessage(
+        message: String,
+        conversationId: String? = null,
+        mode: AiMode = AiMode.CONCISE,
+        references: List<AiChatReference> = emptyList()
+    ): AiChatResponse {
         val url = if (conversationId != null) {
             "$baseUrl/v1/assistant/chat/$conversationId"
         } else {
             "$baseUrl/v1/assistant/chat"
         }
-        
+
         return client.post(url) {
             contentType(ContentType.Application.Json)
-            setBody(AiChatRequest(message = message, stream = false))
+            setBody(
+                AiChatRequest(
+                    message = message,
+                    stream = false,
+                    mode = mode.apiValue,
+                    references = references.ifEmpty { null }
+                )
+            )
         }.body()
     }
 
     suspend fun sendMessageStream(
         message: String,
         conversationId: String?,
+        mode: AiMode = AiMode.CONCISE,
+        references: List<AiChatReference> = emptyList(),
         onConversationIdReceived: (String) -> Unit
     ): Flow<AiStreamEvent> = flow {
         val url = if (conversationId != null) {
@@ -143,7 +197,7 @@ class AiApiService(
         } else {
             "$baseUrl/v1/assistant/chat"
         }
-        
+
         val lenientJson = Json { ignoreUnknownKeys = true }
 
         client.sse(
@@ -151,7 +205,14 @@ class AiApiService(
             request = {
                 method = HttpMethod.Post
                 contentType(ContentType.Application.Json)
-                setBody(AiChatRequest(message = message, stream = true))
+                setBody(
+                    AiChatRequest(
+                        message = message,
+                        stream = true,
+                        mode = mode.apiValue,
+                        references = references.ifEmpty { null }
+                    )
+                )
                 headers {
                     append(HttpHeaders.Accept, "text/event-stream")
                 }
