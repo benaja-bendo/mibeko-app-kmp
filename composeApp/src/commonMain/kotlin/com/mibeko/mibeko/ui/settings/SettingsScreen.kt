@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.ui.components.OfficialSourcesSheet
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -51,6 +52,7 @@ fun SettingsScreen() {
     var showTerms by remember { mutableStateOf(false) }
     var showPrivacy by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
+    var showSources by remember { mutableStateOf(false) }
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
 
@@ -373,6 +375,10 @@ fun SettingsScreen() {
                 }
             }
         )
+    }
+
+    if (showSources) {
+        OfficialSourcesSheet(onDismiss = { showSources = false })
     }
 
     if (showTerms) {
@@ -702,6 +708,14 @@ fun SettingsScreen() {
 
             // --- A PROPOS DE MIBEKO ---
             SettingsGroup("A PROPOS DE MIBEKO") {
+                SettingsItem(
+                    title = "Sources officielles",
+                    icon = Icons.Filled.VerifiedUser,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    iconBackground = MaterialTheme.colorScheme.primaryContainer,
+                    onClick = { showSources = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 SettingsLinkItem(
                     title = "CGU",
                     onClick = { showTerms = true }

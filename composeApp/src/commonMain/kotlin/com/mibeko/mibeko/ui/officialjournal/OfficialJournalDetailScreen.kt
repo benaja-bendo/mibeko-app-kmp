@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.data.remote.RemoteDocument
+import com.mibeko.mibeko.ui.components.OfficialSourceAttribution
+import com.mibeko.mibeko.ui.components.OfficialSourcesSheet
 import com.mibeko.mibeko.ui.components.PdfViewer
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
@@ -46,6 +48,7 @@ fun OfficialJournalDetailScreen(id: String) {
 
     var displayedId by remember { mutableStateOf(id) }
     var showPdf by remember { mutableStateOf(false) }
+    var showSources by remember { mutableStateOf(false) }
 
     LaunchedEffect(displayedId) {
         viewModel.loadJournalDetail(displayedId)
@@ -185,6 +188,15 @@ fun OfficialJournalDetailScreen(id: String) {
                             )
                         }
                     }
+
+                    item {
+                        OfficialSourceAttribution(
+                            onClick = { showSources = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 16.dp)
+                        )
+                    }
                 }
             }
         }
@@ -225,6 +237,10 @@ fun OfficialJournalDetailScreen(id: String) {
         } else {
             showPdf = false
         }
+    }
+
+    if (showSources) {
+        OfficialSourcesSheet(onDismiss = { showSources = false })
     }
 }
 

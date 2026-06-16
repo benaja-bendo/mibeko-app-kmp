@@ -42,6 +42,7 @@ import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
 import com.mibeko.mibeko.ui.components.ReportErrorDialog
+import com.mibeko.mibeko.ui.components.OfficialSourcesSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,6 +70,7 @@ fun ReaderScreen(articleId: String) {
         var showReportDialog by remember { mutableStateOf(false) }
         var showDossierSelection by remember { mutableStateOf(false) }
         var showToc by remember { mutableStateOf(false) }
+        var showSources by remember { mutableStateOf(false) }
 
         val listState = rememberLazyListState()
 
@@ -355,10 +357,20 @@ fun ReaderScreen(articleId: String) {
                             modifier = Modifier.padding(vertical = 24.dp, horizontal = 48.dp),
                             color = textColor.copy(alpha = 0.1f)
                         )
-                        Box(
+                        Column(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 48.dp),
-                            contentAlignment = Alignment.Center
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            OutlinedButton(
+                                onClick = { showSources = true },
+                                border = BorderStroke(1.dp, textColor.copy(alpha = 0.2f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = textColor.copy(alpha = 0.7f))
+                            ) {
+                                Icon(Icons.Default.VerifiedUser, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Source officielle")
+                            }
                             OutlinedButton(
                                 onClick = { showReportDialog = true },
                                 border = BorderStroke(1.dp, textColor.copy(alpha = 0.2f)),
@@ -396,6 +408,10 @@ fun ReaderScreen(articleId: String) {
                     viewModel.reportError(type, desc)
                 }
             )
+        }
+
+        if (showSources) {
+            OfficialSourcesSheet(onDismiss = { showSources = false })
         }
 
         if (showDossierSelection) {

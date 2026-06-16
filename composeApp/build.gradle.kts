@@ -119,7 +119,7 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         // Surchargables par la CI : ./gradlew bundleRelease -PversionCode=12 -PversionName=1.2.0
-        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 2
         versionName = (project.findProperty("versionName") as String?) ?: "1.0.0"
     }
     
