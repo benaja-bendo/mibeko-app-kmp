@@ -351,13 +351,20 @@ fun SettingsScreen() {
             onDismissRequest = { showAbout = false },
             title = { Text("À propos") },
             text = {
-                Column {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text("Mibeko - Mobile", fontWeight = FontWeight.Bold)
                     Text("Version: ${uiState.appVersion}")
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Mibeko est une plateforme juridique centralisant les textes de loi de la République du Congo.")
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Base de données mise à jour le: ${uiState.lastUpdateDate}", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Avertissement :", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                    Text(
+                        "Mibeko est une initiative privée et indépendante. Cette application ne représente aucune entité gouvernementale de la République du Congo. " +
+                        "Les informations fournies proviennent de sources officielles publiques (sgg.cg, ohada.org) mais sont fournies à titre informatif uniquement.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             },
             confirmButton = {

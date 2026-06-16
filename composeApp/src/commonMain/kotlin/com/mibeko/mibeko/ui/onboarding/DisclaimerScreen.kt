@@ -90,7 +90,7 @@ fun DisclaimerScreen() {
                             .verticalScroll(rememberScrollState())
                     ) {
                         Text(
-                            text = "Mibeko est un outil d'assistance et de consultation. Bien que nous nous efforcions de maintenir les textes à jour, cette application ne remplace en aucun cas les publications des journaux officiels nationaux, qui demeurent les seules sources juridiques faisant foi.",
+                            text = "Mibeko est un outil d'assistance et de consultation privé. Mibeko ne représente aucune entité gouvernementale de la République du Congo ni aucune autre institution publique. Les informations juridiques fournies proviennent de sources officielles telles que le Secrétariat Général du Gouvernement (sgg.cg) et l'Organisation pour l'Harmonisation en Afrique du Droit des Affaires (ohada.org), mais cette application ne remplace en aucun cas les publications des journaux officiels nationaux.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -103,7 +103,7 @@ fun DisclaimerScreen() {
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "1. Les textes fournis le sont à titre informatif.\n\n" +
+                            text = "1. Les textes fournis le sont à titre informatif et ne constituent pas des conseils juridiques officiels.\n\n" +
                                    "2. Les développeurs et éditeurs de Mibeko déclinent toute responsabilité en cas de préjudice direct ou indirect résultant d'une erreur, d'une omission ou d'un retard de mise à jour dans les textes.\n\n" +
                                    "3. Pour toute procédure judiciaire ou acte officiel, il est impératif de se référer au document papier original ou à la publication officielle de l'État concerné.",
                             style = MaterialTheme.typography.bodyMedium,
