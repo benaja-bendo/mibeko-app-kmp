@@ -153,64 +153,73 @@ private fun CredentialsStep(
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        if (loginState is LoginState.Loading) {
-            CircularProgressIndicator()
-        } else {
-            OutlinedTextField(
-                value = viewModel.email,
-                onValueChange = viewModel::onEmailChange,
-                label = { Text("Adresse email") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+        val isLoading = loginState is LoginState.Loading
 
-            Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+            value = viewModel.email,
+            onValueChange = viewModel::onEmailChange,
+            label = { Text("Adresse email") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            singleLine = true,
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth()
+        )
 
-            OutlinedTextField(
-                value = viewModel.password,
-                onValueChange = viewModel::onPasswordChange,
-                label = { Text("Mot de passe") },
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                singleLine = true,
-                trailingIcon = {
-                    val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                    val description = if (passwordVisible) "Masquer le mot de passe" else "Afficher le mot de passe"
-                    IconButton(onClick = { onPasswordVisibilityChange(!passwordVisible) }) {
-                        Icon(imageVector = image, contentDescription = description)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                TextButton(onClick = onForgotPassword) {
-                    Text("Mot de passe oublié ?", style = MaterialTheme.typography.labelLarge)
+        OutlinedTextField(
+            value = viewModel.password,
+            onValueChange = viewModel::onPasswordChange,
+            label = { Text("Mot de passe") },
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            singleLine = true,
+            enabled = !isLoading,
+            trailingIcon = {
+                val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                val description = if (passwordVisible) "Masquer le mot de passe" else "Afficher le mot de passe"
+                IconButton(onClick = { onPasswordVisibilityChange(!passwordVisible) }) {
+                    Icon(imageVector = image, contentDescription = description)
                 }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+            TextButton(onClick = onForgotPassword, enabled = !isLoading) {
+                Text("Mot de passe oublié ?", style = MaterialTheme.typography.labelLarge)
             }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
-                onClick = { viewModel.loginWithEmail() },
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+        Button(
+            onClick = { viewModel.loginWithEmail() },
+            enabled = !isLoading && viewModel.email.isNotBlank() && viewModel.password.isNotBlank(),
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
-            ) {
+            } else {
                 Text("Se connecter")
             }
+        }
 
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-            TextButton(onClick = onRegister) {
-                Text("Pas encore de compte ? S'inscrire")
-            }
+        TextButton(onClick = onRegister, enabled = !isLoading) {
+            Text("Pas encore de compte ? S'inscrire")
         }
 
         if (loginState is LoginState.Error) {

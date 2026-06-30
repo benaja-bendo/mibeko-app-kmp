@@ -625,7 +625,6 @@ fun SettingsScreen() {
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
                     ) {
-                        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
                         Button(
                             onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Login) },
                             modifier = Modifier.weight(1f).height(48.dp),
@@ -635,7 +634,7 @@ fun SettingsScreen() {
                             Text("Se connecter", style = MaterialTheme.typography.labelLarge)
                         }
                         Button(
-                            onClick = { uriHandler.openUri("https://api.mibeko.fr/register") },
+                            onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Register) },
                             modifier = Modifier.weight(1f).height(48.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,

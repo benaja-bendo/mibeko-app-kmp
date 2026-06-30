@@ -104,86 +104,106 @@ fun RegisterScreen() {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            if (registerState is RegisterState.Loading) {
-                CircularProgressIndicator()
-            } else {
-                OutlinedTextField(
-                    value = viewModel.name,
-                    onValueChange = viewModel::onNameChange,
-                    label = { Text("Nom complet") },
-                    modifier = Modifier.fillMaxWidth()
+            val isLoading = registerState is RegisterState.Loading
+
+            OutlinedTextField(
+                value = viewModel.name,
+                onValueChange = viewModel::onNameChange,
+                label = { Text("Nom complet") },
+                singleLine = true,
+                enabled = !isLoading,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = viewModel.email,
+                onValueChange = viewModel::onEmailChange,
+                label = { Text("Adresse email") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true,
+                enabled = !isLoading,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = viewModel.password,
+                onValueChange = viewModel::onPasswordChange,
+                label = { Text("Mot de passe") },
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                enabled = !isLoading,
+                trailingIcon = {
+                    val image = if (passwordVisible)
+                        Icons.Filled.Visibility
+                    else Icons.Filled.VisibilityOff
+
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = image, contentDescription = "Afficher le mot de passe")
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = viewModel.passwordConfirmation,
+                onValueChange = viewModel::onPasswordConfirmationChange,
+                label = { Text("Confirmer le mot de passe") },
+                visualTransformation = if (passwordConfirmationVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                enabled = !isLoading,
+                trailingIcon = {
+                    val image = if (passwordConfirmationVisible)
+                        Icons.Filled.Visibility
+                    else Icons.Filled.VisibilityOff
+
+                    IconButton(onClick = { passwordConfirmationVisible = !passwordConfirmationVisible }) {
+                        Icon(imageVector = image, contentDescription = "Afficher le mot de passe")
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = { viewModel.register() },
+                enabled = !isLoading &&
+                    viewModel.name.isNotBlank() &&
+                    viewModel.email.isNotBlank() &&
+                    viewModel.password.isNotBlank() &&
+                    viewModel.passwordConfirmation.isNotBlank(),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = viewModel.email,
-                    onValueChange = viewModel::onEmailChange,
-                    label = { Text("Adresse email") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = viewModel.password,
-                    onValueChange = viewModel::onPasswordChange,
-                    label = { Text("Mot de passe") },
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    trailingIcon = {
-                        val image = if (passwordVisible)
-                            Icons.Filled.Visibility
-                        else Icons.Filled.VisibilityOff
-
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = "Afficher le mot de passe")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = viewModel.passwordConfirmation,
-                    onValueChange = viewModel::onPasswordConfirmationChange,
-                    label = { Text("Confirmer le mot de passe") },
-                    visualTransformation = if (passwordConfirmationVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    trailingIcon = {
-                        val image = if (passwordConfirmationVisible)
-                            Icons.Filled.Visibility
-                        else Icons.Filled.VisibilityOff
-
-                        IconButton(onClick = { passwordConfirmationVisible = !passwordConfirmationVisible }) {
-                            Icon(imageVector = image, contentDescription = "Afficher le mot de passe")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Button(
-                    onClick = { viewModel.register() },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
-                ) {
+                } else {
                     Text("S'inscrire")
                 }
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                TextButton(onClick = {
-                    navController.navigateUp()
-                }) {
-                    Text("Vous avez déjà un compte ? Se connecter")
-                }
+            TextButton(
+                onClick = { navController.navigateUp() },
+                enabled = !isLoading
+            ) {
+                Text("Vous avez déjà un compte ? Se connecter")
             }
 
             if (registerState is RegisterState.Error) {
