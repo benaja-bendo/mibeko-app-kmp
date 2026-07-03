@@ -107,6 +107,27 @@ spacing:
   margin-desktop: 40px
 ---
 
+# Design System — Mibeko Mobile
+
+> Statut : à jour au 2 juillet 2026 · palette forêt, typographie et tokens du design system de l'application mobile (Android + iOS).
+
+Ce document décrit le design system de l'application mobile. La source de vérité des couleurs est le fichier Kotlin [`composeApp/src/commonMain/kotlin/com/mibeko/mibeko/ui/theme/Color.kt`](../composeApp/src/commonMain/kotlin/com/mibeko/mibeko/ui/theme/Color.kt) ; le bloc de métadonnées ci-dessus (front-matter) sert de référence pour les outils et l'export, mais en cas d'écart, `Color.kt` fait foi.
+
+## Palette forêt — valeurs de référence
+
+La palette « forêt » est partagée avec le site public. Deux verts coexistent, ce qui est intentionnel :
+
+- **Vert d'action `#1E6B47`** (`MibekoGreen`) : c'est la couleur **primaire** réelle du thème (boutons, liens, accents). Elle est alignée sur le web (`#1e6b47` retenu « au lieu de `#03271a` qui paraissait noir »).
+- **Vert forêt profond `#03271A`** (`MibekoForest`) : couleur de **marque** réservée aux surfaces héros (en-têtes pleins avec texte blanc), jamais comme couleur de texte ou d'action.
+- **Terracotta sobre `#8F4C31`** (`MibekoTerracotta`) : accent secondaire, chaud et professionnel.
+- **Crème chaud `#FCF9F8`** (`MibekoCream`) : fond/surface, réduit la fatigue visuelle en lecture longue.
+
+Un thème sombre dérivé existe (surfaces `#131314` et voisines, primaire clarifiée pour le contraste). Les statuts juridiques disposent de tokens dédiés (`LegalValid` / `LegalRepealed` / `LegalPending`, avec variantes « Dark » pour le contraste sur fond sombre) : toujours passer par `MibekoTheme.status` dans les écrans.
+
+### Divergence de marque à trancher
+
+Cette palette forêt est celle du **site public** et de **l'app mobile**. Le **dashboard professionnel web** (`mibeko-front`) utilise un thème par défaut différent, **« Lex Gold »** (bronze `#C8A86A`, typographie Fraunces + Instrument Sans). Il s'agit d'une divergence de marque assumée entre les surfaces grand public (forêt) et l'espace pro (Lex Gold) ; l'unification éventuelle reste une décision produit ouverte. Toute évolution de la charte mobile doit donc être pesée au regard de cet écart plutôt que copiée aveuglément depuis le web pro.
+
 ## Brand & Style
 
 The design system is anchored in the concepts of **Stability, Authority, and Accessibility**. It serves as a digital repository of Congolese law, requiring a visual language that feels as enduring as a leather-bound legal volume yet as efficient as a modern tool. 

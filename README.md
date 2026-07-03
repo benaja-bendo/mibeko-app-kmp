@@ -1,53 +1,98 @@
-# Mibeko - Lois de la République du Congo 🇨🇬
+# Mibeko Mobile — Lois de la République du Congo
 
-[![Kotlin](https://img.shields.io/badge/kotlin-2.3.0-blue.svg?logo=kotlin)](http://kotlinlang.org)
-[![Compose Multiplatform](https://img.shields.io/badge/Compose%20Multiplatform-1.5.11-blue.svg?logo=jetpack-compose)](https://github.com/JetBrains/compose-multiplatform)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+> Statut : à jour au 2 juillet 2026 · application mobile Kotlin Multiplatform (Android + iOS) donnant accès aux textes juridiques du Congo-Brazzaville.
 
-**Mibeko** est une application mobile moderne conçue pour faciliter l'accès aux textes législatifs et réglementaires de la **République du Congo**. Développée avec **Kotlin Multiplatform (KMP)** et **Compose Multiplatform**, elle offre une expérience fluide sur Android et iOS.
+**Mibeko Mobile** est l'application mobile de l'écosystème Mibeko, destinée aux citoyens et à la diaspora du Congo-Brazzaville. Elle offre un accès mobile, structuré et partiellement hors-ligne aux textes législatifs et réglementaires (OHADA/CEMAC, monnaie FCFA/XAF). Elle s'appuie sur l'API Laravel `api.mibeko.fr` partagée avec le site public et le dashboard professionnel.
 
-## ✨ Fonctionnalités
+Elle est développée en **Kotlin Multiplatform (KMP)** avec **Compose Multiplatform** : la quasi-totalité du code (~90 %) est partagée entre Android et iOS.
 
-- 📚 **Exploration :** Parcourez les différents codes (Code Civil, Code Pénal, etc.) et lois de la République.
-- 🔍 **Recherche Avancée :** Trouvez rapidement un article ou un mot-clé spécifique.
-- ⭐ **Favoris :** Enregistrez les articles importants pour une consultation hors-ligne.
-- 🌙 **Mode Sombre :** Interface adaptée pour une lecture confortable de jour comme de nuit.
-- 📱 **Multiplateforme :** Code partagé entre Android et iOS pour une maintenance simplifiée.
+## Fonctionnalités
 
-## 🛠 Architecture
+- **Bibliothèque et exploration** : parcours des documents et codes de la République.
+- **Recherche** : recherche d'articles et de textes par mot-clé.
+- **Favoris et téléchargements** : consultation de contenus mis en cache localement (Room) pour un usage hors-ligne.
+- **Assistant** : écran de discussion assistée.
+- **Dossiers** : espace de travail personnel (modèle encore divergent de celui du web).
+- **Compte** : authentification complète (voir ci-dessous).
+- **Mode sombre** : thème clair/sombre suivant le système.
 
-Le projet utilise les dernières technologies de l'écosystème Kotlin :
-- **Compose Multiplatform** pour l'interface utilisateur partagée.
-- **Koin** ou **Voyager** (à confirmer selon l'implémentation) pour l'injection et la navigation.
-- **Material 3** pour un design propre et moderne.
+## Authentification
 
-## 🚀 Installation & Build
+L'authentification passe par l'API Laravel (Fortify/Sanctum). Le parcours de compte est complet :
 
-### Prérequis
-- Android Studio Hedgehog ou supérieur.
-- Xcode 15+ (pour la partie iOS).
-- JDK 17.
+- **Connexion et inscription** classiques.
+- **Réinitialisation du mot de passe** : `mot de passe oublié` puis réinitialisation (`forgotPassword` / `resetPassword`).
+- **Double authentification (2FA) à la connexion** : lorsque le compte exige un code TOTP, l'API répond en HTTP 423 et l'app présente le défi ; un code de récupération (`recovery_code`) est accepté.
+- **Suppression du compte** : possible depuis les réglages (`deleteAccount`), avec confirmation par le mot de passe courant.
 
-### Cloner le projet
-```bash
-git clone https://github.com/votre-user/mibeko-congo.git
-cd mibeko-congo
+Limites connues à ce jour : le jeton d'authentification est stocké en clair (pas de Keychain/Keystore dédié), la vérification d'e-mail n'est pas encore implémentée, et certains liens pointent encore vers le domaine mort `mibeko.cg`.
+
+## Architecture et structure des modules
+
+Le projet Gradle (`rootProject.name = "mibeko"`) n'inclut qu'un seul module de code partagé, `:composeApp` (voir `settings.gradle.kts`). Le point d'entrée iOS vit dans le dossier Xcode `iosApp/`, et `androidApp/` conserve des ressources Android historiques ; l'application Android est assemblée depuis la cible `androidTarget` de `:composeApp`.
+
+```
+mibeko-app-kmp/
+├── composeApp/          # module KMP unique : commonMain (~90 %) + androidMain + iosMain
+│   └── src/
+│       ├── commonMain/  # UI Compose, ViewModels, data (Ktor/Room), DI (Koin), navigation
+│       ├── androidMain/ # Ktor Android, Firebase, activité Android
+│       └── iosMain/     # Ktor Darwin, ponts iOS
+├── iosApp/              # projet Xcode (framework ComposeApp, bundleId cg.mibeko.app)
+├── androidApp/          # ressources Android historiques
+└── docs/                # documentation technique (voir ci-dessous)
 ```
 
-### Build Android
+Le code de `commonMain` est organisé par domaine sous `com.mibeko.mibeko` : `ui/*` (écrans et ViewModels par feature : `auth`, `home`, `library`, `search`, `reader`, `settings`, `dossier`, `chat`, `favorites`, `downloads`, `notifications`, `onboarding`, `officialjournal`…), `data/*` (`remote` Ktor, `local` Room, `repository`, `preferences`), `di` (Koin) et `ui/navigation`.
+
+### Pile technique
+
+| Domaine | Choix |
+| --- | --- |
+| Langage / build | Kotlin 2.3.20, Gradle avec `libs.versions.toml`, JVM toolchain 21 |
+| UI | Compose Multiplatform 1.10.3, Material 3 |
+| Navigation | `navigation-compose` 2.9.1, destinations type-safe (`@Serializable sealed class Screen`) |
+| Réseau | Ktor 3.4.2 (Android / Darwin), contenu négocié JSON |
+| Persistance locale | Room 2.8.4 + SQLite bundled |
+| Injection de dépendances | Koin 4.1.1 |
+| Préférences | multiplatform-settings 1.3.0 |
+| Notifications / analytics | Firebase (Messaging, Analytics) côté Android |
+| SDK Android | compileSdk/targetSdk 36, minSdk 24 |
+| iOS | framework statique `ComposeApp`, bundleId `cg.mibeko.app` |
+
+L'URL de base de l'API est injectée à la compilation via le plugin BuildConfig (`BASE_URL`), avec `https://api.mibeko.fr/api` par défaut ; en développement, définir `mibeko.dev.baseUrl` dans `local.properties`.
+
+## Prérequis
+
+- Android Studio récent (avec le plugin Kotlin Multiplatform).
+- Xcode 15+ et un Mac pour la cible iOS.
+- JDK 21.
+
+## Build
+
+Android (debug) :
+
 ```bash
 ./gradlew :composeApp:assembleDebug
 ```
 
-### Build iOS
-Ouvrez le dossier `iosApp` dans Xcode ou utilisez la configuration de run dans Android Studio.
+iOS : ouvrir `iosApp/` dans Xcode, ou lancer la configuration iOS depuis Android Studio. Le framework partagé est produit par la cible KMP `:composeApp`.
 
-## 🤝 Contribution
+Pour une release Android signée, renseigner `keystore.properties` (voir `keystore.properties.template`) puis :
 
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou à soumettre une pull request.
+```bash
+./gradlew :composeApp:bundleRelease -PversionCode=<n> -PversionName=<x.y.z>
+```
 
-## ⚖️ Licence
+## Documentation
 
-Ce projet est sous licence **MIT**. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
----
-*Conçu avec ❤️ pour faciliter l'accès au droit au Congo.*
+La documentation technique se trouve dans [`docs/`](./docs/) :
+
+- [`docs/README.md`](./docs/README.md) — index de la documentation.
+- [`docs/design-system.md`](./docs/design-system.md) — design system (palette forêt, typographie, tokens).
+- [`docs/prd-mvp.md`](./docs/prd-mvp.md) — cahier des charges du MVP.
+- [`docs/publication-ios.md`](./docs/publication-ios.md) — procédure de publication iOS.
+
+## Licence
+
+Projet sous licence **MIT**. Voir [LICENSE](LICENSE).
