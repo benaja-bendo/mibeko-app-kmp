@@ -6,6 +6,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import com.mibeko.mibeko.util.recordException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -28,6 +29,7 @@ class NotificationRepository(
                 emit(emptyList())
             }
         } catch (e: Exception) {
+            recordException(e, context = "NotificationRepository.getNotifications")
             emit(emptyList())
         }
     }

@@ -14,6 +14,7 @@ plugins {
     alias(libs.plugins.buildConfig)
     alias(libs.plugins.googleServices)
     alias(libs.plugins.firebaseAppDistribution)
+    alias(libs.plugins.firebaseCrashlytics)
 }
 
 kotlin {
@@ -56,6 +57,7 @@ kotlin {
             implementation(project.dependencies.platform(libs.firebase.bom))
             implementation(libs.firebase.messaging)
             implementation(libs.firebase.analytics)
+            implementation(libs.firebase.crashlytics)
             implementation(libs.androidx.security.crypto)
         }
         iosMain.dependencies {
@@ -159,6 +161,14 @@ android {
     buildTypes {
         debug {
             // BASE_URL is now provided by gmazzo buildConfig plugin
+
+            // Crashlytics : en debug on n'upload PAS le fichier de mapping
+            // (obfuscation désactivée de toute façon) → build debug rapide et
+            // sans dépendance à une config release absente. Le report d'exception
+            // à l'exécution (recordException) reste actif.
+            configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+                mappingFileUploadEnabled = false
+            }
         }
         getByName("release") {
             isMinifyEnabled = true

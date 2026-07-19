@@ -14,6 +14,7 @@ import com.mibeko.mibeko.data.remote.LegalApiService
 import com.mibeko.mibeko.data.remote.ApiResponse
 import com.mibeko.mibeko.data.remote.RemoteNode
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
+import com.mibeko.mibeko.util.recordException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
@@ -239,7 +240,7 @@ class LocalLegalRepository(
             mibekoDao.upsertDocuments(listOf(document))
             document.toLawCodeSpec()
         } catch (e: Exception) {
-            e.printStackTrace()
+            recordException(e, context = "LocalLegalRepository.fetchAndStoreDocument")
             null
         }
     }
@@ -367,8 +368,9 @@ class LocalLegalRepository(
                 val response = apiService.fetchStats()
                 response.data ?: emptyList()
             } catch (e: Exception) {
-                // Fallback to local stats if offline
-                // For MVP: Return empty or implement local count logic
+                // On remonte l'erreur (elle était avalée) avant le fallback :
+                // distingue une vraie panne d'un simple hors-ligne.
+                recordException(e, context = "LocalLegalRepository.getDocumentStats")
                 emptyList()
             }
         } else {
@@ -393,10 +395,11 @@ class LocalLegalRepository(
                     return response.data
                 }
             } catch (e: Exception) {
-                // Fallback to local
+                // Fallback to local — mais on remonte l'erreur avalée.
+                recordException(e, context = "LocalLegalRepository.getDocumentTypes")
             }
         }
-        
+
         // Fallback or offline: Get unique types from local DB
         return mibekoDao.getUniqueDocumentTypeCodes().map { code ->
             com.mibeko.mibeko.data.remote.RemoteDocumentType(
@@ -470,7 +473,7 @@ class LocalLegalRepository(
             fetchAndStoreDocumentStructure(context.document_id)
             mibekoDao.getArticleById(articleId).firstOrNull() != null
         } catch (e: Exception) {
-            e.printStackTrace()
+            recordException(e, context = "LocalLegalRepository.ensureArticleAvailable")
             false
         }
     }
@@ -505,7 +508,8 @@ class LocalLegalRepository(
                     isFromNetwork = true
                 )
             } catch (e: Exception) {
-                // Network request failed, fallback to local search
+                // Network request failed, fallback to local search.
+                recordException(e, context = "LocalLegalRepository.search")
                 val localResults = searchLocally(query = query, tag = tag)
                 SearchResult.Error(
                     message = "Erreur réseau: ${e.message ?: "Connexion impossible"}",
@@ -573,6 +577,7 @@ class LocalLegalRepository(
                     )
                 }
             } catch (e: Exception) {
+                recordException(e, context = "LocalLegalRepository.getAutocompleteSuggestions")
                 getAutocompleteSuggestionsLocally(query)
             }
         } else {

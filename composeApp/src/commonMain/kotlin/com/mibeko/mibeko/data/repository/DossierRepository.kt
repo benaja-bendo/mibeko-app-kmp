@@ -17,6 +17,7 @@ import com.mibeko.mibeko.data.remote.RemoteDossier
 import com.mibeko.mibeko.data.remote.RemoteDossierArticle
 import com.mibeko.mibeko.getCurrentTimeMillis
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
+import com.mibeko.mibeko.util.recordException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -247,6 +248,7 @@ class DossierRepository(
                 preferences.setDossierLastSyncAt(syncedAt)
                 _syncState.value = DossierSyncState.Synced(syncedAt)
             } catch (e: Exception) {
+                recordException(e, context = "DossierRepository.sync")
                 _syncState.value = DossierSyncState.Error(e.message ?: "Erreur réseau")
             }
         }

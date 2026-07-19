@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import com.mibeko.mibeko.data.preferences.RecentlyViewedManager
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.repository.DossierRepository
+import com.mibeko.mibeko.util.recordException
 import kotlinx.coroutines.flow.asStateFlow
 
 /** Entrée du sommaire : un article dans l'ordre du document. */
@@ -92,6 +93,7 @@ class ReaderViewModel(
                 // Reload article to update UI state
                 loadArticle(currentArticle.id)
             } catch (e: Exception) {
+                recordException(e, context = "ReaderViewModel.toggleOffline")
                 _uiState.value = _uiState.value.copy(error = "Erreur: ${e.message}")
             }
         }
@@ -117,6 +119,9 @@ class ReaderViewModel(
                 // Reload article to update UI state
                 loadArticle(currentArticle.id)
             } catch (e: Exception) {
+                // Chemin favoris = crash opaque historique (audit 07/2026) : on
+                // remonte l'exception au collecteur avant de l'afficher.
+                recordException(e, context = "ReaderViewModel.toggleFavorite")
                 _uiState.value = _uiState.value.copy(error = "Erreur: ${e.message}")
             }
         }

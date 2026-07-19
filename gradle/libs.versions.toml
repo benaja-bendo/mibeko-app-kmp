@@ -22,6 +22,7 @@ kotlinx-datetime = "0.7.1"
 firebase-bom = "34.12.0"
 google-services = "4.4.4"
 firebase-appdistribution = "5.2.1"
+firebase-crashlytics-plugin = "3.0.6"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -75,6 +76,7 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version = "1.10.0-alpha05" }
@@ -97,3 +99,4 @@ room = { id = "androidx.room", version.ref = "room" }
 buildConfig = { id = "com.github.gmazzo.buildconfig", version = "6.0.7" }
 googleServices = { id = "com.google.gms.google-services", version.ref = "google-services" }
 firebaseAppDistribution = { id = "com.google.firebase.appdistribution", version.ref = "firebase-appdistribution" }
+firebaseCrashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }
