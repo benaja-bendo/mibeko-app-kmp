@@ -25,11 +25,13 @@ L'authentification passe par l'API Laravel (Fortify/Sanctum). Le parcours de com
 - **Double authentification (2FA) à la connexion** : lorsque le compte exige un code TOTP, l'API répond en HTTP 423 et l'app présente le défi ; un code de récupération (`recovery_code`) est accepté.
 - **Suppression du compte** : possible depuis les réglages (`deleteAccount`), avec confirmation par le mot de passe courant.
 
-Limites connues à ce jour : le jeton d'authentification est stocké en clair (pas de Keychain/Keystore dédié), la vérification d'e-mail n'est pas encore implémentée, et certains liens pointent encore vers le domaine mort `mibeko.cg`.
+Le jeton d'authentification est stocké chiffré (EncryptedSharedPreferences sur Android, Keychain sur iOS) derrière l'interface `Settings`, avec migration automatique depuis l'ancien stockage en clair. Un 401 sur une route authentifiée purge la session locale et ramène à l'écran de connexion.
+
+Limites connues à ce jour : la vérification d'e-mail n'est pas encore implémentée, et certains liens pointent encore vers le domaine mort `mibeko.cg`.
 
 ## Architecture et structure des modules
 
-Le projet Gradle (`rootProject.name = "mibeko"`) n'inclut qu'un seul module de code partagé, `:composeApp` (voir `settings.gradle.kts`). Le point d'entrée iOS vit dans le dossier Xcode `iosApp/`, et `androidApp/` conserve des ressources Android historiques ; l'application Android est assemblée depuis la cible `androidTarget` de `:composeApp`.
+Le projet Gradle (`rootProject.name = "mibeko"`) n'inclut qu'un seul module de code partagé, `:composeApp` (voir `settings.gradle.kts`). Le point d'entrée iOS vit dans le dossier Xcode `iosApp/` ; l'application Android est assemblée depuis la cible `androidTarget` de `:composeApp`.
 
 ```
 mibeko-app-kmp/

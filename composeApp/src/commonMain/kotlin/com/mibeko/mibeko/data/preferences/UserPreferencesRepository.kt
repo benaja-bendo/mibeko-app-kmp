@@ -8,8 +8,11 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Repository for managing user preferences using multiplatform-settings.
  * Handles onboarding completion state and other user preferences.
+ *
+ * Le [settings] injecté doit être le stockage sécurisé de la plateforme
+ * (voir [createSecureSettings]) : il porte notamment le jeton Sanctum.
  */
-class UserPreferencesRepository(private val settings: Settings = Settings()) {
+class UserPreferencesRepository(private val settings: Settings) {
 
     private val _theme = MutableStateFlow(getAppTheme())
     val theme: StateFlow<AppTheme> = _theme.asStateFlow()
@@ -27,24 +30,26 @@ class UserPreferencesRepository(private val settings: Settings = Settings()) {
     val readerThemeFlow: StateFlow<ReaderTheme> = _readerTheme.asStateFlow()
 
     companion object {
-        private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
-        private const val KEY_OFFLINE_MODE = "offline_mode_enabled"
-        private const val KEY_APP_THEME = "app_theme"
-        private const val KEY_LAST_SYNC_TIMESTAMP = "last_sync_timestamp"
-        private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
-        private const val KEY_DISCLAIMER_ACCEPTED = "disclaimer_accepted"
-        private const val KEY_TEXT_SIZE = "text_size"
-        private const val KEY_READER_THEME = "reader_theme"
-        private const val KEY_DYSLEXIA_FONT = "dyslexia_font_enabled"
-        private const val KEY_WIFI_ONLY_DOWNLOAD = "wifi_only_download"
-        private const val KEY_LEGAL_MONITORING = "legal_monitoring_enabled"
-        private const val KEY_DOSSIER_ALERTS_ENABLED = "dossier_alerts_enabled"
-        private const val KEY_AUTH_TOKEN = "auth_token"
-        private const val KEY_USER_EMAIL = "user_email"
-        private const val KEY_USER_NAME = "user_name"
-        private const val KEY_PROFILE_SETUP_COMPLETED = "profile_setup_completed"
-        private const val KEY_DOSSIER_SYNC_ACCOUNT = "dossier_sync_account"
-        private const val KEY_DOSSIER_LAST_SYNC = "dossier_last_sync"
+        // Clés internes (et non privées) : LegacySettingsMigration les référence
+        // pour migrer l'ancien stockage en clair vers le stockage sécurisé.
+        internal const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
+        internal const val KEY_OFFLINE_MODE = "offline_mode_enabled"
+        internal const val KEY_APP_THEME = "app_theme"
+        internal const val KEY_LAST_SYNC_TIMESTAMP = "last_sync_timestamp"
+        internal const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
+        internal const val KEY_DISCLAIMER_ACCEPTED = "disclaimer_accepted"
+        internal const val KEY_TEXT_SIZE = "text_size"
+        internal const val KEY_READER_THEME = "reader_theme"
+        internal const val KEY_DYSLEXIA_FONT = "dyslexia_font_enabled"
+        internal const val KEY_WIFI_ONLY_DOWNLOAD = "wifi_only_download"
+        internal const val KEY_LEGAL_MONITORING = "legal_monitoring_enabled"
+        internal const val KEY_DOSSIER_ALERTS_ENABLED = "dossier_alerts_enabled"
+        internal const val KEY_AUTH_TOKEN = "auth_token"
+        internal const val KEY_USER_EMAIL = "user_email"
+        internal const val KEY_USER_NAME = "user_name"
+        internal const val KEY_PROFILE_SETUP_COMPLETED = "profile_setup_completed"
+        internal const val KEY_DOSSIER_SYNC_ACCOUNT = "dossier_sync_account"
+        internal const val KEY_DOSSIER_LAST_SYNC = "dossier_last_sync"
     }
 
     /**

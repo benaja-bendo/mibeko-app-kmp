@@ -56,6 +56,7 @@ kotlin {
             implementation(project.dependencies.platform(libs.firebase.bom))
             implementation(libs.firebase.messaging)
             implementation(libs.firebase.analytics)
+            implementation(libs.androidx.security.crypto)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -90,6 +91,7 @@ kotlin {
 
             // Preferences
             implementation(libs.multiplatform.settings)
+            implementation(libs.multiplatform.settings.core)
 
             // Date & Time
             implementation(libs.kotlinx.datetime)

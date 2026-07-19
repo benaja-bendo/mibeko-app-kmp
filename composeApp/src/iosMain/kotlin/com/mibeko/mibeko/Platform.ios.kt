@@ -14,5 +14,8 @@ actual fun getCurrentTimeMillis(): Long {
     return (NSDate().timeIntervalSince1970 * 1000).toLong()
 }
 
+@OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+actual fun isDebugBuild(): Boolean = kotlin.native.Platform.isDebugBinary
+
 actual fun getContentSharer(): com.mibeko.mibeko.util.ContentSharer = 
     com.mibeko.mibeko.util.IosContentSharer()

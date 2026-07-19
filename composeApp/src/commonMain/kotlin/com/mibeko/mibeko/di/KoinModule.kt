@@ -5,7 +5,9 @@ import com.mibeko.mibeko.data.local.getDatabaseBuilder
 import com.mibeko.mibeko.data.preferences.RecentlyViewedManager
 import com.mibeko.mibeko.data.preferences.SearchHistoryManager
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.data.preferences.createSecureSettings
 import com.mibeko.mibeko.getContentSharer
+import com.mibeko.mibeko.isDebugBuild
 import com.mibeko.mibeko.util.ContentSharer
 import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.remote.AiApiService
@@ -50,8 +52,8 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val commonModule = module {
-    // User Preferences
-    single { UserPreferencesRepository() }
+    // User Preferences (stockage sécurisé : EncryptedSharedPreferences / Keychain)
+    single { UserPreferencesRepository(createSecureSettings()) }
     single { SearchHistoryManager() }
     single { RecentlyViewedManager() }
     single {
@@ -80,7 +82,9 @@ val commonModule = module {
                 }
             }
             install(Logging) {
-                level = LogLevel.INFO
+                // Jamais de logs réseau dans un binaire release : les URLs
+                // d'API n'ont rien à faire dans les logs de production.
+                level = if (isDebugBuild()) LogLevel.INFO else LogLevel.NONE
             }
             install(SSE)
         }
