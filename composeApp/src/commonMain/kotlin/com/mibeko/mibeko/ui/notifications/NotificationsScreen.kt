@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.ui.navigation.LocalNavController
+import com.mibeko.mibeko.util.formatRelativeTime
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -178,7 +179,7 @@ fun NotificationsScreen() {
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     Text(
-                        text = "Il y a 2 heures", // TODO: Formatter le timestamp
+                        text = formatRelativeTime(notification.timestamp),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline
                     )

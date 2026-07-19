@@ -69,10 +69,12 @@ class NotificationRepository(
 
     /**
      * Enregistre l'appareil pour les notifications push.
+     * @return true si le backend a accepté l'enregistrement (permet à
+     * PushTokenRegistrar de conserver le token en attente en cas d'échec).
      */
-    suspend fun registerDevice(deviceId: String, pushToken: String, platform: String) {
-        try {
-            httpClient.post("$baseUrl/v1/devices/register") {
+    suspend fun registerDevice(deviceId: String, pushToken: String, platform: String): Boolean {
+        return try {
+            val response = httpClient.post("$baseUrl/v1/devices/register") {
                 setBody(mapOf(
                     "device_id" to deviceId,
                     "push_token" to pushToken,
@@ -80,8 +82,10 @@ class NotificationRepository(
                 ))
                 contentType(io.ktor.http.ContentType.Application.Json)
             }
+            response.status.value in 200..299
         } catch (e: Exception) {
-            // Log error
+            recordException(e, context = "NotificationRepository.registerDevice")
+            false
         }
     }
 

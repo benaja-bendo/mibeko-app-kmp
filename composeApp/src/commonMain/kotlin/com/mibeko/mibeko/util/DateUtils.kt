@@ -1,5 +1,6 @@
 package com.mibeko.mibeko.util
 
+import com.mibeko.mibeko.getCurrentTimeMillis
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -104,4 +105,27 @@ fun yearFromEpochMillis(epochMillis: Long): String {
     val instant = Instant.fromEpochMilliseconds(epochMillis)
     val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
     return dateTime.year.toString()
+}
+
+/**
+ * Temps relatif court pour les listes (notifications…) : « À l'instant »,
+ * « Il y a 5 min », « Hier »… Au-delà d'une semaine, on affiche la date.
+ */
+fun formatRelativeTime(epochMillis: Long, nowMillis: Long = getCurrentTimeMillis()): String {
+    val diff = nowMillis - epochMillis
+    if (diff < 0) return formatEpochMillisDate(epochMillis)
+
+    val minutes = diff / 60_000
+    val hours = diff / 3_600_000
+    val days = diff / 86_400_000
+
+    return when {
+        minutes < 1 -> "À l'instant"
+        minutes < 60 -> "Il y a $minutes min"
+        hours == 1L -> "Il y a 1 heure"
+        hours < 24 -> "Il y a $hours heures"
+        days == 1L -> "Hier"
+        days < 7 -> "Il y a $days jours"
+        else -> formatEpochMillisDate(epochMillis)
+    }
 }

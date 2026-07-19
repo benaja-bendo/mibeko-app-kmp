@@ -17,6 +17,7 @@ import com.mibeko.mibeko.data.remote.LibraryApiService
 import com.mibeko.mibeko.data.repository.DossierRepository
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.repository.NotificationRepository
+import com.mibeko.mibeko.data.repository.PushTokenRegistrar
 import com.mibeko.mibeko.ui.auth.ForgotPasswordViewModel
 import com.mibeko.mibeko.ui.auth.LoginViewModel
 import com.mibeko.mibeko.ui.auth.RegisterViewModel
@@ -115,9 +116,10 @@ val commonModule = module {
     single { LocalLegalRepository(get(), get(), get(), get()) }
     single { DossierRepository(get(), get(), get(), get(), get()) }
     single { NotificationRepository(get(), get<AppConfig>().baseUrl) }
+    single { PushTokenRegistrar(get(), get()) }
 
-    viewModel { LoginViewModel(get(), get()) }
-    viewModel { RegisterViewModel(get(), get()) }
+    viewModel { LoginViewModel(get(), get(), get()) }
+    viewModel { RegisterViewModel(get(), get(), get()) }
     viewModel { ForgotPasswordViewModel(get()) }
     viewModel { ProfileSetupViewModel(get(), get()) }
 

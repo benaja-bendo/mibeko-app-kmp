@@ -12,12 +12,14 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.mibeko.mibeko.MainActivity
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.data.repository.PushTokenRegistrar
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class MyFirebaseMessagingService : FirebaseMessagingService(), KoinComponent {
 
     private val userPreferencesRepository: UserPreferencesRepository by inject()
+    private val pushTokenRegistrar: PushTokenRegistrar by inject()
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         // Vérifier si les notifications sont activées dans les préférences de l'app
@@ -36,9 +38,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService(), KoinComponent {
     }
 
     override fun onNewToken(token: String) {
-        // Si on avait une logique pour envoyer le token au serveur ici, on le ferait.
-        // Mais notre architecture le fait via le ViewModel/Repository quand l'app est lancée ou quand le switch change.
         super.onNewToken(token)
+        // FCM peut renouveler le token à tout moment : sans ré-enregistrement,
+        // le backend continue de pousser vers un token mort. Si l'utilisateur
+        // n'est pas connecté, le token est mis en attente et envoyé au
+        // prochain login / démarrage connecté.
+        pushTokenRegistrar.onNewToken(token)
     }
 
     private fun sendNotification(title: String, messageBody: String) {

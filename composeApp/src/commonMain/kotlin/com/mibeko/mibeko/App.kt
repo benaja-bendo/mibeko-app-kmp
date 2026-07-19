@@ -9,6 +9,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -21,6 +22,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.data.repository.PushTokenRegistrar
 import com.mibeko.mibeko.ui.auth.ForgotPasswordScreen
 import com.mibeko.mibeko.ui.auth.LoginScreen
 import com.mibeko.mibeko.ui.auth.ProfileSetupScreen
@@ -74,6 +76,13 @@ fun App() {
                 runCatching { navController.navigate(NavUri(uri)) }
             }
             onDispose { ExternalUriHandler.listener = null }
+        }
+
+        // Démarrage connecté : envoie le token push resté en attente
+        // (renouvelé hors session ou échec réseau précédent).
+        val pushTokenRegistrar = koinInject<PushTokenRegistrar>()
+        LaunchedEffect(Unit) {
+            pushTokenRegistrar.flushPendingToken()
         }
 
         CompositionLocalProvider(LocalNavController provides navController) {

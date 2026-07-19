@@ -50,6 +50,7 @@ class UserPreferencesRepository(private val settings: Settings) {
         internal const val KEY_PROFILE_SETUP_COMPLETED = "profile_setup_completed"
         internal const val KEY_DOSSIER_SYNC_ACCOUNT = "dossier_sync_account"
         internal const val KEY_DOSSIER_LAST_SYNC = "dossier_last_sync"
+        internal const val KEY_PENDING_PUSH_TOKEN = "pending_push_token"
     }
 
     /**
@@ -283,6 +284,23 @@ class UserPreferencesRepository(private val settings: Settings) {
         } else {
             settings.putString(KEY_AUTH_TOKEN, token)
             _isLoggedIn.value = true
+        }
+    }
+
+    /**
+     * Token push (FCM/APNs) reçu alors que l'envoi au backend n'était pas
+     * possible (utilisateur déconnecté, réseau absent). Il sera transmis au
+     * prochain login ou démarrage connecté par PushTokenRegistrar.
+     */
+    fun getPendingPushToken(): String? {
+        return settings.getStringOrNull(KEY_PENDING_PUSH_TOKEN)
+    }
+
+    fun setPendingPushToken(token: String?) {
+        if (token == null) {
+            settings.remove(KEY_PENDING_PUSH_TOKEN)
+        } else {
+            settings.putString(KEY_PENDING_PUSH_TOKEN, token)
         }
     }
 
