@@ -73,6 +73,14 @@ fun SettingsScreen() {
         }
     }
 
+    // Erreurs de téléchargement / suppression de documents hors-ligne.
+    LaunchedEffect(uiState.syncError) {
+        uiState.syncError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearSyncError()
+        }
+    }
+
     if (showProfileDialog) {
         AlertDialog(
             onDismissRequest = { showProfileDialog = false },

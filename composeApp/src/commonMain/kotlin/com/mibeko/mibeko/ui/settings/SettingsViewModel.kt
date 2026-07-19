@@ -415,22 +415,22 @@ class SettingsViewModel(
         viewModelScope.launch {
             // Update UI to show downloading state
             updateDocumentState(documentId) { it.copy(isDownloading = true, downloadProgress = 0f) }
-            
+
             try {
-                // TODO: Implement actual download logic
-                // This would call the API to get full document content
-                // and store it in Room database
-                
-                // For now, just simulate a successful download
-                kotlinx.coroutines.delay(1000)
-                
-                updateDocumentState(documentId) { 
-                    it.copy(isDownloading = false, isDownloaded = true, downloadProgress = 1f) 
+                // Téléchargement réel : structure + articles stockés dans Room.
+                legalRepository.downloadDocument(documentId)
+
+                updateDocumentState(documentId) {
+                    it.copy(isDownloading = false, isDownloaded = true, downloadProgress = 1f)
                 }
+                refreshDiskUsage()
             } catch (e: Exception) {
-                updateDocumentState(documentId) { 
-                    it.copy(isDownloading = false, downloadProgress = 0f) 
+                updateDocumentState(documentId) {
+                    it.copy(isDownloading = false, isDownloaded = false, downloadProgress = 0f)
                 }
+                _uiState.value = _uiState.value.copy(
+                    syncError = "Le téléchargement du document a échoué. Vérifiez votre connexion."
+                )
             }
         }
     }
@@ -440,11 +440,18 @@ class SettingsViewModel(
      */
     fun deleteDocument(documentId: String) {
         viewModelScope.launch {
-            // TODO: Implement actual delete logic
-            // This would remove articles for this document from Room
-            
-            updateDocumentState(documentId) { 
-                it.copy(isDownloaded = false, downloadProgress = 0f) 
+            try {
+                // Suppression réelle des articles non favoris du document dans Room.
+                legalRepository.removeDownload(documentId)
+
+                updateDocumentState(documentId) {
+                    it.copy(isDownloaded = false, downloadProgress = 0f)
+                }
+                refreshDiskUsage()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    syncError = "La suppression du document a échoué."
+                )
             }
         }
     }
