@@ -114,6 +114,18 @@ kotlin {
     }
 }
 
+// Les secrets de signature vivent HORS du dépôt (voir audit 2026-07, P0.10).
+// Chemin surchargeable : -PkeystorePropertiesFile=/chemin/keystore.properties
+// ou variable d'environnement MIBEKO_KEYSTORE_PROPERTIES.
+// Défaut : ../../secrets/mibeko-app-kmp/keystore.properties (relatif à la racine
+// du projet). Absent => pas de signature locale (le build debug fonctionne,
+// la CI passe par les variables KEYSTORE_FILE/KEYSTORE_PASSWORD/...).
+val keystorePropertiesFile: File = (
+    (project.findProperty("keystorePropertiesFile") as String?)
+        ?: System.getenv("MIBEKO_KEYSTORE_PROPERTIES")
+    )?.let { rootProject.file(it) }
+    ?: rootProject.file("../../secrets/mibeko-app-kmp/keystore.properties")
+
 android {
     namespace = "com.mibeko.mibeko"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -140,12 +152,13 @@ android {
 
     signingConfigs {
         create("release") {
-            val keystorePropertiesFile = rootProject.file("keystore.properties")
             if (keystorePropertiesFile.exists()) {
                 val keystoreProperties = Properties()
                 keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-                // Chemin relatif résolu depuis la racine du projet (emplacement du .jks)
-                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                // Chemin du .jks résolu depuis l'emplacement du fichier de
+                // propriétés (le keystore vit à côté, hors du dépôt).
+                storeFile = keystorePropertiesFile.parentFile
+                    .resolve(keystoreProperties.getProperty("storeFile"))
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
@@ -175,8 +188,7 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             
             // On s'assure que la configuration de signature est utilisée si elle a été configurée
-            val keystoreFile = rootProject.file("keystore.properties")
-            if (keystoreFile.exists() || System.getenv("KEYSTORE_FILE") != null) {
+            if (keystorePropertiesFile.exists() || System.getenv("KEYSTORE_FILE") != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
 

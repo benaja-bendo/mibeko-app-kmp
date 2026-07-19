@@ -79,7 +79,7 @@ Android (debug) :
 
 iOS : ouvrir `iosApp/` dans Xcode, ou lancer la configuration iOS depuis Android Studio. Le framework partagé est produit par la cible KMP `:composeApp`.
 
-Pour une release Android signée, renseigner `keystore.properties` (voir `keystore.properties.template`) puis :
+Pour une release Android signée, renseigner un `keystore.properties` **hors du dépôt** — par défaut `../../secrets/mibeko-app-kmp/keystore.properties`, surchargeable via `-PkeystorePropertiesFile=...` ou la variable d'environnement `MIBEKO_KEYSTORE_PROPERTIES` (voir `keystore.properties.template`) — puis :
 
 ```bash
 ./gradlew :composeApp:bundleRelease -PversionCode=<n> -PversionName=<x.y.z>
