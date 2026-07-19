@@ -80,6 +80,12 @@ data class RemoteUser(
     val id: String,
     val name: String,
     val email: String,
+    // Vérification d'e-mail — exposée par `UserProfileResource` (GET /v1/profile).
+    // `email_verified` : booléen ; `email_verified_at` : ISO8601 ou null.
+    // Absents des réponses login/register (formatUser) : d'où les valeurs par
+    // défaut, qui provoquent une dégradation silencieuse côté UI.
+    val email_verified: Boolean? = null,
+    val email_verified_at: String? = null,
     // L'API normalise les rôles en tableau de chaînes (AuthController::formatUser).
     val roles: List<String> = emptyList(),
     val mobile_profile: RemoteMobileProfile? = null
@@ -146,6 +152,27 @@ class AuthApiService(
 
     suspend fun getProfile(): ProfileResponse = safeApiCall {
         client.get("$baseUrl/v1/profile")
+    }
+
+    /**
+     * Renvoie l'e-mail de vérification (contrat livré : POST
+     * `/v1/email/verification-notification`, Bearer → 202, idempotent, quota
+     * serré 3/min). Distingue le succès, l'étranglement (429) et l'échec pour
+     * un retour utilisateur clair sans exposer d'exception.
+     */
+    suspend fun resendEmailVerification(): ResendVerificationResult {
+        return try {
+            client.post("$baseUrl/v1/email/verification-notification")
+            ResendVerificationResult.SENT
+        } catch (e: ClientRequestException) {
+            if (e.response.status == HttpStatusCode.TooManyRequests) {
+                ResendVerificationResult.THROTTLED
+            } else {
+                ResendVerificationResult.ERROR
+            }
+        } catch (e: Exception) {
+            ResendVerificationResult.ERROR
+        }
     }
 
     suspend fun updateProfile(request: ProfileUpdateRequest): ProfileResponse = safeApiCall {
@@ -227,3 +254,15 @@ class AuthApiService(
 
 /** Le compte est protégé par double authentification : un code TOTP est requis. */
 class TwoFactorRequiredException(message: String) : Exception(message)
+
+/** Issue de l'appel de renvoi d'e-mail de vérification. */
+enum class ResendVerificationResult {
+    /** 202 — l'e-mail a (le cas échéant) été renvoyé. */
+    SENT,
+
+    /** 429 — quota d'envoi atteint, réessayer plus tard. */
+    THROTTLED,
+
+    /** Autre erreur (réseau, 5xx…). */
+    ERROR
+}

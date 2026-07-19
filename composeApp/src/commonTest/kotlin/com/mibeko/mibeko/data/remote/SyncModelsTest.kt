@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SyncModelsTest {
@@ -141,5 +142,41 @@ class SyncModelsTest {
         
         assertEquals(2, homeData.ai_suggestions.size)
         assertEquals("Quels sont mes droits en cas de licenciement abusif ?", homeData.ai_suggestions[0])
+    }
+
+    @Test
+    fun testUserProfileParsesEmailVerification() {
+        // UserProfileResource expose email_verified (bool) + email_verified_at.
+        val jsonString = """
+            {
+                "id": "u-1",
+                "name": "Jean",
+                "email": "jean@example.cg",
+                "email_verified": false,
+                "email_verified_at": null,
+                "roles": ["citizen"]
+            }
+        """.trimIndent()
+
+        val user = jsonParser.decodeFromString<RemoteUser>(jsonString)
+        assertEquals(false, user.email_verified)
+        assertNull(user.email_verified_at)
+    }
+
+    @Test
+    fun testUserWithoutVerificationFieldsDegrades() {
+        // Réponse login/register (formatUser) : pas de champ email_verified →
+        // null (dégradation silencieuse, aucune bannière côté UI).
+        val jsonString = """
+            {
+                "id": "u-1",
+                "name": "Jean",
+                "email": "jean@example.cg",
+                "roles": []
+            }
+        """.trimIndent()
+
+        val user = jsonParser.decodeFromString<RemoteUser>(jsonString)
+        assertNull(user.email_verified)
     }
 }

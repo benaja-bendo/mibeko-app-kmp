@@ -32,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import com.mibeko.mibeko.ui.components.EmailVerificationBanner
 import com.mibeko.mibeko.ui.components.NetworkStatusBanner
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
@@ -56,11 +58,35 @@ fun HomeScreen() {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Masquage local de la bannière « e-mail non vérifié » pour la session.
+    var emailBannerDismissed by remember { mutableStateOf(false) }
+
     LaunchedEffect(viewModel.uiEvent) {
         viewModel.uiEvent.collect { message ->
             snackbarHostState.showSnackbar(message)
         }
     }
+
+    // Résultat du renvoi de vérification → snackbar, puis on efface le message.
+    LaunchedEffect(uiState.verificationResendMessage) {
+        uiState.verificationResendMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearVerificationResendMessage()
+        }
+    }
+
+    // `now` s'actualise tant qu'un cooldown est en cours, pour que le bouton
+    // « Renvoyer l'e-mail » se réactive de lui-même à l'expiration (sans ticker,
+    // `now` resterait figé à l'instant du dernier envoi → bouton bloqué à vie).
+    val cooldownUntil = uiState.verificationResendCooldownUntil
+    val now by produceState(initialValue = com.mibeko.mibeko.getCurrentTimeMillis(), cooldownUntil) {
+        value = com.mibeko.mibeko.getCurrentTimeMillis()
+        while (value < cooldownUntil) {
+            delay(1000)
+            value = com.mibeko.mibeko.getCurrentTimeMillis()
+        }
+    }
+    val canResendVerification = now >= cooldownUntil
 
     val askAssistant: (String) -> Unit = { prompt ->
         if (prompt.isNotBlank()) {
@@ -98,6 +124,18 @@ fun HomeScreen() {
                     suggestions = uiState.aiSuggestions,
                     onAsk = askAssistant
                 )
+            }
+
+            // Posture douce P1.17 : rappel non bloquant de vérification d'e-mail.
+            if (uiState.showEmailVerificationBanner && !emailBannerDismissed) {
+                item {
+                    EmailVerificationBanner(
+                        isResending = uiState.isResendingVerification,
+                        canResend = canResendVerification,
+                        onResend = { viewModel.resendEmailVerification() },
+                        onDismiss = { emailBannerDismissed = true }
+                    )
+                }
             }
 
             item {

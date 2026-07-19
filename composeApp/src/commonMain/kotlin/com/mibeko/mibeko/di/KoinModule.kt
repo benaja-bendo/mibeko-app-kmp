@@ -1,5 +1,6 @@
 package com.mibeko.mibeko.di
 
+import com.mibeko.mibeko.data.auth.SessionEvents
 import com.mibeko.mibeko.data.local.AppDatabase
 import com.mibeko.mibeko.data.local.getDatabaseBuilder
 import com.mibeko.mibeko.data.preferences.RecentlyViewedManager
@@ -42,21 +43,41 @@ import com.mibeko.mibeko.util.NotificationManager
 import com.mibeko.mibeko.util.getNetworkConnectivityChecker
 import com.mibeko.mibeko.util.getNotificationManager
 import io.ktor.client.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.sse.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
+
+/**
+ * Routes d'authentification publiques dont un 401 fait partie du contrat
+ * (identifiants invalides, code de réinitialisation erroné…) : elles ne
+ * doivent pas déclencher la déconnexion globale.
+ */
+private val PUBLIC_AUTH_ROUTES = listOf(
+    "/v1/login",
+    "/v1/register",
+    "/v1/auth/firebase",
+    "/v1/forgot-password",
+    "/v1/reset-password",
+    "/v1/logout"
+)
 
 val commonModule = module {
     // User Preferences (stockage sécurisé : EncryptedSharedPreferences / Keychain)
     single { UserPreferencesRepository(createSecureSettings()) }
     single { SearchHistoryManager() }
     single { RecentlyViewedManager() }
+
+    // Événements de session (expiration du jeton observée par l'UI)
+    single { SessionEvents() }
     single {
         Json {
             ignoreUnknownKeys = true
@@ -88,6 +109,22 @@ val commonModule = module {
                 level = if (isDebugBuild()) LogLevel.INFO else LogLevel.NONE
             }
             install(SSE)
+            // Gestion 401 globale : un jeton révoqué ou expiré côté serveur
+            // purge la session locale et notifie l'UI (retour à l'écran de
+            // connexion) au lieu de laisser une session zombie.
+            HttpResponseValidator {
+                validateResponse { response ->
+                    if (response.status == HttpStatusCode.Unauthorized) {
+                        val path = response.request.url.encodedPath
+                        val isPublicAuthRoute = PUBLIC_AUTH_ROUTES.any { path.endsWith(it) }
+                        val preferences = get<UserPreferencesRepository>()
+                        if (!isPublicAuthRoute && preferences.isLoggedIn()) {
+                            preferences.logout()
+                            get<SessionEvents>().notifySessionExpired()
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -123,7 +160,7 @@ val commonModule = module {
     viewModel { ForgotPasswordViewModel(get()) }
     viewModel { ProfileSetupViewModel(get(), get()) }
 
-    viewModel { HomeViewModel(get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { ReaderViewModel(get(), get(), get(), get(), get()) }
     viewModel { DocumentDetailViewModel(get(), get()) }

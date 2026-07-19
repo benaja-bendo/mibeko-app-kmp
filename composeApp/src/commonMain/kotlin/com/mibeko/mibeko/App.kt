@@ -21,7 +21,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navDeepLink
 import androidx.navigation.toRoute
+import com.mibeko.mibeko.data.auth.SessionEvents
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.repository.PushTokenRegistrar
 import com.mibeko.mibeko.ui.auth.ForgotPasswordScreen
 import com.mibeko.mibeko.ui.auth.LoginScreen
@@ -76,6 +78,20 @@ fun App() {
                 runCatching { navController.navigate(NavUri(uri)) }
             }
             onDispose { ExternalUriHandler.listener = null }
+        }
+
+        // Session expirée (401 sur route authentifiée, jeton déjà purgé par le
+        // client HTTP) : on invalide le cache bearer et on ramène l'utilisateur
+        // à l'écran de connexion.
+        val sessionEvents = koinInject<SessionEvents>()
+        val authApiService = koinInject<AuthApiService>()
+        LaunchedEffect(navController) {
+            sessionEvents.sessionExpired.collect {
+                authApiService.invalidateTokenCache()
+                navController.navigate(Screen.Login) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
         }
 
         // Démarrage connecté : envoie le token push resté en attente

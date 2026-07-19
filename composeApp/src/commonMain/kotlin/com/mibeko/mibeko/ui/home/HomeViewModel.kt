@@ -4,8 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.data.remote.ApiResponse
+import com.mibeko.mibeko.data.remote.AuthApiService
+import com.mibeko.mibeko.data.remote.ResendVerificationResult
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.getCurrentTimeMillis
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,13 +43,26 @@ data class HomeUiState(
     val recentlyAdded: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList(),
     val officialJournals: List<com.mibeko.mibeko.data.remote.RemoteOfficialJournal> = emptyList(),
     val aiSuggestions: List<String> = emptyList(),
-    val isSyncing: Boolean = false
+    val isSyncing: Boolean = false,
+    /**
+     * Bannière « e-mail non vérifié » (posture douce, non bloquante). N'apparaît
+     * que si le profil expose explicitement `email_verified == false` : si le
+     * champ manque (login/register, backend plus ancien), dégradation
+     * silencieuse — pas de bannière.
+     */
+    val showEmailVerificationBanner: Boolean = false,
+    val isResendingVerification: Boolean = false,
+    /** Message transitoire de résultat du renvoi (succès / throttle / erreur). */
+    val verificationResendMessage: String? = null,
+    /** Cooldown local anti-spam : timestamp epoch ms de fin d'attente. */
+    val verificationResendCooldownUntil: Long = 0L
 )
 
 class HomeViewModel(
     private val repository: LocalLegalRepository,
     private val networkChecker: NetworkConnectivityChecker,
-    private val userPreferences: UserPreferencesRepository
+    private val userPreferences: UserPreferencesRepository,
+    private val authApiService: AuthApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -57,11 +73,77 @@ class HomeViewModel(
 
     val lawCodes: StateFlow<List<LawCodeSpec>> = repository.getLawCodes()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    
+
     init {
         loadInitialState()
         initialSyncIfNeeded()
         loadHomeData()
+        checkEmailVerification()
+    }
+
+    /**
+     * Posture douce P1.17 : au démarrage connecté, interroge le profil et, si
+     * l'e-mail n'est explicitement pas vérifié, arme la bannière non bloquante.
+     * Toute absence de champ / erreur réseau → pas de bannière (silencieux).
+     */
+    private fun checkEmailVerification() {
+        if (!userPreferences.isLoggedIn()) return
+        if (!networkChecker.isNetworkAvailable()) return
+        viewModelScope.launch {
+            try {
+                val response = authApiService.getProfile()
+                // Bannière uniquement si le backend dit explicitement « non vérifié ».
+                val unverified = response.success && response.data?.email_verified == false
+                if (unverified) {
+                    _uiState.value = _uiState.value.copy(showEmailVerificationBanner = true)
+                }
+            } catch (e: Exception) {
+                // Dégradation silencieuse : aucune bannière, aucun crash.
+            }
+        }
+    }
+
+    /**
+     * Renvoie l'e-mail de vérification (bouton de la bannière). Respecte un
+     * cooldown local de 60 s et gère l'étranglement serveur (429).
+     */
+    fun resendEmailVerification() {
+        val now = getCurrentTimeMillis()
+        if (_uiState.value.isResendingVerification) return
+        if (now < _uiState.value.verificationResendCooldownUntil) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isResendingVerification = true,
+                verificationResendMessage = null
+            )
+            val result = authApiService.resendEmailVerification()
+            val message: String
+            val cooldownUntil: Long
+            when (result) {
+                ResendVerificationResult.SENT -> {
+                    message = "E-mail de vérification envoyé. Pensez à vérifier vos spams."
+                    cooldownUntil = now + COOLDOWN_MS
+                }
+                ResendVerificationResult.THROTTLED -> {
+                    message = "Trop de tentatives. Réessayez dans quelques minutes."
+                    cooldownUntil = now + COOLDOWN_MS
+                }
+                ResendVerificationResult.ERROR -> {
+                    message = "L'envoi a échoué. Vérifiez votre connexion puis réessayez."
+                    cooldownUntil = _uiState.value.verificationResendCooldownUntil
+                }
+            }
+            _uiState.value = _uiState.value.copy(
+                isResendingVerification = false,
+                verificationResendMessage = message,
+                verificationResendCooldownUntil = cooldownUntil
+            )
+        }
+    }
+
+    fun clearVerificationResendMessage() {
+        _uiState.value = _uiState.value.copy(verificationResendMessage = null)
     }
     
     private fun loadHomeData() {
@@ -191,5 +273,10 @@ class HomeViewModel(
                 _uiState.value = _uiState.value.copy(isSyncing = false, isLoading = false)
             }
         }
+    }
+
+    private companion object {
+        /** Cooldown local anti-spam du renvoi de vérification (60 s). */
+        const val COOLDOWN_MS = 60_000L
     }
 }
