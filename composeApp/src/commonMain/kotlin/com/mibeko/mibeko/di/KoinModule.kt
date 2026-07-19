@@ -27,6 +27,7 @@ import com.mibeko.mibeko.ui.home.HomeViewModel
 import com.mibeko.mibeko.ui.search.SearchViewModel
 import com.mibeko.mibeko.ui.reader.ReaderViewModel
 import com.mibeko.mibeko.ui.details.DocumentDetailViewModel
+import com.mibeko.mibeko.ui.resolver.TexteResolverViewModel
 import com.mibeko.mibeko.ui.library.LibraryViewModel
 import com.mibeko.mibeko.ui.downloads.DownloadsViewModel
 import com.mibeko.mibeko.ui.notifications.NotificationsViewModel
@@ -164,6 +165,7 @@ val commonModule = module {
     viewModel { SearchViewModel(get(), get(), get(), get()) }
     viewModel { ReaderViewModel(get(), get(), get(), get(), get()) }
     viewModel { DocumentDetailViewModel(get(), get()) }
+    viewModel { TexteResolverViewModel(get()) }
     viewModel { FavoritesViewModel(get()) }
     viewModel { SettingsViewModel(get(), get(), get(), get(), get()) }
     viewModel { OfficialJournalViewModel(get(), get()) }

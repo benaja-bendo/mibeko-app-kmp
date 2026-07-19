@@ -12,7 +12,8 @@ fun DocumentEntity.toLawCodeSpec(): LawCodeSpec {
         lastUpdated = last_updated,
         isDownloaded = is_downloaded,
         institutionName = institution_name,
-        dateSignature = date_signature
+        dateSignature = date_signature,
+        slug = slug
     )
 }
 

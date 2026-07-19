@@ -27,6 +27,8 @@ data class ReaderUiState(
     val article: ArticleSpec? = null,
     val documentTitle: String? = null,
     val documentType: String? = null,
+    /** Slug d'URL publique du document (partage vers mibeko.fr) — `null` si inconnu. */
+    val documentSlug: String? = null,
     /** Articles du document dans l'ordre de lecture (navigation + sommaire). */
     val articleSequence: List<ReaderTocEntry> = emptyList(),
     val error: String? = null
@@ -146,6 +148,7 @@ class ReaderViewModel(
                         article = articleResult,
                         documentTitle = docResult?.title,
                         documentType = docResult?.type,
+                        documentSlug = docResult?.slug,
                         error = null
                     )
 
@@ -244,16 +247,23 @@ class ReaderViewModel(
     fun shareAsLink() {
         val currentArticle = _uiState.value.article ?: return
         val documentTitle = _uiState.value.documentTitle ?: "Document"
-        
+
+        // Lien public vers le portail citoyen mibeko.fr (slug connu → article
+        // précis ; slug inconnu → accueil, cf. PublicLinks).
+        val link = com.mibeko.mibeko.util.PublicLinks.article(
+            documentSlug = _uiState.value.documentSlug,
+            articleNumber = currentArticle.number
+        )
+
         // Create a rich message with context and the link
         val message = buildString {
             appendLine("📚 Article ${currentArticle.number}")
             appendLine(documentTitle)
             appendLine()
             appendLine("Découvrez cet article sur Mibeko :")
-            appendLine("https://mibeko.cg/article/${currentArticle.id}")
+            appendLine(link)
         }
-        
+
         contentSharer.shareText(message, "Article ${currentArticle.number} - Mibeko")
         _snackbarMessage.value = "Ouverture du lien de partage..."
     }
@@ -267,7 +277,10 @@ class ReaderViewModel(
 
     fun copyArticleLink() {
         val currentArticle = _uiState.value.article ?: return
-        val url = "https://mibeko.cg/article/${currentArticle.id}"
+        val url = com.mibeko.mibeko.util.PublicLinks.article(
+            documentSlug = _uiState.value.documentSlug,
+            articleNumber = currentArticle.number
+        )
         contentSharer.copyToClipboard(url)
         _snackbarMessage.value = "✓ Lien de l'article copié"
     }

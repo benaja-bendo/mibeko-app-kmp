@@ -54,6 +54,23 @@ class LegalApiService(
     }
 
     /**
+     * Résout un document publié par son slug d'URL publique (lien profond
+     * `mibeko.fr/textes/{slug}`). Route publique, publiés uniquement. Renvoie
+     * le document (avec son id interne) et l'index de ses articles ; `null` si
+     * le slug est introuvable (404) ou en cas d'erreur réseau.
+     */
+    suspend fun fetchDocumentBySlug(slug: String): RemotePublicDocumentData? {
+        return try {
+            client.get("$baseUrl/v1/legal-documents/slug/${slug.encodeURLPathPart()}")
+                .body<RemotePublicDocumentResponse>()
+                .data
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
      * Fetch the structure tree for a document with articles.
      */
     suspend fun fetchDocumentTree(documentId: String): List<RemoteNode> {

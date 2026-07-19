@@ -11,5 +11,12 @@ data class DocumentEntity(
     val last_updated: Long,
     val is_downloaded: Boolean = false,
     val institution_name: String? = null,
-    val date_signature: String? = null
+    val date_signature: String? = null,
+    /**
+     * Slug d'URL publique (site vitrine `/textes/{slug}`) — sert à générer les
+     * liens de partage vers mibeko.fr. `null` tant que le document n'a pas de
+     * slug (jamais publié, ou coquille créée localement depuis un résultat de
+     * recherche / mode hors-ligne).
+     */
+    val slug: String? = null
 )

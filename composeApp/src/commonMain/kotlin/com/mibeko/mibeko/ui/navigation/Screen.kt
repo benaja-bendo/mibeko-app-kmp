@@ -41,9 +41,19 @@ sealed class Screen {
     
     @Serializable
     data class DocumentDetail(val documentId: String) : Screen()
-    
+
     @Serializable
     data class Reader(val articleId: String) : Screen()
+
+    /**
+     * Destination-relais des liens publics `mibeko.fr/textes/{slug}` (et
+     * `/article-{numero}`). Le slug n'est pas un identifiant interne : cet écran
+     * le résout en document (et éventuellement en article), puis redirige vers
+     * [Reader] ou [DocumentDetail]. C'est la cible des App Links (host mibeko.fr,
+     * pathPrefix /textes) — cf. AndroidManifest et App.kt.
+     */
+    @Serializable
+    data class TexteResolver(val docSlug: String, val articleNumber: String? = null) : Screen()
     
     @Serializable
     data object Dossiers : Screen()

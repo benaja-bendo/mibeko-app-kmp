@@ -8,7 +8,9 @@ data class LawCodeSpec(
     val lastUpdated: Long,
     val isDownloaded: Boolean = false,
     val institutionName: String? = null,
-    val dateSignature: String? = null
+    val dateSignature: String? = null,
+    /** Slug d'URL publique (mibeko.fr/textes/{slug}) — `null` si inconnu. */
+    val slug: String? = null
 )
 
 data class ArticleSpec(

@@ -27,7 +27,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- App Links (https://mibeko.cg/article/...) -->
+            <!-- App Links portail citoyen (https://mibeko.fr/textes/...) —
+                 domaine public réel, lecteur sous /textes. Vérifié via
+                 /.well-known/assetlinks.json (host mibeko.fr). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="mibeko.fr" android:pathPrefix="/textes" />
+            </intent-filter>
+
+            <!-- App Links legacy (https://mibeko.cg/article|document/{uuid}) —
+                 conservés pour rétro-compat des anciens liens partagés. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -36,11 +47,12 @@
                 <data android:scheme="https" android:host="mibeko.cg" android:pathPrefix="/document" />
             </intent-filter>
 
-            <!-- Custom Scheme (mibeko://article/...) -->
+            <!-- Custom Scheme (mibeko://textes/..., mibeko://article/...) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="mibeko" android:host="textes" />
                 <data android:scheme="mibeko" android:host="article" />
                 <data android:scheme="mibeko" android:host="document" />
             </intent-filter>

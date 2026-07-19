@@ -202,6 +202,19 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
+/**
+ * v8 → v9 :
+ * - `documents` gagne une colonne `slug` (nullable) : clé d'URL publique
+ *   `mibeko.fr/textes/{slug}` exposée par l'API, mémorisée pour générer les
+ *   liens de partage même hors-ligne. Colonne facultative, aucun backfill —
+ *   elle se remplit à la prochaine synchronisation du catalogue.
+ */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `documents` ADD COLUMN `slug` TEXT DEFAULT NULL")
+    }
+}
+
 /** Migrations à enregistrer sur chaque plateforme lors de la construction de la base. */
 val ALL_MIGRATIONS = arrayOf(
     MIGRATION_1_2,
@@ -210,5 +223,6 @@ val ALL_MIGRATIONS = arrayOf(
     MIGRATION_4_5,
     MIGRATION_5_6,
     MIGRATION_6_7,
-    MIGRATION_7_8
+    MIGRATION_7_8,
+    MIGRATION_8_9
 )

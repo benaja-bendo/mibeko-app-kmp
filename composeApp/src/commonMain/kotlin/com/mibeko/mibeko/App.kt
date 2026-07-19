@@ -48,6 +48,7 @@ import com.mibeko.mibeko.ui.officialjournal.OfficialJournalListScreen
 import com.mibeko.mibeko.ui.onboarding.DisclaimerScreen
 import com.mibeko.mibeko.ui.onboarding.OnboardingScreen
 import com.mibeko.mibeko.ui.reader.ReaderScreen
+import com.mibeko.mibeko.ui.resolver.TexteResolverScreen
 import com.mibeko.mibeko.ui.search.SearchResultsScreen
 import com.mibeko.mibeko.ui.settings.SettingsScreen
 import com.mibeko.mibeko.ui.splash.SplashScreen
@@ -175,6 +176,23 @@ fun App() {
                         ) { backStackEntry ->
                             val route = backStackEntry.toRoute<Screen.Reader>()
                             ReaderScreen(route.articleId)
+                        }
+
+                        // Liens publics du portail citoyen mibeko.fr/textes/{slug}
+                        // (et /article-{numero}). Le slug n'est pas un id interne :
+                        // l'écran-relais le résout puis redirige vers Reader/Document.
+                        // L'ordre compte : le motif « article » (plus spécifique)
+                        // est déclaré avant le motif document seul.
+                        composable<Screen.TexteResolver>(
+                            deepLinks = listOf(
+                                navDeepLink { uriPattern = "https://mibeko.fr/textes/{docSlug}/article-{articleNumber}" },
+                                navDeepLink { uriPattern = "https://mibeko.fr/textes/{docSlug}" },
+                                navDeepLink { uriPattern = "mibeko://textes/{docSlug}/article-{articleNumber}" },
+                                navDeepLink { uriPattern = "mibeko://textes/{docSlug}" }
+                            )
+                        ) { backStackEntry ->
+                            val route = backStackEntry.toRoute<Screen.TexteResolver>()
+                            TexteResolverScreen(docSlug = route.docSlug, articleNumber = route.articleNumber)
                         }
 
                         composable<Screen.DossierDetail> { backStackEntry ->

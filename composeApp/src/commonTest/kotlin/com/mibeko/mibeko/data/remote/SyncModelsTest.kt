@@ -145,6 +145,74 @@ class SyncModelsTest {
     }
 
     @Test
+    fun testDocumentParsesSlug() {
+        // L'API (LegalDocumentResource) expose `slug` : le modèle doit le lire.
+        val jsonString = """
+            {
+                "id": "019d68a2-8445-71ff-ad47-b03a95a7e42c",
+                "title": "Code du travail",
+                "slug": "code-du-travail",
+                "status": "published",
+                "updated_at": "2026-04-07T15:49:34+00:00"
+            }
+        """.trimIndent()
+
+        val doc = jsonParser.decodeFromString<RemoteDocument>(jsonString)
+        assertEquals("code-du-travail", doc.slug)
+    }
+
+    @Test
+    fun testDocumentWithoutSlugIsNull() {
+        // Absence de slug (JO, coquille) → null, pas d'échec de désérialisation.
+        val jsonString = """
+            {
+                "id": "019d68a2-8445-71ff-ad47-b03a95a7e42c",
+                "title": "Acte sans slug",
+                "status": "published",
+                "updated_at": "2026-04-07T15:49:34+00:00"
+            }
+        """.trimIndent()
+
+        val doc = jsonParser.decodeFromString<RemoteDocument>(jsonString)
+        assertNull(doc.slug)
+    }
+
+    @Test
+    fun testPublicDocumentBySlugParsing() {
+        // Réponse de GET /v1/legal-documents/slug/{slug}, réduite à l'essentiel.
+        val jsonString = """
+            {
+                "success": true,
+                "message": "ok",
+                "data": {
+                    "document": {
+                        "id": "doc-1",
+                        "title": "Code du travail",
+                        "slug": "code-du-travail",
+                        "status": "published",
+                        "updated_at": "2026-04-07T15:49:34+00:00"
+                    },
+                    "articles": [
+                        { "id": "art-10", "number": "10", "order": 1 },
+                        { "id": "art-11", "number": "11", "order": 2 }
+                    ],
+                    "structure": [],
+                    "has_pdf": false,
+                    "current_article": null
+                }
+            }
+        """.trimIndent()
+
+        val response = jsonParser.decodeFromString<RemotePublicDocumentResponse>(jsonString)
+        assertTrue(response.success)
+        assertNotNull(response.data)
+        assertEquals("doc-1", response.data?.document?.id)
+        assertEquals("code-du-travail", response.data?.document?.slug)
+        assertEquals(2, response.data?.articles?.size)
+        assertEquals("art-11", response.data?.articles?.firstOrNull { it.number == "11" }?.id)
+    }
+
+    @Test
     fun testUserProfileParsesEmailVerification() {
         // UserProfileResource expose email_verified (bool) + email_verified_at.
         val jsonString = """

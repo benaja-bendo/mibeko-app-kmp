@@ -105,6 +105,12 @@ data class DocumentStats(
 data class RemoteDocument(
     val id: String,
     val title: String,
+    /**
+     * Slug d'URL publique stable (site vitrine `/textes/{slug}`). Exposé par
+     * `LegalDocumentResource` côté Laravel ; sert à générer les liens de partage
+     * vers mibeko.fr. `null` pour les documents jamais publiés/slugués.
+     */
+    val slug: String? = null,
     val reference: String? = null,
     val status: String,
     val type: RemoteDocumentType? = null,
@@ -173,6 +179,36 @@ data class RemoteArticleContextResponse(
     val success: Boolean = false,
     val message: String = "",
     val data: RemoteArticleContext? = null
+)
+
+// =============================================================================
+// Public-by-slug Models (deep links mibeko.fr/textes/{slug})
+// =============================================================================
+
+/**
+ * Réponse de `GET /v1/legal-documents/slug/{slug}` (vue publique par slug).
+ * Utilisée uniquement pour résoudre un lien profond mibeko.fr en identifiants
+ * internes (document + article) : on ne conserve que l'essentiel.
+ */
+@Serializable
+data class RemotePublicDocumentResponse(
+    val success: Boolean = false,
+    val message: String = "",
+    val data: RemotePublicDocumentData? = null
+)
+
+@Serializable
+data class RemotePublicDocumentData(
+    val document: RemoteDocument? = null,
+    /** Index léger des articles du document (id + numéro), pour la résolution. */
+    val articles: List<RemotePublicArticleRef> = emptyList()
+)
+
+@Serializable
+data class RemotePublicArticleRef(
+    val id: String,
+    val number: String,
+    val order: Int = 0
 )
 
 /**

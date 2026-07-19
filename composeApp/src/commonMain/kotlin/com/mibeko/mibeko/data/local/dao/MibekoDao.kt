@@ -39,6 +39,21 @@ interface MibekoDao {
     @Query("SELECT * FROM documents WHERE id = :id")
     fun getDocumentById(id: String): Flow<DocumentEntity?>
 
+    /**
+     * Résout un article par (document, numéro) — utilisé pour la réception d'un
+     * lien public `/textes/{slug}/article-{numero}`. `null` si le document n'a
+     * pas été téléchargé localement ou si le numéro n'existe pas.
+     */
+    @Query(
+        """
+        SELECT articles.id FROM articles
+        JOIN nodes ON articles.node_id = nodes.id
+        WHERE nodes.document_id = :documentId AND articles.number = :number
+        LIMIT 1
+        """
+    )
+    suspend fun getArticleIdByDocumentAndNumber(documentId: String, number: String): String?
+
     @Query("SELECT * FROM documents WHERE is_downloaded = 1")
     fun getDownloadedDocuments(): Flow<List<DocumentEntity>>
 

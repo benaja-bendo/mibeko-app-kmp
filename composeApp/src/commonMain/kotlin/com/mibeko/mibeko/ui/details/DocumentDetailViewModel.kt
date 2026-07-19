@@ -158,22 +158,26 @@ class DocumentDetailViewModel(
 
     fun shareDocumentAsLink() {
         val doc = _uiState.value.document ?: return
-        
+
+        // Lien public vers le portail citoyen mibeko.fr (slug connu → texte
+        // précis ; slug inconnu → accueil, cf. PublicLinks).
+        val link = com.mibeko.mibeko.util.PublicLinks.document(doc.slug)
+
         val message = buildString {
             appendLine("📚 ${doc.title}")
             appendLine(doc.type)
             appendLine()
             appendLine("Consultez ce document sur Mibeko :")
-            appendLine("https://mibeko.cg/document/${doc.id}")
+            appendLine(link)
         }
-        
+
         contentSharer.shareText(message, "${doc.title} - Mibeko")
         _uiState.value = _uiState.value.copy(error = "Ouverture du lien de partage...")
     }
 
     fun copyDocumentLink() {
         val doc = _uiState.value.document ?: return
-        val url = "https://mibeko.cg/document/${doc.id}"
+        val url = com.mibeko.mibeko.util.PublicLinks.document(doc.slug)
         contentSharer.copyToClipboard(url)
         _uiState.value = _uiState.value.copy(error = "✓ Lien copié dans le presse-papiers")
     }

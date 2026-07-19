@@ -35,6 +35,18 @@ sealed class SearchResult {
     object Loading : SearchResult()
 }
 
+/**
+ * Résultat de la résolution d'un lien public `mibeko.fr/textes/{slug}` :
+ * la cible de navigation interne à ouvrir.
+ */
+sealed class SlugResolution {
+    /** Ouvrir le lecteur sur un article précis. */
+    data class Article(val articleId: String, val documentId: String) : SlugResolution()
+
+    /** Ouvrir le détail du document (article inconnu ou lien document seul). */
+    data class Document(val documentId: String) : SlugResolution()
+}
+
 class LocalLegalRepository(
     private val mibekoDao: MibekoDao,
     private val apiService: LegalApiService,
@@ -74,7 +86,8 @@ class LocalLegalRepository(
                     last_updated = parseIsoDate(remoteDoc.updated_at),
                     is_downloaded = downloadedIds.contains(remoteDoc.id),
                     institution_name = remoteDoc.institution?.name,
-                    date_signature = remoteDoc.dates?.signature
+                    date_signature = remoteDoc.dates?.signature,
+                    slug = remoteDoc.slug
                 ))
 
                 // Fetch full tree for this document to get structure and articles
@@ -234,9 +247,10 @@ class LocalLegalRepository(
                 last_updated = parseIsoDate(remoteDoc.updated_at),
                 is_downloaded = mibekoDao.getDownloadedDocumentIds().contains(remoteDoc.id),
                 institution_name = remoteDoc.institution?.name,
-                date_signature = remoteDoc.dates?.signature
+                date_signature = remoteDoc.dates?.signature,
+                slug = remoteDoc.slug
             )
-            
+
             mibekoDao.upsertDocuments(listOf(document))
             document.toLawCodeSpec()
         } catch (e: Exception) {
@@ -479,8 +493,63 @@ class LocalLegalRepository(
     }
 
     /**
+     * Résout un lien public `mibeko.fr/textes/{slug}` (et éventuellement
+     * `.../article-{numero}`) en cibles de navigation internes.
+     *
+     * Le slug est d'abord cherché parmi les documents déjà en cache (chemin
+     * hors-ligne), puis via l'endpoint public par slug si nécessaire. En cas de
+     * succès, le document est stocké localement (le lecteur lit depuis Room) et
+     * un [SlugResolution] indique quoi ouvrir : l'article demandé si son numéro
+     * a pu être résolu, sinon le document parent. `null` si rien n'a pu être
+     * résolu (slug inconnu, hors-ligne sans cache) — l'appelant reste alors sur
+     * l'accueil.
+     */
+    suspend fun resolveTexteBySlug(slug: String, articleNumber: String?): SlugResolution? {
+        // 1) Cache local : le document est-il déjà connu par son slug ?
+        val cached = mibekoDao.getAllDocuments().firstOrNull()
+            ?.firstOrNull { it.slug == slug }
+        var documentId = cached?.id
+
+        // 2) Sinon, résolution réseau via l'endpoint public par slug.
+        var remoteArticles: List<com.mibeko.mibeko.data.remote.RemotePublicArticleRef> = emptyList()
+        val canUseNetwork = networkChecker.isNetworkAvailable() &&
+            !userPreferencesRepository.isOfflineModeEnabled()
+
+        if (documentId == null && canUseNetwork) {
+            val data = apiService.fetchDocumentBySlug(slug)
+            val remoteDoc = data?.document
+            if (remoteDoc != null) {
+                documentId = remoteDoc.id
+                remoteArticles = data.articles
+                // Stocke le document + sa structure pour une lecture depuis Room.
+                fetchAndStoreDocument(remoteDoc.id)
+                runCatching { fetchAndStoreDocumentStructure(remoteDoc.id) }
+            }
+        }
+
+        val resolvedDocId = documentId ?: return null
+
+        // Pas de numéro d'article demandé → on ouvre le document.
+        if (articleNumber.isNullOrBlank()) {
+            return SlugResolution.Document(resolvedDocId)
+        }
+
+        // Résolution de l'article : d'abord via l'index renvoyé par l'API, puis
+        // via le cache local (document déjà téléchargé).
+        val articleId = remoteArticles.firstOrNull { it.number == articleNumber }?.id
+            ?: mibekoDao.getArticleIdByDocumentAndNumber(resolvedDocId, articleNumber)
+
+        return if (articleId != null) {
+            SlugResolution.Article(articleId, resolvedDocId)
+        } else {
+            // Numéro introuvable : on retombe sur le document parent (règle P1.11).
+            SlugResolution.Document(resolvedDocId)
+        }
+    }
+
+    /**
      * Hybrid search: queries API if online, falls back to local Room database.
-     * 
+     *
      * This is the core hybrid search logic:
      * 1. Check if network is available AND offline mode is not forced
      * 2. If yes -> Call API for live search (leverages backend full-text/pgvector search)
