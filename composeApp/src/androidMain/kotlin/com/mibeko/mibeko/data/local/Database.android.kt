@@ -20,6 +20,13 @@ actual fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase> {
         context = context,
         name = dbFile.absolutePath
     ).addMigrations(*ALL_MIGRATIONS)
-        .fallbackToDestructiveMigration(true)
+        // Plancher de migration : v1. Toutes les transitions 1→…→9 ont une
+        // migration réelle (voir Migrations.kt) → aucune perte de données locales
+        // lors d'une mise à jour depuis n'importe quel schéma publié. Le fallback
+        // destructif GLOBAL a été RETIRÉ (il effaçait la base à chaque montée de
+        // version). Seul un *downgrade* — un utilisateur qui réinstalle une version
+        // plus ancienne de l'app — reste destructif : Room ne peut pas « démigrer »
+        // proprement, et ce n'est pas un chemin de mise à jour normal.
+        .fallbackToDestructiveMigrationOnDowngrade(true)
 }
 

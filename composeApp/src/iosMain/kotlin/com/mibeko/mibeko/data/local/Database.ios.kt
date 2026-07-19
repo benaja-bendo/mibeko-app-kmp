@@ -23,7 +23,12 @@ actual fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase> {
         factory = { AppDatabaseConstructor.initialize() }
     ).setDriver(androidx.sqlite.driver.bundled.BundledSQLiteDriver())
      .addMigrations(*ALL_MIGRATIONS)
-     .fallbackToDestructiveMigration(true)
+     // Plancher de migration : v1. Toutes les transitions 1→…→9 ont une migration
+     // réelle (voir Migrations.kt) → aucune perte de données locales à la mise à
+     // jour depuis n'importe quel schéma publié. Le fallback destructif GLOBAL a
+     // été RETIRÉ. Seul un *downgrade* (réinstallation d'une version plus ancienne
+     // de l'app) reste destructif, cas non récupérable proprement par Room.
+     .fallbackToDestructiveMigrationOnDowngrade(true)
 }
 
 
