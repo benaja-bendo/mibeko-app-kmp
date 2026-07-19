@@ -3,6 +3,7 @@
 .gradle
 **/build/
 xcuserdata
+DerivedData/
 !src/**/build/
 local.properties
 .idea

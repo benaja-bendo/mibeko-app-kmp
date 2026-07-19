@@ -39,7 +39,6 @@ mibeko-app-kmp/
 │       ├── androidMain/ # Ktor Android, Firebase, activité Android
 │       └── iosMain/     # Ktor Darwin, ponts iOS
 ├── iosApp/              # projet Xcode (framework ComposeApp, bundleId cg.mibeko.app)
-├── androidApp/          # ressources Android historiques
 └── docs/                # documentation technique (voir ci-dessous)
 ```
 
