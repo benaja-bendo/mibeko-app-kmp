@@ -13,7 +13,8 @@ fun DocumentEntity.toLawCodeSpec(): LawCodeSpec {
         isDownloaded = is_downloaded,
         institutionName = institution_name,
         dateSignature = date_signature,
-        slug = slug
+        slug = slug,
+        consolidationAsOf = consolidation_as_of
     )
 }
 

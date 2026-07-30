@@ -13,7 +13,13 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ApiResponse<T>(
     val success: Boolean,
-    val message: String,
+    /**
+     * Nullable ET optionnel : plusieurs endpoints répondent sans message
+     * (`success($data)` sans second argument renvoie `"message": null`). Un
+     * type non-nullable faisait échouer toute la désérialisation, et l'erreur,
+     * avalée par les appelants, vidait silencieusement la réponse.
+     */
+    val message: String? = null,
     val data: T? = null
 )
 
@@ -50,7 +56,15 @@ data class RemotePagination(
 data class RemoteCatalogData(
     val global_update_required: Boolean,
     val last_essential_sync: String,
-    val resources: List<RemoteCatalogResource>
+    val resources: List<RemoteCatalogResource>,
+    /**
+     * Empreinte de tout le catalogue : inchangée depuis la dernière
+     * synchronisation, il n'y a rien à faire. Valeurs par défaut pour rester
+     * compatible d'un serveur plus ancien.
+     */
+    val catalog_version: String? = null,
+    /** Horloge du serveur, préférée à celle de l'appareil pour horodater. */
+    val server_time: String? = null
 )
 
 /**
@@ -61,9 +75,19 @@ data class RemoteCatalogResource(
     val id: String,
     val title: String,
     val type: String,
+    /**
+     * Empreinte de version du document : mêle son `updated_at`, celui de son
+     * article le plus récent et son nombre d'articles. C'est le signal de
+     * « ce texte a changé » — une correction d'article la fait bouger même
+     * quand la ligne du document n'a pas été touchée.
+     */
     val version_hash: String,
     val last_updated: String,
-    val download_size_kb: Int
+    val download_size_kb: Int,
+    val slug: String? = null,
+    /** « À jour au » d'un texte consolidé ; null pour un acte unitaire. */
+    val consolidation_as_of: String? = null,
+    val articles_count: Int = 0
 )
 
 // =============================================================================
@@ -416,4 +440,23 @@ data class RemoteOfficialJournal(
     val legal_documents: List<RemoteDocument> = emptyList(),
     val created_at: String,
     val updated_at: String
+)
+
+/**
+ * Contrat de GET /v1/app-config (force-update).
+ * `store_urls.ios` peut être null. Tout champ illisible = fail-open côté
+ * client (VersionGate).
+ */
+@Serializable
+data class AppConfigResponse(
+    val min_supported_version: String,
+    val latest_version: String,
+    val message: String? = null,
+    val store_urls: AppStoreUrls = AppStoreUrls()
+)
+
+@Serializable
+data class AppStoreUrls(
+    val android: String? = null,
+    val ios: String? = null
 )

@@ -2,6 +2,7 @@ package com.mibeko.mibeko.data.remote
 
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -25,11 +26,22 @@ class LegalApiService(
     }
 
     /**
+     * Contrat force-update (GET /v1/app-config, public, caché serveur).
+     * L'appelant DOIT traiter tout échec en fail-open (aucun blocage).
+     */
+    suspend fun fetchAppConfig(): AppConfigResponse {
+        return client.get("$baseUrl/v1/app-config").body()
+    }
+
+    /**
      * Fetch paginated list of legal documents.
      */
     suspend fun fetchDocuments(page: Int = 1): RemoteDocumentResponse {
         val response = client.get("${baseUrl}/v1/legal-documents") {
             parameter("page", page)
+            // Page de catalogue lue pendant la synchronisation initiale, sur le
+            // même réseau lent que l'arbre : même marge.
+            timeout { requestTimeoutMillis = 300_000 }
         }
         return response.body()
     }
@@ -72,9 +84,15 @@ class LegalApiService(
 
     /**
      * Fetch the structure tree for a document with articles.
+     *
+     * L'arbre transporte le contenu de TOUS les articles : plusieurs Mo pour un
+     * code volumineux. Le plafond global de 60 s (wall-clock, réception du corps
+     * comprise) le ferait échouer sur une 3G congolaise alors qu'il progresse.
      */
     suspend fun fetchDocumentTree(documentId: String): List<RemoteNode> {
-        return client.get("$baseUrl/v1/legal-documents/$documentId/tree").body<ApiResponse<List<RemoteNode>>>().data ?: emptyList()
+        return client.get("$baseUrl/v1/legal-documents/$documentId/tree") {
+            timeout { requestTimeoutMillis = 300_000 }
+        }.body<ApiResponse<List<RemoteNode>>>().data ?: emptyList()
     }
 
     /**
@@ -101,6 +119,9 @@ class LegalApiService(
     suspend fun downloadDocument(documentId: String, nodeId: String? = null): RemoteDownloadResponse {
         return client.get("$baseUrl/v1/legal-documents/$documentId/download") {
             nodeId?.let { parameter("node_id", it) }
+            // Un code volumineux sur réseau lent peut dépasser le timeout
+            // global de 60 s : on l'élargit pour ce seul appel.
+            timeout { requestTimeoutMillis = 300_000 }
         }.body()
     }
 
@@ -209,6 +230,26 @@ class LegalApiService(
      * Download a file from a URL.
      */
     suspend fun downloadFile(url: String): ByteArray {
-        return client.get(url).body<ByteArray>()
+        return client.get(url) {
+            timeout { requestTimeoutMillis = 300_000 }
+        }.body<ByteArray>()
+    }
+
+    /**
+     * Envoie un message de support (POST /v1/contact, public, throttle 6/min).
+     * Contrat serveur : name + email requis, message ≥ 10 caractères.
+     */
+    suspend fun sendContactMessage(name: String, email: String, message: String): Boolean {
+        val response = client.post("$baseUrl/v1/contact") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                mapOf(
+                    "name" to name,
+                    "email" to email,
+                    "message" to message
+                )
+            )
+        }
+        return response.status.value in 200..299
     }
 }

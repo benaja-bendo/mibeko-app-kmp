@@ -6,6 +6,7 @@ import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.data.remote.ApiResponse
 import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.remote.ResendVerificationResult
+import com.mibeko.mibeko.data.repository.CorpusRefreshResult
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.getCurrentTimeMillis
@@ -230,15 +231,48 @@ class HomeViewModel(
     }
 
     /**
-     * Sync catalog if no data exists locally.
+     * Aligne le corpus local au démarrage.
+     *
+     * Trois cas, dans cet ordre :
+     * 1. base vide → synchronisation initiale ;
+     * 2. synchronisation initiale interrompue (curseur posé) → REPRISE — sans
+     *    cela le corpus restait tronqué à vie, l'ancienne garde « base vide »
+     *    ne se déclenchant plus dès la première page écrite ;
+     * 3. corpus complet → rafraîchissement différentiel au plus une fois par
+     *    jour, qui ne re-télécharge que les textes réellement modifiés.
      */
     private fun initialSyncIfNeeded() {
         viewModelScope.launch {
             val codes = repository.getLawCodes().first()
-            if (codes.isEmpty() && networkChecker.isNetworkAvailable()) {
+            val needsFullSync = codes.isEmpty() || userPreferences.isInitialSyncIncomplete()
+
+            if (needsFullSync && networkChecker.isNetworkAvailable()) {
                 syncData()
             } else {
                 _uiState.value = _uiState.value.copy(isLoading = false)
+                refreshCorpusIfStale()
+            }
+        }
+    }
+
+    /**
+     * Rafraîchissement discret du corpus, au plus une fois par 24 h. Silencieux
+     * par construction : il ne doit ni bloquer l'accueil ni afficher d'erreur,
+     * l'utilisateur garde son corpus local en attendant.
+     */
+    private fun refreshCorpusIfStale() {
+        if (!networkChecker.isNetworkAvailable()) return
+
+        val since = getCurrentTimeMillis() - userPreferences.getLastCorpusRefreshAt()
+        if (userPreferences.getLastCorpusRefreshAt() != 0L && since < CORPUS_REFRESH_INTERVAL_MS) return
+
+        viewModelScope.launch {
+            val result = runCatching { repository.refreshCorpus() }.getOrNull()
+            if (result is CorpusRefreshResult.Refreshed && result.updated > 0) {
+                _uiEvent.emit(
+                    if (result.updated == 1) "1 texte a été mis à jour."
+                    else "${result.updated} textes ont été mis à jour."
+                )
             }
         }
     }
@@ -276,6 +310,9 @@ class HomeViewModel(
     }
 
     private companion object {
+        /** Intervalle minimal entre deux rafraîchissements automatiques (24 h). */
+        const val CORPUS_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000L
+
         /** Cooldown local anti-spam du renvoi de vérification (60 s). */
         const val COOLDOWN_MS = 60_000L
     }

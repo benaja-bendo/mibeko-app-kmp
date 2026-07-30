@@ -10,7 +10,12 @@ data class LawCodeSpec(
     val institutionName: String? = null,
     val dateSignature: String? = null,
     /** Slug d'URL publique (mibeko.fr/textes/{slug}) — `null` si inconnu. */
-    val slug: String? = null
+    val slug: String? = null,
+    /**
+     * « À jour au » du texte consolidé, tel que publié par la source
+     * officielle. `null` pour un acte unitaire, qui n'est pas consolidé.
+     */
+    val consolidationAsOf: String? = null
 )
 
 data class ArticleSpec(

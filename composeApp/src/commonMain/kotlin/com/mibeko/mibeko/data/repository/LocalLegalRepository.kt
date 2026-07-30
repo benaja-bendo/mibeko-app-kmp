@@ -54,18 +54,39 @@ class LocalLegalRepository(
     private val userPreferencesRepository: UserPreferencesRepository
 ) {
 
+    /**
+     * Synchronisation initiale du corpus, REPRENABLE.
+     *
+     * Chaque page est commitée puis le curseur avancé : si le réseau tombe au
+     * milieu (fréquent au Congo), l'appel suivant reprend à la page qui a
+     * échoué au lieu de tout reprendre — ou, pire, de ne jamais repartir comme
+     * avant, ce qui figeait un corpus tronqué définitivement.
+     */
     suspend fun sync() {
-        var currentPage = 1
-        var totalPages = 1
+        // Le nombre total de pages n'est connu qu'APRÈS le premier appel : la
+        // décision de continuer est donc prise page par page (cf. SyncPagination,
+        // testé — une boucle à pré-test s'y était révélée inerte à la reprise).
+        var currentPage = SyncPagination.startPage(userPreferencesRepository.getSyncCursorPage())
 
-        while (currentPage <= totalPages) {
+        while (true) {
             val response = apiService.fetchDocuments(currentPage)
-            totalPages = response.pagination?.last_page ?: 1
-            
-            // Capture server time from last page or metadata if available
-            // Note: fetchDocuments might need to return server_time too in its meta
-            // For now, if fetchDocuments meta is RemotePagination, it might not have server_time.
-            // Let's assume we'll use current time if not provided.
+            // Une réponse sans bloc de pagination trahit une erreur (429, 5xx)
+            // désérialisée en enveloppe vide : la prendre pour « une seule
+            // page » clôturerait la synchronisation sur un corpus tronqué en
+            // la déclarant complète. On laisse remonter pour que le curseur
+            // reste posé et que la reprise fasse son travail.
+            val totalPages = response.pagination?.last_page
+                ?: throw IllegalStateException("Réponse de catalogue sans pagination (page $currentPage)")
+
+            when (val decision = SyncPagination.decide(currentPage, totalPages)) {
+                is SyncPageDecision.Finished -> break
+                is SyncPageDecision.RestartFromFirstPage -> {
+                    currentPage = 1
+                    userPreferencesRepository.setSyncCursorPage(1)
+                    continue
+                }
+                is SyncPageDecision.Process -> Unit
+            }
 
             val documents = mutableListOf<DocumentEntity>()
             val allNodes = mutableListOf<NodeEntity>()
@@ -73,6 +94,9 @@ class LocalLegalRepository(
 
             // Get currently downloaded IDs to preserve state
             val downloadedIds = mibekoDao.getDownloadedDocumentIds().toSet()
+            // Métadonnées de catalogue déjà connues : l'upsert remplaçant la
+            // ligne entière, il faut les reporter sous peine de les effacer.
+            val knownMetadata = mibekoDao.getDocumentVersions().associateBy { it.id }
             // Get favorite and offline IDs to preserve them
             val favoriteIds = mibekoDao.getFavoriteArticles().firstOrNull()?.map { it.article.id }?.toSet() ?: emptySet()
             val offlineIds = mibekoDao.getOfflineArticles().firstOrNull()?.map { it.article.id }?.toSet() ?: emptySet()
@@ -87,7 +111,9 @@ class LocalLegalRepository(
                     is_downloaded = downloadedIds.contains(remoteDoc.id),
                     institution_name = remoteDoc.institution?.name,
                     date_signature = remoteDoc.dates?.signature,
-                    slug = remoteDoc.slug
+                    slug = remoteDoc.slug,
+                    consolidation_as_of = knownMetadata[remoteDoc.id]?.consolidation_as_of,
+                    version_hash = knownMetadata[remoteDoc.id]?.version_hash
                 ))
 
                 // Fetch full tree for this document to get structure and articles
@@ -96,11 +122,163 @@ class LocalLegalRepository(
             }
 
             mibekoDao.syncAll(documents, allNodes, allArticles)
+
+            val processedPage = currentPage
             currentPage++
+            // Curseur avancé APRÈS le commit : au pire on refait une page déjà
+            // écrite (les écritures sont des upserts, donc sans effet de bord).
+            userPreferencesRepository.setSyncCursorPage(currentPage)
+
+            if (SyncPagination.isComplete(processedPage, totalPages)) break
         }
-        
-        // If it was a full sync, set timestamp to now
+
+        // Parcours complet : plus rien à reprendre.
+        userPreferencesRepository.setSyncCursorPage(0)
         userPreferencesRepository.setLastSyncTimestamp(getCurrentTimeMillis())
+
+        // Le corpus vient d'être aligné : on mémorise l'état du catalogue pour
+        // que le premier rafraîchissement ne re-télécharge pas tout.
+        runCatching { alignCatalogVersions() }
+    }
+
+    /**
+     * Rafraîchissement différentiel du corpus.
+     *
+     * Compare le catalogue serveur à l'état local et ne re-télécharge que les
+     * textes réellement modifiés. Sans lui, un texte corrigé restait faux
+     * indéfiniment sur les téléphones déjà installés.
+     *
+     * @param force ignore l'empreinte globale et recompare document par document.
+     * @return le résultat, pour informer l'utilisateur.
+     */
+    suspend fun refreshCorpus(force: Boolean = false): CorpusRefreshResult {
+        if (!networkChecker.isNetworkAvailable()) return CorpusRefreshResult.Offline
+
+        // Mode hors-ligne demandé par l'utilisateur : ne pas consommer ses
+        // données mobiles pour un rafraîchissement automatique. Un
+        // déclenchement explicite (bouton des Réglages) reste prioritaire.
+        if (!force && userPreferencesRepository.isOfflineModeEnabled()) {
+            return CorpusRefreshResult.Offline
+        }
+
+        val catalog = try {
+            apiService.fetchCatalog().data ?: return CorpusRefreshResult.Failed("Catalogue indisponible")
+        } catch (e: Exception) {
+            recordException(e, "refreshCorpus.fetchCatalog")
+            return CorpusRefreshResult.Failed(e.message ?: "Connexion impossible")
+        }
+
+        // Empreinte globale inchangée : rien n'a bougé côté serveur.
+        val remoteVersion = catalog.catalog_version
+        if (!force && remoteVersion != null && remoteVersion == userPreferencesRepository.getCatalogVersion()) {
+            userPreferencesRepository.setLastCorpusRefreshAt(getCurrentTimeMillis())
+            return CorpusRefreshResult.UpToDate
+        }
+
+        val localById = mibekoDao.getDocumentVersions().associateBy { it.id }
+        val localVersions = localById.mapValues { it.value.version_hash }
+        val remoteById = catalog.resources.associateBy { it.id }
+
+        // Documents dont l'empreinte est inconnue mais qui existent déjà en
+        // base : c'est le cas de TOUT le corpus juste après la mise à jour de
+        // l'app (la colonne `version_hash` vient d'être créée, donc vide). Les
+        // déclarer périmés re-téléchargerait le corpus entier sur les données
+        // mobiles de l'utilisateur. On retombe donc sur l'horodatage serveur,
+        // déjà mémorisé lors de la synchronisation précédente : identique, le
+        // texte n'a pas bougé et on se contente d'adopter son empreinte.
+        val bootstrapIds = remoteById.values
+            .filter { remote ->
+                val local = localById[remote.id]
+                local != null &&
+                    local.version_hash == null &&
+                    local.last_updated != 0L &&
+                    local.last_updated == parseIsoDate(remote.last_updated)
+            }
+            .map { it.id }
+
+        for (id in bootstrapIds) {
+            val remote = remoteById[id] ?: continue
+            runCatching {
+                mibekoDao.applyCatalogMetadata(id, remote.version_hash, remote.consolidation_as_of, remote.slug)
+            }
+        }
+
+        val staleIds = remoteById.values
+            .filter { remote -> localVersions[remote.id] != remote.version_hash }
+            .map { it.id }
+            .filterNot { bootstrapIds.contains(it) }
+
+        // Un document absent du catalogue n'est plus publié : on le retire du
+        // corpus local. Garde-fou : jamais sur un catalogue vide, qui
+        // trahirait une panne serveur plutôt qu'une dépublication de masse.
+        val removedIds = if (catalog.resources.isEmpty()) {
+            emptyList()
+        } else {
+            localVersions.keys.filterNot { remoteById.containsKey(it) }
+        }
+
+        var updated = 0
+        for (id in staleIds) {
+            val remote = remoteById[id] ?: continue
+            // Un document jamais vu localement n'a pas encore sa ligne
+            // `documents` : on la crée avant d'y accrocher nœuds et articles.
+            if (!localVersions.containsKey(id)) {
+                runCatching { fetchAndStoreDocument(id) }
+            }
+            val refreshed = runCatching { fetchAndStoreDocumentStructure(id) }.isSuccess
+            if (refreshed) {
+                runCatching { mibekoDao.applyCatalogMetadata(id, remote.version_hash, remote.consolidation_as_of, remote.slug) }
+                updated++
+            }
+        }
+
+        // Le retrait épargne les documents dont l'utilisateur a conservé des
+        // articles : on ne compte donc que ce qui a réellement disparu.
+        val actuallyRemoved = if (removedIds.isEmpty()) {
+            emptyList()
+        } else {
+            runCatching { mibekoDao.removeDocuments(removedIds) }.getOrDefault(emptyList())
+        }
+
+        val completed = updated == staleIds.size
+        if (completed) {
+            // L'empreinte n'est mémorisée que si TOUT est passé : sinon le
+            // prochain rafraîchissement croirait le corpus à jour.
+            userPreferencesRepository.setCatalogVersion(remoteVersion)
+        }
+        userPreferencesRepository.setLastCorpusRefreshAt(getCurrentTimeMillis())
+
+        return CorpusRefreshResult.Refreshed(
+            updated = updated,
+            removed = actuallyRemoved.size,
+            partial = !completed
+        )
+    }
+
+    /**
+     * Aligne les empreintes locales sur le catalogue sans rien re-télécharger :
+     * appelé juste après une synchronisation complète, où le corpus local est
+     * par construction identique au serveur.
+     */
+    private suspend fun alignCatalogVersions() {
+        if (!networkChecker.isNetworkAvailable()) return
+        val catalog = apiService.fetchCatalog().data ?: return
+        for (remote in catalog.resources) {
+            mibekoDao.applyCatalogMetadata(remote.id, remote.version_hash, remote.consolidation_as_of, remote.slug)
+        }
+
+        // `applyCatalogMetadata` est un UPDATE ciblé : il ne touche aucune ligne
+        // pour un document jamais téléchargé, silencieusement. Mémoriser
+        // l'empreinte globale sans vérifier la complétude ferait conclure
+        // « rien à faire » au prochain rafraîchissement et gèlerait un corpus
+        // incomplet. Tant qu'il manque des textes, on laisse l'empreinte
+        // absente : le diff par document les rattrapera.
+        val localIds = mibekoDao.getDocumentVersions().map { it.id }.toSet()
+        val isComplete = catalog.resources.all { localIds.contains(it.id) }
+        if (isComplete) {
+            userPreferencesRepository.setCatalogVersion(catalog.catalog_version)
+        }
+        userPreferencesRepository.setLastCorpusRefreshAt(getCurrentTimeMillis())
     }
 
     private fun flattenTree(
@@ -240,6 +418,12 @@ class LocalLegalRepository(
             val response = apiService.fetchDocument(documentId)
             val remoteDoc = response.data ?: return null
             
+            // `@Upsert` remplace la ligne entière : sans report explicite, on
+            // effacerait l'empreinte de version (le document redeviendrait
+            // « périmé » et serait re-téléchargé) et la date de consolidation
+            // (le bandeau de provenance disparaîtrait du lecteur).
+            val known = mibekoDao.getDocumentVersions().firstOrNull { it.id == remoteDoc.id }
+
             val document = DocumentEntity(
                 id = remoteDoc.id,
                 title = remoteDoc.title,
@@ -248,7 +432,9 @@ class LocalLegalRepository(
                 is_downloaded = mibekoDao.getDownloadedDocumentIds().contains(remoteDoc.id),
                 institution_name = remoteDoc.institution?.name,
                 date_signature = remoteDoc.dates?.signature,
-                slug = remoteDoc.slug
+                slug = remoteDoc.slug,
+                consolidation_as_of = known?.consolidation_as_of,
+                version_hash = known?.version_hash
             )
 
             mibekoDao.upsertDocuments(listOf(document))
@@ -275,10 +461,20 @@ class LocalLegalRepository(
             val offlineIds = mibekoDao.getOfflineArticleIds().toSet()
             
             flattenTree(documentId, treeNodes, allNodes, allArticles, favoriteIds, offlineIds)
-            
+
             // Only sync nodes and articles, don't touch other documents
             mibekoDao.upsertNodes(allNodes)
             mibekoDao.upsertArticles(allArticles)
+
+            // L'arbre reçu fait foi : ce qui n'y figure plus a été abrogé ou
+            // supprimé côté serveur. Sans cet élagage, de simples upserts
+            // laissaient l'ancien contenu en base — lisible et indexé — sur un
+            // document pourtant marqué à jour.
+            mibekoDao.pruneDocumentContent(
+                documentId = documentId,
+                keptArticleIds = allArticles.map { it.id },
+                keptNodeIds = allNodes.map { it.id }
+            )
         } catch (e: Exception) {
             e.printStackTrace()
             throw e
@@ -319,18 +515,32 @@ class LocalLegalRepository(
 
     suspend fun toggleArticleOffline(article: ArticleSpec, isOffline: Boolean) {
         if (isOffline) {
-            // Ensure the article and its node/document shell exist in DB
-            val document = DocumentEntity(
-                id = article.codeId,
-                title = "Document", // We might not have the full title if from search
-                type_code = article.typeCode.ifEmpty { "unknown" },
-                last_updated = getCurrentTimeMillis(),
-                is_downloaded = false,
-                institution_name = null,
-                date_signature = null
-            )
+            // Document parent : l'ancienne coquille title="Document" ÉCRASAIT
+            // (upsert) les métadonnées d'un document déjà présent et polluait
+            // l'écran Téléchargements. On préserve l'existant, on tente les
+            // vraies métadonnées via l'API, et la coquille ne reste qu'en
+            // dernier recours hors-ligne.
+            val existingDocument = mibekoDao.getDocumentById(article.codeId).firstOrNull()
+            if (existingDocument == null) {
+                val fetched = runCatching { fetchAndStoreDocument(article.codeId) }.getOrNull()
+                if (fetched == null) {
+                    mibekoDao.upsertDocuments(
+                        listOf(
+                            DocumentEntity(
+                                id = article.codeId,
+                                title = article.title.ifEmpty { "Document" },
+                                type_code = article.typeCode.ifEmpty { "unknown" },
+                                last_updated = getCurrentTimeMillis(),
+                                is_downloaded = false,
+                                institution_name = null,
+                                date_signature = null
+                            )
+                        )
+                    )
+                }
+            }
             val node = NodeEntity(
-                id = article.id, // In this app, often article ID and node ID are related or same in some contexts, 
+                id = article.id, // In this app, often article ID and node ID are related or same in some contexts,
                                  // but let's check ArticleEntity.node_id
                 document_id = article.codeId,
                 parent_id = null,
@@ -345,8 +555,7 @@ class LocalLegalRepository(
                 is_favorite = article.isFavorite,
                 is_offline = true
             )
-            
-            mibekoDao.upsertDocuments(listOf(document))
+
             mibekoDao.upsertNodes(listOf(node))
             mibekoDao.upsertArticles(listOf(entity))
         } else {
@@ -596,10 +805,38 @@ class LocalLegalRepository(
      * Used as primary when offline or as fallback when API fails.
      */
     private suspend fun searchLocally(query: String? = null, tag: String? = null): List<ArticleSpec> {
-        return when {
-            tag != null -> mibekoDao.searchArticlesByTag(tag).first().map { it.toArticleSpec() }
-            query != null -> mibekoDao.searchArticles(query).first().map { it.toArticleSpec() }
-            else -> emptyList()
+        return try {
+            when {
+                tag != null -> mibekoDao.searchArticlesByTag(tag).first().map { it.toArticleSpec() }
+                query != null -> {
+                    val sanitized = sanitizeFtsQuery(query)
+                    if (sanitized.isEmpty()) {
+                        emptyList()
+                    } else {
+                        mibekoDao.searchArticles(sanitized).first().map { it.toArticleSpec() }
+                    }
+                }
+                else -> emptyList()
+            }
+        } catch (e: Exception) {
+            // Une requête FTS invalide ne doit jamais faire tomber la
+            // recherche hors-ligne : zéro résultat plutôt qu'un crash.
+            recordException(e, context = "LocalLegalRepository.searchLocally")
+            emptyList()
+        }
+    }
+
+    companion object {
+        /**
+         * La saisie utilisateur est passée telle quelle à `MATCH`, dont la
+         * syntaxe (guillemets, `-`, `*`, parenthèses) peut lever une
+         * SQLiteException. On neutralise en encadrant chaque terme de
+         * guillemets (AND implicite entre les termes).
+         */
+        internal fun sanitizeFtsQuery(raw: String): String {
+            return raw.split(Regex("\\s+"))
+                .filter { it.isNotBlank() }
+                .joinToString(" ") { token -> "\"" + token.replace("\"", "\"\"") + "\"" }
         }
     }
 
@@ -610,7 +847,7 @@ class LocalLegalRepository(
      * @deprecated Use searchHybrid() for network-enabled search
      */
     fun search(query: String): Flow<List<ArticleSpec>> {
-        return mibekoDao.searchArticles(query).map { results ->
+        return mibekoDao.searchArticles(sanitizeFtsQuery(query)).map { results ->
             results.map { result ->
                 result.toArticleSpec()
             }
@@ -655,14 +892,25 @@ class LocalLegalRepository(
     }
 
     private suspend fun getAutocompleteSuggestionsLocally(query: String): List<com.mibeko.mibeko.data.ArticleSuggestion> {
-        return mibekoDao.searchArticles(query).first().take(10).map { result ->
-            com.mibeko.mibeko.data.ArticleSuggestion(
-                id = result.article.id,
-                number = result.article.number,
-                breadcrumb = result.node_title,
-                isDownloaded = result.doc_is_downloaded,
-                contentSnippet = result.article.content?.take(100)
-            )
+        // Chemin déclenché à CHAQUE frappe : une saisie en cours comme `"c` ou
+        // `(a` est une expression MATCH invalide et lèverait une SQLiteException
+        // jusque dans le viewModelScope, donc un crash du process.
+        val sanitized = sanitizeFtsQuery(query)
+        if (sanitized.isEmpty()) return emptyList()
+
+        return try {
+            mibekoDao.searchArticles(sanitized).first().take(10).map { result ->
+                com.mibeko.mibeko.data.ArticleSuggestion(
+                    id = result.article.id,
+                    number = result.article.number,
+                    breadcrumb = result.node_title,
+                    isDownloaded = result.doc_is_downloaded,
+                    contentSnippet = result.article.content?.take(100)
+                )
+            }
+        } catch (e: Exception) {
+            recordException(e, context = "LocalLegalRepository.autocompleteLocally")
+            emptyList()
         }
     }
 
@@ -671,7 +919,7 @@ class LocalLegalRepository(
      * Always uses local Room database.
      */
     fun getAutocompleteSuggestions(query: String): Flow<List<com.mibeko.mibeko.data.ArticleSuggestion>> {
-        return mibekoDao.searchArticles(query).map { results ->
+        return mibekoDao.searchArticles(sanitizeFtsQuery(query)).map { results ->
             results.take(10).map { result ->
                 com.mibeko.mibeko.data.ArticleSuggestion(
                     id = result.article.id,
@@ -716,5 +964,30 @@ class LocalLegalRepository(
      */
     suspend fun clearAllData() {
         mibekoDao.clearAllData()
+        // La base repart de zéro : laisser un curseur de reprise ou une
+        // empreinte de catalogue ferait croire à une synchronisation en cours
+        // (ou terminée) sur une bibliothèque vide.
+        userPreferencesRepository.setSyncCursorPage(0)
+        userPreferencesRepository.setCatalogVersion(null)
+        userPreferencesRepository.setLastCorpusRefreshAt(0L)
+        userPreferencesRepository.setLastSyncTimestamp(0L)
     }
+}
+
+/** Issue d'un rafraîchissement différentiel du corpus. */
+sealed class CorpusRefreshResult {
+    /** Le catalogue n'a pas bougé depuis la dernière fois. */
+    data object UpToDate : CorpusRefreshResult()
+
+    /** Pas de réseau : l'utilisateur garde son corpus local. */
+    data object Offline : CorpusRefreshResult()
+
+    data class Refreshed(
+        val updated: Int,
+        val removed: Int,
+        /** Vrai si certains textes n'ont pas pu être récupérés. */
+        val partial: Boolean
+    ) : CorpusRefreshResult()
+
+    data class Failed(val reason: String) : CorpusRefreshResult()
 }
