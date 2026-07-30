@@ -18,5 +18,18 @@ data class DocumentEntity(
      * slug (jamais publié, ou coquille créée localement depuis un résultat de
      * recherche / mode hors-ligne).
      */
-    val slug: String? = null
+    val slug: String? = null,
+    /**
+     * Date de consolidation du texte (« à jour au JJ/MM/AAAA ») telle que
+     * publiée par l'API. Renseignée pour les textes consolidés (STOCK),
+     * `null` pour les actes unitaires (FLUX) qui n'en ont pas.
+     */
+    val consolidation_as_of: String? = null,
+    /**
+     * Empreinte de version renvoyée par le catalogue lors de la dernière
+     * récupération de ce document. C'est elle qu'on compare au catalogue pour
+     * savoir si le texte local est périmé — `null` pour un document qui n'a
+     * jamais été synchronisé depuis le catalogue (coquille locale).
+     */
+    val version_hash: String? = null
 )

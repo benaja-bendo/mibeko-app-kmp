@@ -215,6 +215,44 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
     }
 }
 
+/**
+ * v9 → v10 :
+ * - `articles_fts` est recréée avec le tokenizer `unicode61 remove_diacritics=1`
+ *   à la place de `simple` : sans repli des diacritiques, « societe » ne
+ *   trouvait pas « société » dans un corpus juridique français.
+ * - `documents` gagne `consolidation_as_of` (nullable) : le « à jour au » d'un
+ *   texte consolidé, affiché dans le bandeau de provenance du lecteur.
+ * - `documents` gagne `version_hash` (nullable) : l'empreinte renvoyée par le
+ *   catalogue, comparée à chaque rafraîchissement pour savoir quels textes
+ *   sont périmés. `null` sur les documents déjà en base — ils seront
+ *   simplement re-téléchargés au premier rafraîchissement.
+ *
+ * Le SQL de la table virtuelle est repris MOT POUR MOT de `schemas/10.json`
+ * (`entities[].createSql`) : Room compare la définition trouvée en base à
+ * celle qu'il attend et refuse d'ouvrir la base à la moindre différence, y
+ * compris d'espacement.
+ *
+ * Comme pour MIGRATION_3_4, on ne touche pas aux triggers de synchronisation :
+ * Room les retire avant la migration (onPreMigrate) et les recrée après
+ * (onPostMigrate), et il réécrit lui-même l'identityHash. La table externe
+ * étant vidée par le DROP, on redemande un `rebuild` pour réindexer le corpus
+ * déjà téléchargé.
+ */
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `documents` ADD COLUMN `consolidation_as_of` TEXT DEFAULT NULL")
+        connection.execSQL("ALTER TABLE `documents` ADD COLUMN `version_hash` TEXT DEFAULT NULL")
+
+        connection.execSQL("DROP TABLE IF EXISTS `articles_fts`")
+        connection.execSQL(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS `articles_fts` USING FTS4(" +
+                "`number` TEXT NOT NULL, `content` TEXT, " +
+                "tokenize=unicode61 `remove_diacritics=1`, content=`articles`)"
+        )
+        connection.execSQL("INSERT INTO `articles_fts`(`articles_fts`) VALUES('rebuild')")
+    }
+}
+
 /** Migrations à enregistrer sur chaque plateforme lors de la construction de la base. */
 val ALL_MIGRATIONS = arrayOf(
     MIGRATION_1_2,
@@ -224,5 +262,6 @@ val ALL_MIGRATIONS = arrayOf(
     MIGRATION_5_6,
     MIGRATION_6_7,
     MIGRATION_7_8,
-    MIGRATION_8_9
+    MIGRATION_8_9,
+    MIGRATION_9_10
 )

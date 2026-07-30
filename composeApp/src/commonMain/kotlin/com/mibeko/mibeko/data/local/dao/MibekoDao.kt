@@ -63,6 +63,122 @@ interface MibekoDao {
     @Query("SELECT DISTINCT type_code FROM documents")
     suspend fun getUniqueDocumentTypeCodes(): List<String>
 
+    /**
+     * Métadonnées de catalogue déjà connues localement.
+     *
+     * Servent à deux choses : diffuser le catalogue (comparaison des
+     * empreintes) et surtout REPORTER ces valeurs quand on reconstruit une
+     * ligne `documents` — un `@Upsert` remplace la ligne entière et effacerait
+     * sinon l'empreinte et la date de consolidation.
+     */
+    @Query("SELECT id, version_hash, consolidation_as_of, last_updated FROM documents")
+    suspend fun getDocumentVersions(): List<DocumentVersion>
+
+    /**
+     * Reporte sur un document local les métadonnées du catalogue. `slug` et
+     * `consolidation_as_of` ne sont écrasés que si le serveur les fournit :
+     * un catalogue incomplet ne doit pas effacer ce qu'on savait déjà.
+     */
+    @Query(
+        """
+        UPDATE documents SET
+            version_hash = :versionHash,
+            consolidation_as_of = COALESCE(:consolidationAsOf, consolidation_as_of),
+            slug = COALESCE(:slug, slug)
+        WHERE id = :documentId
+        """
+    )
+    suspend fun applyCatalogMetadata(
+        documentId: String,
+        versionHash: String?,
+        consolidationAsOf: String?,
+        slug: String?
+    )
+
+    @Query("DELETE FROM documents WHERE id IN (:ids)")
+    suspend fun deleteDocumentsByIds(ids: List<String>)
+
+    @Query("DELETE FROM nodes WHERE document_id IN (:ids)")
+    suspend fun deleteNodesByDocumentIds(ids: List<String>)
+
+    /** Un document a-t-il encore du contenu conservé par l'utilisateur ? */
+    @Query(
+        """
+        SELECT COUNT(*) FROM articles
+        JOIN nodes ON articles.node_id = nodes.id
+        WHERE nodes.document_id = :documentId
+          AND (articles.is_favorite = 1 OR articles.is_offline = 1)
+        """
+    )
+    suspend fun countKeptArticles(documentId: String): Int
+
+    /**
+     * Retire du corpus les documents qui ne sont plus publiés.
+     *
+     * Un texte dépublié disparaît de la bibliothèque, MAIS jamais au prix du
+     * travail de l'utilisateur : si le document contient des articles mis en
+     * favori ou téléchargés hors-ligne, on ne supprime rien — l'avocat qui a
+     * épinglé un article doit pouvoir continuer à le consulter, même après une
+     * dépublication (le bandeau de provenance dit de quand date sa copie).
+     *
+     * @return les identifiants réellement supprimés.
+     */
+    @Transaction
+    suspend fun removeDocuments(ids: List<String>): List<String> {
+        if (ids.isEmpty()) return emptyList()
+
+        val removable = ids.filter { countKeptArticles(it) == 0 }
+        if (removable.isEmpty()) return emptyList()
+
+        // Les articles tombent avec leurs nœuds (ON DELETE CASCADE).
+        deleteNodesByDocumentIds(removable)
+        deleteDocumentsByIds(removable)
+        return removable
+    }
+
+    /**
+     * Élague le contenu d'un document disparu de l'arbre servi par le serveur.
+     *
+     * Sans cet élagage, un article abrogé restait lisible hors-ligne et
+     * indexé par la recherche alors que le document venait d'être marqué « à
+     * jour » : l'app aurait servi du droit abrogé en le présentant comme
+     * courant. Les articles conservés par l'utilisateur (favori, hors-ligne)
+     * sont épargnés, comme au retrait d'un document.
+     */
+    @Query(
+        """
+        DELETE FROM articles
+        WHERE node_id IN (SELECT id FROM nodes WHERE document_id = :documentId)
+          AND id NOT IN (:keptArticleIds)
+          AND is_favorite = 0
+          AND is_offline = 0
+        """
+    )
+    suspend fun deleteStaleArticles(documentId: String, keptArticleIds: List<String>)
+
+    @Query(
+        """
+        DELETE FROM nodes
+        WHERE document_id = :documentId
+          AND id NOT IN (:keptNodeIds)
+          AND id NOT IN (SELECT DISTINCT node_id FROM articles)
+        """
+    )
+    suspend fun deleteStaleNodes(documentId: String, keptNodeIds: List<String>)
+
+    @Transaction
+    suspend fun pruneDocumentContent(
+        documentId: String,
+        keptArticleIds: List<String>,
+        keptNodeIds: List<String>
+    ) {
+        // Une liste vide rendrait le `NOT IN` toujours faux : on ne purge que
+        // sur un arbre réellement reçu, jamais sur une réponse vide.
+        if (keptArticleIds.isEmpty() && keptNodeIds.isEmpty()) return
+        deleteStaleArticles(documentId, keptArticleIds)
+        deleteStaleNodes(documentId, keptNodeIds)
+    }
+
     @Query("UPDATE documents SET is_downloaded = :isDownloaded WHERE id = :documentId")
     suspend fun updateDocumentDownloadStatus(documentId: String, isDownloaded: Boolean)
 
@@ -150,13 +266,22 @@ interface MibekoDao {
     """)
     fun getArticleById(id: String): Flow<ArticleSearchResult?>
 
+    /**
+     * Recherche plein texte hors-ligne.
+     *
+     * La jointure se fait sur `articles.rowid`, PAS sur `articles.id` : le
+     * docid d'une table FTS4 `content=` est le rowid INTEGER implicite de la
+     * table source, alors que `articles.id` est un UUID texte. Comparer les
+     * deux ne matche jamais (affinité de type SQLite) — la recherche
+     * hors-ligne renvoyait donc systématiquement zéro résultat.
+     */
     @Transaction
     @Query("""
         SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
-        FROM articles 
+        FROM articles
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
-        JOIN articles_fts ON articles.id = articles_fts.rowid 
+        JOIN articles_fts ON articles.rowid = articles_fts.rowid
         WHERE articles_fts MATCH :query
     """)
     fun searchArticles(query: String): Flow<List<ArticleSearchResult>>
@@ -325,6 +450,7 @@ interface MibekoDao {
         clearDossierArticles()
         clearAllPendingDossierDeletions()
     }
+
 }
 
 data class ArticleSearchResult(
@@ -350,4 +476,16 @@ data class DossierArticleWithDetails(
 data class DossierWithCount(
     @Embedded val dossier: DossierEntity,
     val articleCount: Int
+)
+
+/**
+ * Empreinte locale d'un document, comparée à celle du catalogue serveur pour
+ * décider s'il faut le re-télécharger.
+ */
+data class DocumentVersion(
+    val id: String,
+    val version_hash: String?,
+    val consolidation_as_of: String? = null,
+    /** Horodatage serveur du document lors de la dernière récupération. */
+    val last_updated: Long = 0L
 )
