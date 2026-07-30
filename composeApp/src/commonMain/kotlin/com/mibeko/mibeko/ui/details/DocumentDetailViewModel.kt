@@ -31,7 +31,8 @@ data class DocumentDetailUiState(
 
 class DocumentDetailViewModel(
     private val repository: LocalLegalRepository,
-    private val contentSharer: com.mibeko.mibeko.util.ContentSharer
+    private val contentSharer: com.mibeko.mibeko.util.ContentSharer,
+    private val analytics: com.mibeko.mibeko.util.MibekoAnalytics
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DocumentDetailUiState())
@@ -53,7 +54,8 @@ class DocumentDetailViewModel(
      */
     fun loadStructure(documentId: String) {
         _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-        
+        analytics.logEvent(com.mibeko.mibeko.util.AnalyticsEvents.DOCUMENT_OPENED)
+
         viewModelScope.launch {
             // Launch remote fetch in background if needed
             launch {

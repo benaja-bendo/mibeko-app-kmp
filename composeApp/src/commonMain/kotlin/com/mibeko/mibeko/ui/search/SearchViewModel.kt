@@ -6,6 +6,8 @@ import com.mibeko.mibeko.data.ArticleSpec
 import com.mibeko.mibeko.data.preferences.SearchHistoryManager
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.repository.SearchResult
+import com.mibeko.mibeko.util.AnalyticsEvents
+import com.mibeko.mibeko.util.MibekoAnalytics
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,7 +36,8 @@ class SearchViewModel(
     private val repository: LocalLegalRepository,
     private val searchHistoryManager: SearchHistoryManager,
     private val dossierRepository: com.mibeko.mibeko.data.repository.DossierRepository,
-    private val contentSharer: com.mibeko.mibeko.util.ContentSharer
+    private val contentSharer: com.mibeko.mibeko.util.ContentSharer,
+    private val analytics: MibekoAnalytics
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -112,6 +115,15 @@ class SearchViewModel(
             when (val result = repository.searchHybrid(query = query)) {
                 is SearchResult.Success -> {
                     allSearchResults = result.articles
+                    // Jamais le texte de la requête : longueur et compteurs only.
+                    analytics.logEvent(
+                        AnalyticsEvents.SEARCH_PERFORMED,
+                        mapOf(
+                            "query_length" to query.length,
+                            "result_count" to result.articles.size,
+                            "source" to if (result.isFromNetwork) "online" else "offline"
+                        )
+                    )
                     val counts = calculateCounts(allSearchResults)
                     val filteredResults = applyFilter(allSearchResults, _uiState.value.currentFilter)
                     _uiState.value = SearchUiState(

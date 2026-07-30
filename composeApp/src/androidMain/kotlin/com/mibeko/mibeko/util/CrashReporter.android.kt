@@ -12,6 +12,11 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
  * celle qu'on est en train de rapporter.
  */
 actual fun recordException(t: Throwable, context: String?) {
+    // Une annulation de coroutine n'est pas une anomalie : quitter un écran
+    // pendant un chargement, ou atteindre un withTimeoutOrNull, en produit
+    // constamment. Les remonter noierait les vraies erreurs.
+    if (t is kotlinx.coroutines.CancellationException) return
+
     try {
         val crashlytics = FirebaseCrashlytics.getInstance()
         if (context != null) {

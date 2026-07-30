@@ -17,7 +17,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class DossierViewModel(
-    private val repository: DossierRepository
+    private val repository: DossierRepository,
+    private val analytics: com.mibeko.mibeko.util.MibekoAnalytics
 ) : ViewModel() {
 
     private val searchQuery = MutableStateFlow("")
@@ -109,6 +110,7 @@ class DossierViewModel(
     ) {
         viewModelScope.launch {
             repository.createDossier(name, legalDomain, tag, description, color)
+            analytics.logEvent(com.mibeko.mibeko.util.AnalyticsEvents.DOSSIER_CREATED)
             _showCreateDialog.value = false
             repository.syncNow()
         }

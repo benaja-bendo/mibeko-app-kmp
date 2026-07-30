@@ -14,7 +14,8 @@ import kotlinx.coroutines.launch
  * une redirection interne (article, document, ou accueil en dernier recours).
  */
 class TexteResolverViewModel(
-    private val repository: LocalLegalRepository
+    private val repository: LocalLegalRepository,
+    private val analytics: com.mibeko.mibeko.util.MibekoAnalytics
 ) : ViewModel() {
 
     sealed class Target {
@@ -33,6 +34,10 @@ class TexteResolverViewModel(
     fun resolve(docSlug: String, articleNumber: String?) {
         if (started) return
         started = true
+        analytics.logEvent(
+            com.mibeko.mibeko.util.AnalyticsEvents.DEEP_LINK_OPENED,
+            mapOf("has_article" to (articleNumber != null))
+        )
         viewModelScope.launch {
             val resolution = runCatching {
                 repository.resolveTexteBySlug(docSlug, articleNumber)

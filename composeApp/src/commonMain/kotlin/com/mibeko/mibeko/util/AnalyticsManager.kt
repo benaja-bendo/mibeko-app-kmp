@@ -12,17 +12,11 @@ interface AnalyticsManager {
     fun logEvent(name: String, params: Map<String, Any>? = null)
 
     /**
-     * Définit l'identifiant unique de l'utilisateur pour l'analytics.
-     * @param id L'identifiant de l'utilisateur ou null pour l'effacer.
+     * Active ou coupe la collecte au niveau du SDK (toggle de consentement
+     * « Partage de statistiques anonymes » des Réglages). Coupée, plus aucun
+     * événement ne quitte l'appareil, y compris ceux émis automatiquement.
      */
-    fun setUserId(id: String?)
-
-    /**
-     * Définit une propriété personnalisée pour l'utilisateur courant.
-     * @param name Nom de la propriété.
-     * @param value Valeur de la propriété.
-     */
-    fun setUserProperty(name: String, value: String)
+    fun setCollectionEnabled(enabled: Boolean)
 }
 
 /**

@@ -2,16 +2,15 @@ package com.mibeko.mibeko.util
 
 import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
+import com.mibeko.mibeko.MibekoApp
 
 class AndroidAnalyticsManager : AnalyticsManager {
-    private val analytics: FirebaseAnalytics?
-        get() = ActivityProvider.getActivity()?.let { activity ->
-            FirebaseAnalytics.getInstance(activity)
-        }
+    // Contexte applicatif : l'ancienne résolution via ActivityProvider rendait
+    // le SDK nul dès qu'aucune Activity n'était au premier plan (service FCM,
+    // démarrage) et perdait silencieusement les événements.
+    private val analytics: FirebaseAnalytics
+        get() = FirebaseAnalytics.getInstance(MibekoApp.INSTANCE)
 
-    /**
-     * Log un événement spécifique via Firebase Analytics
-     */
     override fun logEvent(name: String, params: Map<String, Any>?) {
         val bundle = params?.let {
             Bundle().apply {
@@ -28,15 +27,11 @@ class AndroidAnalyticsManager : AnalyticsManager {
                 }
             }
         }
-        analytics?.logEvent(name, bundle)
+        analytics.logEvent(name, bundle)
     }
 
-    override fun setUserId(id: String?) {
-        analytics?.setUserId(id)
-    }
-
-    override fun setUserProperty(name: String, value: String) {
-        analytics?.setUserProperty(name, value)
+    override fun setCollectionEnabled(enabled: Boolean) {
+        analytics.setAnalyticsCollectionEnabled(enabled)
     }
 }
 

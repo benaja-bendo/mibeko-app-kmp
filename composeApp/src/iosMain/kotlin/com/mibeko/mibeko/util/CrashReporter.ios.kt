@@ -1,17 +1,25 @@
 package com.mibeko.mibeko.util
 
 /**
- * Report iOS : no-op journalisé.
- *
- * Le SDK Firebase Crashlytics iOS s'intègre via un pod (ou SPM) dans le projet
- * Xcode `iosApp`, non branché ici → hors périmètre de cette tâche (userAction :
- * ajouter `FirebaseCrashlytics` au Podfile puis relayer cet appel vers
- * `Crashlytics.crashlytics().record(error:)` via un pont Kotlin/Native).
- *
- * En attendant, on journalise l'erreur pour qu'elle reste visible dans la
- * console Xcode plutôt que d'être totalement silencieuse.
+ * Report iOS : délègue à Crashlytics via [FirebaseIosBridge] quand Firebase
+ * est configuré, sinon journalise dans la console Xcode. Ne relance jamais
+ * (appelé depuis des catch).
  */
 actual fun recordException(t: Throwable, context: String?) {
-    val prefix = if (context != null) "[Mibeko/$context]" else "[Mibeko]"
-    println("$prefix erreur non fatale: ${t::class.simpleName}: ${t.message}")
+    // Voir CrashReporter.android.kt : les annulations de coroutines sont un
+    // fonctionnement normal, pas des erreurs à rapporter.
+    if (t is kotlinx.coroutines.CancellationException) return
+
+    val label = context ?: "unspecified"
+    val description = "${t::class.simpleName}: ${t.message}"
+    val record = FirebaseIosBridge.recordError
+    if (record != null) {
+        try {
+            record(label, description)
+        } catch (_: Throwable) {
+            // L'échec du report ne doit pas masquer l'erreur d'origine.
+        }
+    } else {
+        println("[Mibeko/$label] erreur non fatale: $description")
+    }
 }

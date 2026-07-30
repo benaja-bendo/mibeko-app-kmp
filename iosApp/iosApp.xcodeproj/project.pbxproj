@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F1BA5E000000000000000004 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = F1BA5E000000000000000002 /* FirebaseAnalytics */; };
+		F1BA5E000000000000000005 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = F1BA5E000000000000000003 /* FirebaseCrashlytics */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		74DEC87DE196E13272C309B0 /* mibeko.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = mibeko.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -41,6 +46,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F1BA5E000000000000000004 /* FirebaseAnalytics in Frameworks */,
+				F1BA5E000000000000000005 /* FirebaseCrashlytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +82,7 @@
 				E01A8D3F0F094F91AB34547E /* Sources */,
 				C9868BBB01E982E1A06451B8 /* Frameworks */,
 				816D854C37E35A76DA67219C /* Resources */,
+				F1BA5E000000000000000006 /* Upload Crashlytics dSYMs */,
 			);
 			buildRules = (
 			);
@@ -85,6 +93,8 @@
 			);
 			name = iosApp;
 			packageProductDependencies = (
+				F1BA5E000000000000000002 /* FirebaseAnalytics */,
+				F1BA5E000000000000000003 /* FirebaseCrashlytics */,
 			);
 			productName = iosApp;
 			productReference = 74DEC87DE196E13272C309B0 /* mibeko.app */;
@@ -114,6 +124,9 @@
 			);
 			mainGroup = 36D088F3B33F485613E55ECE;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F1BA5E000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5FEB46E13FA06E96BCB14774 /* Products */;
 			projectDirPath = "";
@@ -153,6 +166,22 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\n\n# Configure Java for Xcode Cloud\n# Chercher Homebrew selon l'architecture (Apple Silicon ou Intel)\nif [ -d \"/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home\" ]; then\n  export JAVA_HOME=\"/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home\"\n  export PATH=\"$JAVA_HOME/bin:$PATH\"\nelif [ -d \"/usr/local/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home\" ]; then\n  export JAVA_HOME=\"/usr/local/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home\"\n  export PATH=\"$JAVA_HOME/bin:$PATH\"\nfi\n\ncd \"$SRCROOT/..\"\n./gradlew :composeApp:embedAndSignAppleFrameworkForXcode\n";
+		};
+		F1BA5E000000000000000006 /* Upload Crashlytics dSYMs */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${EXECUTABLE_NAME}",
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+			);
+			name = "Upload Crashlytics dSYMs";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Le script Crashlytics lit le GoogleService-Info.plist DANS LE BUNDLE\n# CONSTRUIT (pas dans les sources) et échoue en 13 s'il n'y est pas : c'est\n# donc le bundle qu'on teste, sinon l'archive casserait avec un message\n# sans rapport avec la cause.\nPLIST_IN_BUNDLE=\"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleService-Info.plist\"\nif [ ! -f \"$PLIST_IN_BUNDLE\" ]; then\n  echo \"GoogleService-Info.plist absent du bundle — upload dSYM Crashlytics ignoré\"\n  exit 0\nfi\nRUN_SCRIPT=\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\nif [ -x \"$RUN_SCRIPT\" ]; then\n  \"$RUN_SCRIPT\"\nelse\n  echo \"Script Crashlytics introuvable ($RUN_SCRIPT) — upload dSYM ignoré\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -250,7 +279,7 @@
 				);
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -344,7 +373,7 @@
 				);
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -370,6 +399,34 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F1BA5E000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F1BA5E000000000000000002 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1BA5E000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			/* Depuis firebase-ios-sdk 12, ce produit N'INCLUT PAS le support de
+			   l'identifiant publicitaire : celui-ci s'ajoute explicitement via
+			   la bibliothèque FirebaseAnalyticsIdentitySupport, que nous ne
+			   déclarons pas (cohérent avec NSPrivacyTracking = false). */
+			productName = FirebaseAnalytics;
+		};
+		F1BA5E000000000000000003 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1BA5E000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 2A09CFBAE22E92C877053B60 /* Project object */;
 }

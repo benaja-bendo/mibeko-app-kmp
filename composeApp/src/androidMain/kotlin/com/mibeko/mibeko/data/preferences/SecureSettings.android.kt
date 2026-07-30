@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.mibeko.mibeko.MibekoApp
+import com.mibeko.mibeko.util.recordException
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
 
@@ -38,12 +39,14 @@ private fun createEncryptedPreferences(context: Context): SharedPreferences {
         // Clé maître ou fichier corrompu (réinstallation, restauration de
         // sauvegarde…) : on repart d'un fichier neuf plutôt que de planter
         // au démarrage. L'utilisateur devra se reconnecter.
+        recordException(e, "secure_settings_rebuild")
         context.deleteSharedPreferences(SECURE_PREFS_FILE)
         try {
             buildEncryptedPreferences(context)
         } catch (e2: Exception) {
             // Dernier recours : fichier dédié non chiffré pour que l'app
             // reste utilisable sur les appareils au Keystore défaillant.
+            recordException(e2, "secure_settings_plaintext_fallback")
             context.getSharedPreferences("${SECURE_PREFS_FILE}_fallback", Context.MODE_PRIVATE)
         }
     }

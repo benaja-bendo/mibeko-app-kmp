@@ -67,6 +67,7 @@ private val pages = listOf(
 fun OnboardingScreen() {
         val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
         val userPreferences: UserPreferencesRepository = koinInject()
+        val analytics: com.mibeko.mibeko.util.MibekoAnalytics = koinInject()
         val scope = rememberCoroutineScope()
 
         val pagerState = rememberPagerState(pageCount = { pages.size })
@@ -74,6 +75,7 @@ fun OnboardingScreen() {
 
         fun completeOnboarding() {
             userPreferences.setOnboardingCompleted()
+            analytics.logEvent(com.mibeko.mibeko.util.AnalyticsEvents.ONBOARDING_COMPLETED)
             
             // Navigate to Disclaimer if not accepted, otherwise Home
             if (!userPreferences.hasAcceptedDisclaimer()) {
