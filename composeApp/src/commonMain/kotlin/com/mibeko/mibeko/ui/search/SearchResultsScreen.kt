@@ -55,7 +55,6 @@ import com.mibeko.mibeko.ui.navigation.MibekoBottomBar
 import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.components.HighlightedText
 import com.mibeko.mibeko.ui.components.DossierSelectionSheet
-import com.mibeko.mibeko.ui.components.SearchResultsShimmer
 import com.mibeko.mibeko.util.copyToClipboard
 
 val LocalSnackbarHostState = staticCompositionLocalOf<SnackbarHostState> {
@@ -276,9 +275,8 @@ fun SearchResultsScreen(query: String? = null, tag: String? = null) {
                                 .padding(horizontal = 16.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        SearchResultsShimmer(
-                            itemCount = 4,
-                            modifier = Modifier.padding(horizontal = 16.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally)
                         )
                     }
                 }

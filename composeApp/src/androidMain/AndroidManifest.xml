@@ -37,16 +37,6 @@
                 <data android:scheme="https" android:host="mibeko.fr" android:pathPrefix="/textes" />
             </intent-filter>
 
-            <!-- App Links legacy (https://mibeko.cg/article|document/{uuid}) —
-                 conservés pour rétro-compat des anciens liens partagés. -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="mibeko.cg" android:pathPrefix="/article" />
-                <data android:scheme="https" android:host="mibeko.cg" android:pathPrefix="/document" />
-            </intent-filter>
-
             <!-- Custom Scheme (mibeko://textes/..., mibeko://article/...) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

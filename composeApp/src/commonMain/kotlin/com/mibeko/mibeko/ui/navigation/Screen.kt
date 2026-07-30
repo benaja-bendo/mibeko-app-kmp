@@ -26,10 +26,7 @@ sealed class Screen {
     
     @Serializable
     data object Home : Screen()
-    
-    @Serializable
-    data object Favorites : Screen()
-    
+
     @Serializable
     data object Settings : Screen()
     
@@ -66,12 +63,12 @@ sealed class Screen {
     
     @Serializable
     data object Notifications : Screen()
+
+    @Serializable
+    data object Contact : Screen()
     
     @Serializable
     data class DossierDetail(val dossierId: String) : Screen()
-    
-    @Serializable
-    data class DocumentList(val typeCode: String, val typeName: String) : Screen()
     
     @Serializable
     data object OfficialJournalList : Screen()
@@ -80,7 +77,18 @@ sealed class Screen {
     data class OfficialJournalDetail(val id: String) : Screen()
     
     @Serializable
-    data class Chat(val conversationId: String? = null, val initialPrompt: String? = null) : Screen()
+    data class Chat(
+        val conversationId: String? = null,
+        val initialPrompt: String? = null,
+        /**
+         * Document épinglé d'emblée comme référence (« Analyser avec
+         * l'assistant » depuis le lecteur). On épingle plutôt que de
+         * pré-remplir une question : la formulation reste celle de
+         * l'utilisateur, l'assistant se contente de restreindre son périmètre.
+         */
+        val pinnedDocumentId: String? = null,
+        val pinnedLabel: String? = null
+    ) : Screen()
     
     @Serializable
     data object ConversationHistory : Screen()

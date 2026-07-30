@@ -44,6 +44,14 @@ class UserPreferencesRepository(private val settings: Settings) {
         internal const val KEY_WIFI_ONLY_DOWNLOAD = "wifi_only_download"
         internal const val KEY_LEGAL_MONITORING = "legal_monitoring_enabled"
         internal const val KEY_DOSSIER_ALERTS_ENABLED = "dossier_alerts_enabled"
+        internal const val KEY_TELEMETRY_ENABLED = "telemetry_enabled"
+        internal const val KEY_DISMISSED_UPDATE_VERSION = "dismissed_update_version"
+        internal const val KEY_REVIEW_REQUESTED_VERSION = "review_requested_version"
+        internal const val KEY_ARTICLES_READ_COUNT = "articles_read_count"
+        internal const val KEY_LAST_PUSH_TOKEN = "last_push_token"
+        internal const val KEY_SYNC_CURSOR_PAGE = "sync_cursor_page"
+        internal const val KEY_CATALOG_VERSION = "catalog_version"
+        internal const val KEY_LAST_CORPUS_REFRESH_AT = "last_corpus_refresh_at"
         internal const val KEY_AUTH_TOKEN = "auth_token"
         internal const val KEY_USER_EMAIL = "user_email"
         internal const val KEY_USER_NAME = "user_name"
@@ -189,6 +197,98 @@ class UserPreferencesRepository(private val settings: Settings) {
      */
     fun setDossierAlertsEnabled(enabled: Boolean) {
         settings.putBoolean(KEY_DOSSIER_ALERTS_ENABLED, enabled)
+    }
+
+    /**
+     * Consentement « Partage de statistiques anonymes » (Firebase Analytics).
+     * Activé par défaut, désactivable dans les Réglages ; le choix pilote
+     * setAnalyticsCollectionEnabled du SDK ET le wrapper MibekoAnalytics.
+     */
+    fun isTelemetryEnabled(): Boolean {
+        return settings.getBoolean(KEY_TELEMETRY_ENABLED, true)
+    }
+
+    fun setTelemetryEnabled(enabled: Boolean) {
+        settings.putBoolean(KEY_TELEMETRY_ENABLED, enabled)
+    }
+
+    /** Bannière « mise à jour disponible » : mémorisée par version proposée. */
+    fun isUpdateBannerDismissed(latestVersion: String): Boolean {
+        return settings.getString(KEY_DISMISSED_UPDATE_VERSION, "") == latestVersion
+    }
+
+    fun dismissUpdateBanner(latestVersion: String) {
+        settings.putString(KEY_DISMISSED_UPDATE_VERSION, latestVersion)
+    }
+
+    /** In-app review : au plus une sollicitation par version installée. */
+    fun wasReviewRequestedFor(appVersion: String): Boolean {
+        return settings.getString(KEY_REVIEW_REQUESTED_VERSION, "") == appVersion
+    }
+
+    fun markReviewRequested(appVersion: String) {
+        settings.putString(KEY_REVIEW_REQUESTED_VERSION, appVersion)
+    }
+
+    /** Compteur d'articles lus (déclencheur passif de l'in-app review). */
+    fun incrementArticlesReadCount(): Int {
+        val next = settings.getInt(KEY_ARTICLES_READ_COUNT, 0) + 1
+        settings.putInt(KEY_ARTICLES_READ_COUNT, next)
+        return next
+    }
+
+    /**
+     * Dernier jeton push connu, conservé même après un enregistrement réussi.
+     *
+     * Contrairement au jeton « en attente » (effacé dès l'envoi), il permet de
+     * RÉ-enregistrer l'appareil après une connexion : c'est cet appel qui
+     * rattache l'appareil au compte côté serveur.
+     */
+    fun getLastPushToken(): String? {
+        return settings.getStringOrNull(KEY_LAST_PUSH_TOKEN)
+    }
+
+    fun setLastPushToken(token: String?) {
+        if (token == null) settings.remove(KEY_LAST_PUSH_TOKEN)
+        else settings.putString(KEY_LAST_PUSH_TOKEN, token)
+    }
+
+    /**
+     * Curseur de la synchronisation initiale : numéro de la prochaine page de
+     * catalogue à récupérer. 0 signifie « aucune synchronisation en cours ».
+     *
+     * Sans ce curseur, une coupure réseau au milieu de la première
+     * synchronisation laissait une base partiellement remplie que plus rien ne
+     * relançait — le corpus restait tronqué définitivement.
+     */
+    fun getSyncCursorPage(): Int {
+        return settings.getInt(KEY_SYNC_CURSOR_PAGE, 0)
+    }
+
+    fun setSyncCursorPage(page: Int) {
+        settings.putInt(KEY_SYNC_CURSOR_PAGE, page)
+    }
+
+    /** Vrai tant que la synchronisation initiale n'est pas allée à son terme. */
+    fun isInitialSyncIncomplete(): Boolean = getSyncCursorPage() > 0
+
+    /** Empreinte du catalogue au dernier rafraîchissement réussi. */
+    fun getCatalogVersion(): String? {
+        return settings.getStringOrNull(KEY_CATALOG_VERSION)
+    }
+
+    fun setCatalogVersion(version: String?) {
+        if (version == null) settings.remove(KEY_CATALOG_VERSION)
+        else settings.putString(KEY_CATALOG_VERSION, version)
+    }
+
+    /** Horodatage du dernier rafraîchissement du corpus (pas de la 1re sync). */
+    fun getLastCorpusRefreshAt(): Long {
+        return settings.getLong(KEY_LAST_CORPUS_REFRESH_AT, 0L)
+    }
+
+    fun setLastCorpusRefreshAt(timestamp: Long) {
+        settings.putLong(KEY_LAST_CORPUS_REFRESH_AT, timestamp)
     }
 
     /**

@@ -34,13 +34,15 @@ import com.mibeko.mibeko.ui.notifications.NotificationsViewModel
 import com.mibeko.mibeko.ui.dossier.DossierDetailViewModel
 import com.mibeko.mibeko.ui.dossier.DossierViewModel
 import com.mibeko.mibeko.ui.components.DossierSelectionViewModel
-import com.mibeko.mibeko.ui.favorites.FavoritesViewModel
 import com.mibeko.mibeko.ui.settings.SettingsViewModel
 import com.mibeko.mibeko.ui.officialjournal.OfficialJournalViewModel
 import com.mibeko.mibeko.ui.chat.ChatViewModel
 import com.mibeko.mibeko.ui.chat.ConversationHistoryViewModel
+import com.mibeko.mibeko.util.MibekoAnalytics
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import com.mibeko.mibeko.util.NotificationManager
+import com.mibeko.mibeko.util.getAnalyticsManager
+import com.mibeko.mibeko.util.getDeviceId
 import com.mibeko.mibeko.util.getNetworkConnectivityChecker
 import com.mibeko.mibeko.util.getNotificationManager
 import io.ktor.client.*
@@ -49,6 +51,7 @@ import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
+import io.ktor.client.request.header
 import io.ktor.client.plugins.sse.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -91,6 +94,23 @@ val commonModule = module {
             install(ContentNegotiation) {
                 json(get())
             }
+            // Identifiant d'appareil envoyé à chaque requête : côté serveur, les
+            // quotas de lecture froide s'y accrochent au lieu de l'adresse IP.
+            // Sans cet en-tête, le CGNAT des opérateurs congolais ferait
+            // partager un même quota à des centaines d'abonnés, qui se
+            // bloqueraient mutuellement pendant leur première synchronisation.
+            install(DefaultRequest) {
+                header("X-Mibeko-Device", getDeviceId())
+            }
+            // Sans timeout, une requête peut pendre indéfiniment sur un réseau
+            // dégradé (fréquent au Congo) et geler l'écran appelant. Le socket
+            // est plus large que la requête : les téléchargements de documents
+            // et le premier octet du streaming SSE peuvent être lents.
+            install(HttpTimeout) {
+                connectTimeoutMillis = 15_000
+                requestTimeoutMillis = 60_000
+                socketTimeoutMillis = 120_000
+            }
             install(Auth) {
                 bearer {
                     loadTokens {
@@ -121,6 +141,13 @@ val commonModule = module {
                         val preferences = get<UserPreferencesRepository>()
                         if (!isPublicAuthRoute && preferences.isLoggedIn()) {
                             preferences.logout()
+                            // On ne purge PAS les dossiers ici : un dossier créé
+                            // hors-ligne n'est encore nulle part sur le serveur,
+                            // et le jeton étant déjà invalide on ne peut plus le
+                            // pousser. La même personne se reconnecte et retrouve
+                            // son travail ; le mélange entre comptes est traité
+                            // au bon moment par guardAccountSwitch(), à la
+                            // première synchronisation d'un compte différent.
                             get<SessionEvents>().notifySessionExpired()
                         }
                     }
@@ -139,6 +166,7 @@ val commonModule = module {
     single { LibraryApiService(get(), get<AppConfig>().baseUrl) }
     single { AuthApiService(get(), get<AppConfig>().baseUrl) }
     single { AiApiService(get(), get<AppConfig>().baseUrl) }
+    single<com.mibeko.mibeko.data.remote.AiChatApi> { get<AiApiService>() }
     single { DossierApiService(get(), get<AppConfig>().baseUrl) }
 
     // Network connectivity checker (platform-specific implementation)
@@ -146,6 +174,9 @@ val commonModule = module {
 
     // Notification Manager (platform-specific implementation)
     single<NotificationManager> { getNotificationManager() }
+
+    // Analytics : façade unique, gated par le consentement (Réglages)
+    single { MibekoAnalytics(getAnalyticsManager(), get()) }
 
     // Content Sharer (platform-specific implementation)
     single<ContentSharer> { getContentSharer() }
@@ -162,20 +193,20 @@ val commonModule = module {
     viewModel { ProfileSetupViewModel(get(), get()) }
 
     viewModel { HomeViewModel(get(), get(), get(), get()) }
-    viewModel { SearchViewModel(get(), get(), get(), get()) }
-    viewModel { ReaderViewModel(get(), get(), get(), get(), get()) }
-    viewModel { DocumentDetailViewModel(get(), get()) }
-    viewModel { TexteResolverViewModel(get()) }
-    viewModel { FavoritesViewModel(get()) }
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get()) }
+    viewModel { SearchViewModel(get(), get(), get(), get(), get()) }
+    viewModel { ReaderViewModel(get(), get(), get(), get(), get(), get()) }
+    viewModel { DocumentDetailViewModel(get(), get(), get()) }
+    viewModel { TexteResolverViewModel(get(), get()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { OfficialJournalViewModel(get(), get()) }
     viewModel { LibraryViewModel(get(), get(), get(), get(), get()) }
     viewModel { DownloadsViewModel(get()) }
     viewModel { NotificationsViewModel(get()) }
-    viewModel { DossierViewModel(get()) }
+    viewModel { DossierViewModel(get(), get()) }
     viewModel { DossierSelectionViewModel(get(), get()) }
     viewModel { params -> DossierDetailViewModel(params.get(), get(), get()) }
-    viewModel { ChatViewModel(get()) }
+    viewModel { ChatViewModel(get(), get()) }
     viewModel { ConversationHistoryViewModel(get()) }
+    viewModel { com.mibeko.mibeko.ui.contact.ContactViewModel(get(), get(), get()) }
 }
 

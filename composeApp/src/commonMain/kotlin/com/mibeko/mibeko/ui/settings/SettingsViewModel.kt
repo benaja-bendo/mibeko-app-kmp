@@ -5,18 +5,32 @@ import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.AuthApiService
+import com.mibeko.mibeko.data.remote.NotificationTypes
 import com.mibeko.mibeko.data.remote.ProfileUpdateRequest
+import com.mibeko.mibeko.data.repository.CorpusRefreshResult
+import com.mibeko.mibeko.data.repository.DossierRepository
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.repository.NotificationRepository
+import com.mibeko.mibeko.util.AnalyticsEvents
+import com.mibeko.mibeko.util.MibekoAnalytics
 import com.mibeko.mibeko.util.NotificationManager
 import com.mibeko.mibeko.util.formatSize
 import com.mibeko.mibeko.util.formatTimestampToDate
+import com.mibeko.mibeko.util.getAppVersionName
 import com.mibeko.mibeko.util.getDatabaseSize
 import com.mibeko.mibeko.util.getDeviceId
+import com.mibeko.mibeko.util.recordException
 import com.mibeko.mibeko.getPlatform
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import com.mibeko.mibeko.getCurrentTimeMillis
+
+/** Borne des travaux réseau best-effort exécutés avant une purge locale. */
+private const val REMOTE_CLEANUP_TIMEOUT_MS = 5_000L
 
 /**
  * Represents a document's download state in the settings screen.
@@ -48,6 +62,7 @@ data class SettingsUiState(
 
     val isLegalMonitoringEnabled: Boolean = true,
     val isDossierAlertsEnabled: Boolean = true,
+    val isTelemetryEnabled: Boolean = true,
     val appVersion: String = "v1.0.0",
     
     // Profile Fields
@@ -58,6 +73,7 @@ data class SettingsUiState(
     val company: String = "",
     val isUpdatingProfile: Boolean = false,
     val profileUpdateMessage: String? = null,
+    val isExportingData: Boolean = false,
     
     // Password Fields
     val currentPassword: String = "",
@@ -76,7 +92,10 @@ class SettingsViewModel(
     private val legalRepository: LocalLegalRepository,
     private val notificationManager: NotificationManager,
     private val notificationRepository: NotificationRepository,
-    private val authApiService: AuthApiService
+    private val authApiService: AuthApiService,
+    private val dossierRepository: DossierRepository,
+    private val analytics: MibekoAnalytics,
+    private val contentSharer: com.mibeko.mibeko.util.ContentSharer
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -202,17 +221,103 @@ class SettingsViewModel(
         _uiState.value = _uiState.value.copy(passwordUpdateMessage = null)
     }
 
+    /**
+     * Travaux réseau best-effort exécutés avant une purge locale (déconnexion,
+     * suppression de compte). Bornés dans le temps : sur un réseau qui pend,
+     * les timeouts Ktor (jusqu'à 60 s) laisseraient l'utilisateur bloqué sur
+     * un bouton « Se déconnecter » sans réponse.
+     */
+    private suspend fun runBestEffort(context: String, block: suspend () -> Unit) {
+        try {
+            withTimeoutOrNull(REMOTE_CLEANUP_TIMEOUT_MS) { block() }
+        } catch (e: Exception) {
+            recordException(e, context)
+        }
+    }
+
     fun logout(onLogoutComplete: () -> Unit) {
         viewModelScope.launch {
+            // Avant de purger : pousser l'état des dossiers (les suppressions
+            // faites hors-ligne vivent dans pending_dossier_deletions, que
+            // clearAllData efface — sans ce push, elles seraient perdues) et
+            // détacher l'appareil des push (sinon un envoi « ciblé » partirait
+            // vers un utilisateur déconnecté).
+            runBestEffort("logout_dossier_sync") { dossierRepository.syncNow() }
+            runBestEffort("logout_unregister_device") {
+                notificationRepository.unregisterDevice(getDeviceId())
+            }
+            runBestEffort("logout_api") { authApiService.logout() }
+
+            userPreferencesRepository.logout()
+            authApiService.invalidateTokenCache()
+            legalRepository.clearAllData()
+            onLogoutComplete()
+        }
+    }
+
+    /**
+     * Rafraîchissement manuel du corpus. Ne re-télécharge que les textes dont
+     * l'empreinte a changé côté serveur, et retire ceux qui ne sont plus
+     * publiés.
+     */
+    fun refreshCorpus() {
+        if (_uiState.value.isSyncing) return
+        _uiState.value = _uiState.value.copy(isSyncing = true, syncError = null)
+        viewModelScope.launch {
+            val message = when (val result = legalRepository.refreshCorpus(force = true)) {
+                is CorpusRefreshResult.UpToDate -> "Votre corpus est déjà à jour."
+                is CorpusRefreshResult.Offline -> "Aucune connexion : réessayez une fois en ligne."
+                is CorpusRefreshResult.Failed -> "Mise à jour impossible : ${result.reason}"
+                is CorpusRefreshResult.Refreshed -> buildString {
+                    when {
+                        result.updated == 0 && result.removed == 0 -> append("Aucun changement.")
+                        else -> {
+                            if (result.updated > 0) append("${result.updated} texte(s) mis à jour")
+                            if (result.removed > 0) {
+                                if (result.updated > 0) append(", ")
+                                append("${result.removed} retiré(s) du corpus")
+                            }
+                            append(".")
+                        }
+                    }
+                    if (result.partial) append(" Certains textes n'ont pas pu être récupérés.")
+                }
+            }
+            _uiState.value = _uiState.value.copy(
+                isSyncing = false,
+                lastUpdateDate = formatTimestampToDate(userPreferencesRepository.getLastSyncTimestamp()),
+                profileUpdateMessage = message
+            )
+        }
+    }
+
+    /**
+     * Export des données personnelles (droit d'accès) : le JSON renvoyé par
+     * l'API est remis à l'utilisateur via le partage système (enregistrement,
+     * envoi par mail…). C'est le parcours annoncé par la politique de
+     * confidentialité publiée sur mibeko.fr.
+     */
+    fun exportPersonalData() {
+        if (_uiState.value.isExportingData) return
+        _uiState.value = _uiState.value.copy(isExportingData = true)
+        viewModelScope.launch {
             try {
-                authApiService.logout()
+                val bytes = authApiService.exportPersonalData()
+                contentSharer.shareFile(
+                    bytes = bytes,
+                    fileName = "mibeko-mes-donnees.json",
+                    mimeType = "application/json"
+                )
+                _uiState.value = _uiState.value.copy(
+                    isExportingData = false,
+                    profileUpdateMessage = "Export prêt : choisissez où l'enregistrer."
+                )
             } catch (e: Exception) {
-                // Proceed to logout locally even if API fails
-            } finally {
-                userPreferencesRepository.logout()
-                authApiService.invalidateTokenCache()
-                legalRepository.clearAllData()
-                onLogoutComplete()
+                recordException(e, "export_personal_data")
+                _uiState.value = _uiState.value.copy(
+                    isExportingData = false,
+                    profileUpdateMessage = "L'export a échoué. Vérifiez votre connexion et réessayez."
+                )
             }
         }
     }
@@ -231,6 +336,12 @@ class SettingsViewModel(
             try {
                 val response = authApiService.deleteAccount(currentPassword)
                 if (response.success) {
+                    // Même détachement qu'à la déconnexion : sans lui, le
+                    // backend garderait l'appareil enregistré pour un compte
+                    // supprimé et continuerait de lui pousser des alertes.
+                    runBestEffort("delete_account_unregister_device") {
+                        notificationRepository.unregisterDevice(getDeviceId())
+                    }
                     userPreferencesRepository.logout()
                     authApiService.invalidateTokenCache()
                     legalRepository.clearAllData()
@@ -262,7 +373,9 @@ class SettingsViewModel(
             textSize = userPreferencesRepository.getTextSize(),
             isDyslexiaFontEnabled = userPreferencesRepository.isDyslexiaFontEnabled(),
             isLegalMonitoringEnabled = userPreferencesRepository.isLegalMonitoringEnabled(),
-            isDossierAlertsEnabled = userPreferencesRepository.isDossierAlertsEnabled()
+            isDossierAlertsEnabled = userPreferencesRepository.isDossierAlertsEnabled(),
+            isTelemetryEnabled = analytics.isTelemetryEnabled(),
+            appVersion = "v${getAppVersionName()}"
         )
         
         // Load available documents
@@ -331,6 +444,7 @@ class SettingsViewModel(
     fun setLegalMonitoringEnabled(enabled: Boolean) {
         userPreferencesRepository.setLegalMonitoringEnabled(enabled)
         _uiState.value = _uiState.value.copy(isLegalMonitoringEnabled = enabled)
+        syncNotificationPreferences()
     }
 
     /**
@@ -339,6 +453,72 @@ class SettingsViewModel(
     fun setDossierAlertsEnabled(enabled: Boolean) {
         userPreferencesRepository.setDossierAlertsEnabled(enabled)
         _uiState.value = _uiState.value.copy(isDossierAlertsEnabled = enabled)
+        syncNotificationPreferences()
+    }
+
+    /**
+     * Reporte les réglages de l'app dans la matrice serveur, seule consultée
+     * par les expéditeurs de veille.
+     *
+     * Sans cela le toggle mentait : le canal push est désactivé par défaut côté
+     * serveur, un utilisateur connecté n'aurait donc jamais rien reçu malgré un
+     * réglage affiché « activé ». On ne modifie QUE le canal push : les choix
+     * e-mail et in-app faits depuis le web restent intacts.
+     */
+    private fun syncNotificationPreferences() {
+        if (!userPreferencesRepository.isLoggedIn()) return
+
+        viewModelScope.launch {
+            runBestEffort("sync_notification_preferences") {
+                val current = authApiService.getNotificationPreferences() ?: return@runBestEffort
+                val notificationsOn = userPreferencesRepository.isNotificationsEnabled()
+                val watchOn = notificationsOn && userPreferencesRepository.isLegalMonitoringEnabled()
+                val dossierOn = notificationsOn && userPreferencesRepository.isDossierAlertsEnabled()
+
+                val updated = buildJsonObject {
+                    for ((key, value) in current) {
+                        // Tout ce qui n'est pas un objet de canaux (`_frequency`,
+                        // clés futures) est recopié tel quel : on ne réécrit que
+                        // le canal push, jamais les choix e-mail / in-app faits
+                        // depuis le web.
+                        val channels = value as? JsonObject
+                        if (channels == null) {
+                            put(key, value)
+                            continue
+                        }
+
+                        val push = when (key) {
+                            NotificationTypes.NEW_DOCUMENT, NotificationTypes.LEGAL_ALERT -> watchOn
+                            NotificationTypes.SHARE -> dossierOn
+                            NotificationTypes.EXTRACTION_UPDATE, NotificationTypes.SYSTEM -> notificationsOn
+                            else -> null
+                        }
+                        if (push == null) {
+                            put(key, channels)
+                        } else {
+                            put(
+                                key,
+                                buildJsonObject {
+                                    for ((channel, enabled) in channels) put(channel, enabled)
+                                    put("push", JsonPrimitive(push))
+                                }
+                            )
+                        }
+                    }
+                }
+
+                authApiService.updateNotificationPreferences(updated)
+            }
+        }
+    }
+
+    /**
+     * Toggle « Partage de statistiques anonymes » : pilote la préférence ET la
+     * collecte au niveau du SDK Analytics des deux plateformes.
+     */
+    fun setTelemetryEnabled(enabled: Boolean) {
+        analytics.setTelemetryEnabled(enabled)
+        _uiState.value = _uiState.value.copy(isTelemetryEnabled = enabled)
     }
 
     /**
@@ -347,9 +527,16 @@ class SettingsViewModel(
     fun setNotificationsEnabled(enabled: Boolean) {
         if (enabled) {
             notificationManager.requestPermission { granted ->
+                analytics.logEvent(
+                    AnalyticsEvents.NOTIFICATION_OPT_IN,
+                    mapOf("granted" to granted)
+                )
                 if (granted) {
                     userPreferencesRepository.setNotificationsEnabled(true)
                     _uiState.value = _uiState.value.copy(isNotificationsEnabled = true)
+                    // L'accord donné dans l'app doit atteindre la matrice
+                    // serveur, sinon aucun push ne partira jamais.
+                    syncNotificationPreferences()
 
                     // Register device on backend
                     viewModelScope.launch {
@@ -358,13 +545,21 @@ class SettingsViewModel(
                                 viewModelScope.launch {
                                     val platformName = getPlatform().name.lowercase()
                                     val backendPlatform = if (platformName.contains("android")) "android" else "ios"
-                                    
+
                                     notificationRepository.registerDevice(
                                         deviceId = getDeviceId(),
                                         pushToken = token,
                                         platform = backendPlatform
                                     )
                                 }
+                            } else {
+                                // Pas de jeton push sur cette plateforme (iOS :
+                                // APNs pas encore branché). Le réglage est bien
+                                // mémorisé, mais laisser croire que des alertes
+                                // vont arriver serait mensonger.
+                                _uiState.value = _uiState.value.copy(
+                                    profileUpdateMessage = "Préférence enregistrée. Les alertes push arriveront sur iPhone dans une prochaine version."
+                                )
                             }
                         }
                     }
@@ -373,6 +568,7 @@ class SettingsViewModel(
         } else {
             userPreferencesRepository.setNotificationsEnabled(false)
             _uiState.value = _uiState.value.copy(isNotificationsEnabled = false)
+            syncNotificationPreferences()
 
             // Unregister device on backend
             viewModelScope.launch {

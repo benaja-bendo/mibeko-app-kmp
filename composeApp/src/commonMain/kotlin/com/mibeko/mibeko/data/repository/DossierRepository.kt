@@ -230,7 +230,7 @@ class DossierRepository(
                 val data = response.data
                 if (!response.success || data == null) {
                     _syncState.value = DossierSyncState.Error(
-                        response.message.ifBlank { "Synchronisation impossible" }
+                        response.message?.ifBlank { null } ?: "Synchronisation impossible"
                     )
                     return
                 }

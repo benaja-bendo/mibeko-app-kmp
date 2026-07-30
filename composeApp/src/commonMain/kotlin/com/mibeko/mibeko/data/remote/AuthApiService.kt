@@ -7,6 +7,7 @@ import io.ktor.client.plugins.auth.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class FirebaseLoginRequest(
@@ -155,6 +156,44 @@ class AuthApiService(
     }
 
     /**
+     * Export des données personnelles (droit d'accès). Le serveur renvoie un
+     * téléchargement JSON, pas une réponse d'API : on récupère les octets bruts
+     * pour les passer au partage système.
+     */
+    suspend fun exportPersonalData(): ByteArray {
+        return client.get("$baseUrl/v1/profile/export").body()
+    }
+
+    /**
+     * Matrice de préférences de notification telle que stockée côté serveur —
+     * c'est elle que consultent les expéditeurs de veille.
+     *
+     * Renvoyée en JSON brut à dessein : l'objet mêle des types (chacun une map
+     * de canaux booléens) et la clé `_frequency`, qui est une CHAÎNE. Un type
+     * Kotlin homogène échouerait à la désérialisation, et l'échec — avalé plus
+     * haut — laisserait les préférences jamais synchronisées.
+     */
+    suspend fun getNotificationPreferences(): JsonObject? {
+        return client.get("$baseUrl/v1/profile/preferences")
+            .body<ApiResponse<UserSettingsPayload>>()
+            .data
+            ?.notification_preferences
+    }
+
+    /**
+     * Écrit la matrice complète : le serveur valide chaque couple
+     * (type, canal) et n'accepte pas de mise à jour partielle. L'appelant part
+     * donc de la matrice existante et n'en modifie que ce qu'il veut, pour ne
+     * pas écraser les choix faits depuis le web.
+     */
+    suspend fun updateNotificationPreferences(preferences: JsonObject) {
+        client.put("$baseUrl/v1/profile/notification-preferences") {
+            contentType(ContentType.Application.Json)
+            setBody(NotificationPreferencesRequest(preferences))
+        }
+    }
+
+    /**
      * Renvoie l'e-mail de vérification (contrat livré : POST
      * `/v1/email/verification-notification`, Bearer → 202, idempotent, quota
      * serré 3/min). Distingue le succès, l'étranglement (429) et l'échec pour
@@ -265,4 +304,26 @@ enum class ResendVerificationResult {
 
     /** Autre erreur (réseau, 5xx…). */
     ERROR
+}
+
+/**
+ * Réglages utilisateur — on ne modélise que ce que le mobile consomme.
+ */
+@Serializable
+data class UserSettingsPayload(
+    val notification_preferences: JsonObject? = null
+)
+
+@Serializable
+data class NotificationPreferencesRequest(
+    val preferences: JsonObject
+)
+
+/** Types de notification connus du serveur (UserSetting::NOTIFICATION_TYPES). */
+object NotificationTypes {
+    const val NEW_DOCUMENT = "new_document"
+    const val LEGAL_ALERT = "legal_alert"
+    const val SHARE = "share"
+    const val EXTRACTION_UPDATE = "extraction_update"
+    const val SYSTEM = "system"
 }

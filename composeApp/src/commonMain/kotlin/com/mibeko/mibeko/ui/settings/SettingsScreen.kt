@@ -40,6 +40,7 @@ fun SettingsScreen() {
     val viewModel = koinViewModel<SettingsViewModel>()
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     
     val isAuthenticated = uiState.userName.isNotEmpty() || uiState.userEmail.isNotEmpty()
     
@@ -49,8 +50,6 @@ fun SettingsScreen() {
     var showApparenceDialog by remember { mutableStateOf(false) }
     var showOfflineDataDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
-    var showTerms by remember { mutableStateOf(false) }
-    var showPrivacy by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
     var showSources by remember { mutableStateOf(false) }
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
@@ -306,15 +305,32 @@ fun SettingsScreen() {
     if (showOfflineDataDialog) {
         AlertDialog(
             onDismissRequest = { showOfflineDataDialog = false },
-            title = { Text("Donnée Hors ligne") },
+            title = { Text("Données hors ligne") },
             text = {
                 Column {
                     Text("Espace utilisé : ${uiState.diskUsage}")
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Dernière mise à jour : ${uiState.lastUpdateDate}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
+                    // Le corpus évolue (textes corrigés, nouveaux textes
+                    // publiés) : sans ce bouton, un téléphone gardait sa copie
+                    // du premier jour indéfiniment.
                     Button(
-                        onClick = { 
+                        onClick = { viewModel.refreshCorpus() },
+                        enabled = !uiState.isSyncing,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (uiState.isSyncing) "Mise à jour…" else "Mettre à jour le corpus")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
                             showOfflineDataDialog = false
-                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Downloads) 
+                            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Downloads)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -387,50 +403,6 @@ fun SettingsScreen() {
 
     if (showSources) {
         OfficialSourcesSheet(onDismiss = { showSources = false })
-    }
-
-    if (showTerms) {
-        AlertDialog(
-            onDismissRequest = { showTerms = false },
-            title = { Text("Conditions d'Utilisation") },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text(
-                        "En utilisant Mibeko, vous acceptez les conditions suivantes :\n\n" +
-                        "1. Utilisation du service : Mibeko est fourni 'en l'état'. L'accès peut être suspendu pour maintenance.\n\n" +
-                        "2. Responsabilité : Les informations fournies sont à titre indicatif. Seuls les textes officiels font foi.\n\n" +
-                        "3. Propriété intellectuelle : Le contenu de l'application est protégé par les lois sur la propriété intellectuelle."
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showTerms = false }) {
-                    Text("Fermer")
-                }
-            }
-        )
-    }
-
-    if (showPrivacy) {
-        AlertDialog(
-            onDismissRequest = { showPrivacy = false },
-            title = { Text("Politique de Confidentialité") },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text(
-                        "Votre vie privée est importante pour nous.\n\n" +
-                        "1. Collecte de données : Mibeko ne collecte aucune donnée personnelle identifiable sans votre consentement.\n\n" +
-                        "2. Utilisation : Les préférences (thème, langue) sont stockées localement sur votre appareil.\n\n" +
-                        "3. Partage : Aucune donnée n'est partagée avec des tiers à des fins commerciales."
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showPrivacy = false }) {
-                    Text("Fermer")
-                }
-            }
-        )
     }
 
     if (showDeleteAccountDialog) {
@@ -713,6 +685,30 @@ fun SettingsScreen() {
                 )
             }
 
+            // --- CONFIDENTIALITÉ ---
+            SettingsGroup("CONFIDENTIALITÉ") {
+                SettingsSwitch(
+                    title = "Partage de statistiques anonymes",
+                    subtitle = "Aide à améliorer Mibeko. Jamais le contenu de vos recherches.",
+                    icon = Icons.Filled.Insights,
+                    checked = uiState.isTelemetryEnabled,
+                    onCheckedChange = { viewModel.setTelemetryEnabled(it) }
+                )
+                if (isAuthenticated) {
+                    HorizontalDivider(modifier = Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    // Droit d'accès annoncé par la politique de confidentialité
+                    // publiée sur mibeko.fr (« Profil → Exporter mes données »).
+                    SettingsItem(
+                        title = "Exporter mes données",
+                        subtitle = if (uiState.isExportingData) "Préparation…" else "Recevoir une copie de vos données personnelles",
+                        icon = Icons.Filled.Download,
+                        iconTint = MaterialTheme.colorScheme.secondary,
+                        iconBackground = MaterialTheme.colorScheme.secondaryContainer,
+                        onClick = { viewModel.exportPersonalData() }
+                    )
+                }
+            }
+
             // --- A PROPOS DE MIBEKO ---
             SettingsGroup("A PROPOS DE MIBEKO") {
                 SettingsItem(
@@ -723,18 +719,25 @@ fun SettingsScreen() {
                     onClick = { showSources = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                // Textes de référence hébergés sur mibeko.fr : une seule source
+                // de vérité, alignée sur les déclarations Data Safety des stores.
                 SettingsLinkItem(
-                    title = "CGU",
-                    onClick = { showTerms = true }
+                    title = "Conditions d'utilisation",
+                    onClick = { uriHandler.openUri("https://mibeko.fr/cgu") }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 SettingsLinkItem(
                     title = "Politique de confidentialité",
-                    onClick = { showPrivacy = true }
+                    onClick = { uriHandler.openUri("https://mibeko.fr/confidentialite") }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 SettingsLinkItem(
-                    title = "About Mibeko",
+                    title = "Nous contacter",
+                    onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Contact) }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                SettingsLinkItem(
+                    title = "À propos de Mibeko",
                     onClick = { showAbout = true }
                 )
             }
