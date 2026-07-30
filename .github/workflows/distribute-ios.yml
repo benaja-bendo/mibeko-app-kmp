@@ -114,12 +114,18 @@ jobs:
       run: |
         cd iosApp
         # On injecte CURRENT_PROJECT_VERSION ici pour forcer le numéro de build
+        # DEVELOPMENT_TEAM est nécessaire même en signature manuelle : sans lui,
+        # les targets "produit" synthétisées par SwiftPM pour Firebase/GoogleUtilities
+        # (Firebase_FirebaseCore, GoogleUtilities_*, Promises_*, nanopb_*, ...) n'ont
+        # aucune équipe à qui rattacher leur signature et l'archive échoue, même si
+        # la target iosApp elle-même est correctement signée.
         xcodebuild archive \
           -project iosApp.xcodeproj \
           -scheme iosApp \
           -configuration Release \
           -archivePath $RUNNER_TEMP/iosApp.xcarchive \
           CODE_SIGN_STYLE=Manual \
+          DEVELOPMENT_TEAM="G2VC572UTM" \
           PROVISIONING_PROFILE_SPECIFIER="${{ env.PP_UUID }}" \
           CODE_SIGN_IDENTITY="Apple Distribution" \
           CURRENT_PROJECT_VERSION="${{ env.BUILD_NUM }}" \
