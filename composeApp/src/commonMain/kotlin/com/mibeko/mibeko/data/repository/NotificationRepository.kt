@@ -1,11 +1,13 @@
 package com.mibeko.mibeko.data.repository
 
 import com.mibeko.mibeko.data.NotificationRemote
+import com.mibeko.mibeko.data.remote.ApiResponse
 import com.mibeko.mibeko.data.remote.LegalApiService
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import com.mibeko.mibeko.util.getAppVersionName
 import com.mibeko.mibeko.util.recordException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -19,12 +21,15 @@ class NotificationRepository(
      */
     fun getNotifications(): Flow<List<NotificationRemote>> = flow {
         try {
-            // Dans un cas réel, nous utiliserions un token d'auth.
-            // Pour l'instant on utilise l'URL de base configurée.
             val response = httpClient.get("$baseUrl/v1/notifications")
             if (response.status.value in 200..299) {
-                val body: Map<String, List<NotificationRemote>> = response.body()
-                emit(body["data"] ?: emptyList())
+                // L'API répond {success, message, data:[…]} : le désérialiser en
+                // Map<String, List<…>> échouait systématiquement (`success` est
+                // un booléen, `message` une chaîne) et l'exception, avalée plus
+                // bas, rendait la liste TOUJOURS vide — même quand le serveur
+                // avait des notifications à donner.
+                val body: ApiResponse<List<NotificationRemote>> = response.body()
+                emit(body.data ?: emptyList())
             } else {
                 emit(emptyList())
             }
@@ -41,7 +46,7 @@ class NotificationRepository(
         try {
             httpClient.patch("$baseUrl/v1/notifications/$id/read")
         } catch (e: Exception) {
-            // Log error
+            recordException(e, context = "NotificationRepository.markAsRead")
         }
     }
 
@@ -52,7 +57,7 @@ class NotificationRepository(
         try {
             httpClient.post("$baseUrl/v1/notifications/read-all")
         } catch (e: Exception) {
-            // Log error
+            recordException(e, context = "NotificationRepository.markAllAsRead")
         }
     }
 
@@ -63,7 +68,7 @@ class NotificationRepository(
         try {
             httpClient.delete("$baseUrl/v1/notifications/$id")
         } catch (e: Exception) {
-            // Log error
+            recordException(e, context = "NotificationRepository.deleteNotification")
         }
     }
 
@@ -78,7 +83,12 @@ class NotificationRepository(
                 setBody(mapOf(
                     "device_id" to deviceId,
                     "push_token" to pushToken,
-                    "platform" to platform
+                    "platform" to platform,
+                    // Le serveur adapte la FORME du push à la version installée :
+                    // data-only à partir de cette version (deep link fiable),
+                    // format hérité en deçà — les binaires déjà publiés ne
+                    // savent afficher qu'un bloc `notification`.
+                    "app_version" to getAppVersionName()
                 ))
                 contentType(io.ktor.http.ContentType.Application.Json)
             }
@@ -99,7 +109,7 @@ class NotificationRepository(
                 contentType(io.ktor.http.ContentType.Application.Json)
             }
         } catch (e: Exception) {
-            // Log error
+            recordException(e, context = "NotificationRepository.unregisterDevice")
         }
     }
 }

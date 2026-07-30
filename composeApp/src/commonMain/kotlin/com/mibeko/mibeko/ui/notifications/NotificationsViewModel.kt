@@ -19,7 +19,13 @@ data class NotificationUiModel(
     val timestamp: Long,
     val isRead: Boolean,
     val data: Map<String, String>? = null
-)
+) {
+    /**
+     * Slug du texte visé par la notification, quand elle en désigne un.
+     * Les alertes de synthèse (« N nouveaux textes ») n'en portent pas.
+     */
+    fun targetSlug(): String? = data?.get("slug")?.takeIf { it.isNotBlank() }
+}
 
 /**
  * État de l'UI pour l'écran des notifications.

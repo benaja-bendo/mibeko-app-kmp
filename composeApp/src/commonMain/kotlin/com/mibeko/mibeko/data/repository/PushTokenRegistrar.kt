@@ -30,15 +30,25 @@ class PushTokenRegistrar(
         // Toujours mémorisé d'abord : en cas d'échec réseau, il sera renvoyé
         // au prochain démarrage connecté.
         userPreferencesRepository.setPendingPushToken(token)
+        userPreferencesRepository.setLastPushToken(token)
         flushPendingToken()
     }
 
     /**
-     * Envoie le token en attente si l'utilisateur est connecté et a activé
-     * les notifications. À appeler après un login réussi et au démarrage.
+     * (Ré)enregistre l'appareil auprès du backend. À appeler après un login
+     * réussi et au démarrage.
+     *
+     * On repart du jeton en attente ou, à défaut, du DERNIER jeton connu :
+     * l'enregistrement ne transporte pas que le jeton, il rattache aussi
+     * l'appareil au compte connecté. En ne renvoyant que les jetons « en
+     * attente » — effacés dès le premier envoi réussi — tous les appareils
+     * déjà enregistrés restaient orphelins côté serveur, et leurs préférences
+     * de veille étaient donc ignorées.
      */
     fun flushPendingToken() {
-        val pending = userPreferencesRepository.getPendingPushToken() ?: return
+        val token = userPreferencesRepository.getPendingPushToken()
+            ?: userPreferencesRepository.getLastPushToken()
+            ?: return
         if (!userPreferencesRepository.isLoggedIn()) return
         if (!userPreferencesRepository.isNotificationsEnabled()) return
 
@@ -47,11 +57,12 @@ class PushTokenRegistrar(
             val backendPlatform = if (platformName.contains("android")) "android" else "ios"
             val registered = notificationRepository.registerDevice(
                 deviceId = getDeviceId(),
-                pushToken = pending,
+                pushToken = token,
                 platform = backendPlatform
             )
             if (registered) {
                 userPreferencesRepository.setPendingPushToken(null)
+                userPreferencesRepository.setLastPushToken(token)
             }
         }
     }

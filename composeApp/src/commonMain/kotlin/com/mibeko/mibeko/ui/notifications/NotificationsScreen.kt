@@ -20,8 +20,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.ui.navigation.LocalNavController
+import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.util.formatRelativeTime
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,8 +68,13 @@ fun NotificationsScreen() {
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
+            val isLoggedIn = koinInject<UserPreferencesRepository>().isLoggedIn()
             Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-                if (uiState.isLoading) {
+                if (!isLoggedIn) {
+                    // État invité honnête : les alertes sont liées au compte,
+                    // l'ancien « Vous êtes à jour ! » était mensonger.
+                    GuestNotificationsView(onLogin = { navController.navigate(Screen.Login) })
+                } else if (uiState.isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.align(Alignment.Center),
                         color = MaterialTheme.colorScheme.primary
@@ -82,7 +90,20 @@ fun NotificationsScreen() {
                         items(uiState.notifications) { notification ->
                             NotificationItem(
                                 notification = notification,
-                                onClick = { viewModel.markAsRead(notification.id) },
+                                onClick = {
+                                    viewModel.markAsRead(notification.id)
+                                    // Une alerte de veille désigne un texte :
+                                    // la marquer lue sans y conduire laissait
+                                    // l'utilisateur le chercher lui-même.
+                                    notification.targetSlug()?.let { slug ->
+                                        navController.navigate(
+                                            Screen.TexteResolver(
+                                                docSlug = slug,
+                                                articleNumber = notification.data?.get("article")
+                                            )
+                                        )
+                                    }
+                                },
                                 onDelete = { viewModel.deleteNotification(notification.id) }
                             )
                         }
@@ -193,6 +214,39 @@ fun NotificationsScreen() {
                         modifier = Modifier.size(16.dp)
                     )
                 }
+            }
+        }
+    }
+
+    @Composable
+    private fun GuestNotificationsView(onLogin: () -> Unit) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Default.NotificationsNone,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "Connectez-vous pour recevoir des alertes",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Les alertes de veille juridique et de vos dossiers sont liées à votre compte.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(onClick = onLogin, shape = RoundedCornerShape(8.dp)) {
+                Text("Se connecter")
             }
         }
     }

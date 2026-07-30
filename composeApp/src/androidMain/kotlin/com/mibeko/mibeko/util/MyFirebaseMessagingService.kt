@@ -22,18 +22,37 @@ class MyFirebaseMessagingService : FirebaseMessagingService(), KoinComponent {
     private val pushTokenRegistrar: PushTokenRegistrar by inject()
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        // Vérifier si les notifications sont activées dans les préférences de l'app
-        // Note: On pourrait aussi le gérer côté serveur, mais c'est une sécurité supplémentaire
-        // Pour l'instant on affiche toujours si reçu
+        // Second garde-fou : l'utilisateur a pu couper les notifications dans
+        // l'app sans que le serveur l'ait encore appris.
+        if (!userPreferencesRepository.isNotificationsEnabled()) return
 
-        // Check if message contains a notification payload.
-        remoteMessage.notification?.let {
-            sendNotification(it.title ?: "Mibeko", it.body ?: "")
+        // Le serveur joint un `data` décrivant la cible (un texte publié) :
+        // sans lui, taper la notification n'ouvrait que l'accueil.
+        val deepLink = deepLinkFrom(remoteMessage.data)
+
+        val notification = remoteMessage.notification
+        val title = notification?.title ?: remoteMessage.data["title"] ?: "Mibeko"
+        val body = notification?.body ?: remoteMessage.data["message"] ?: ""
+        if (title.isNotBlank() || body.isNotBlank()) {
+            sendNotification(title, body, deepLink)
         }
-        
-        // Check if message contains data payload.
-        if (remoteMessage.data.isNotEmpty()) {
-            // Handle data payload if needed
+    }
+
+    /**
+     * Construit le lien interne à ouvrir au tap.
+     *
+     * Le serveur envoie `type` + `slug` (et éventuellement `article`) ; on les
+     * traduit vers le schéma `mibeko://` que la navigation sait résoudre — le
+     * même chemin que les liens publics `mibeko.fr/textes/…`.
+     */
+    private fun deepLinkFrom(data: Map<String, String>): String? {
+        val slug = data["slug"]?.takeIf { it.isNotBlank() } ?: return null
+        val article = data["article"]?.takeIf { it.isNotBlank() }
+
+        return if (article != null) {
+            "mibeko://textes/$slug/article-$article"
+        } else {
+            "mibeko://textes/$slug"
         }
     }
 
@@ -46,12 +65,24 @@ class MyFirebaseMessagingService : FirebaseMessagingService(), KoinComponent {
         pushTokenRegistrar.onNewToken(token)
     }
 
-    private fun sendNotification(title: String, messageBody: String) {
-        val intent = Intent(this, MainActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    private fun sendNotification(title: String, messageBody: String, deepLink: String?) {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            // Porté en ACTION_VIEW : MainActivity le transmet à la navigation
+            // Compose, qui route vers le texte concerné.
+            if (deepLink != null) {
+                action = Intent.ACTION_VIEW
+                data = android.net.Uri.parse(deepLink)
+            }
+        }
         val pendingIntent = PendingIntent.getActivity(
-            this, 0 /* Request code */, intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
+            this,
+            // Request code distinct par cible : sans lui, Android réutiliserait
+            // le PendingIntent de la notification précédente et ouvrirait le
+            // mauvais texte.
+            deepLink?.hashCode() ?: 0,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         val channelId = getString(R.string.default_notification_channel_id)
@@ -70,12 +101,15 @@ class MyFirebaseMessagingService : FirebaseMessagingService(), KoinComponent {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Channel human readable title",
+                "Alertes Mibeko",
                 NotificationManager.IMPORTANCE_DEFAULT
             )
             notificationManager.createNotificationChannel(channel)
         }
 
-        notificationManager.notify(0 /* ID of notification */, notificationBuilder.build())
+        // Id dérivé du contenu : un id fixe (0) faisait s'écraser les
+        // notifications entre elles.
+        val notificationId = (title + messageBody).hashCode()
+        notificationManager.notify(notificationId, notificationBuilder.build())
     }
 }
