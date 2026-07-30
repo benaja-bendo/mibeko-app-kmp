@@ -130,11 +130,11 @@ Cette palette forêt est celle du **site public** et de **l'app mobile**. Le **d
 
 ## Brand & Style
 
-The design system is anchored in the concepts of **Stability, Authority, and Accessibility**. It serves as a digital repository of Congolese law, requiring a visual language that feels as enduring as a leather-bound legal volume yet as efficient as a modern tool. 
+The design system is anchored in the concepts of **Stability, Authority, and Accessibility**. It serves as a digital repository of the law of the **Republic of the Congo (Congo-Brazzaville — not the DRC)**, requiring a visual language that feels as enduring as a leather-bound legal volume yet as efficient as a modern tool. 
 
 The aesthetic is a refined **Corporate Minimalism**. It avoids the flighty, transient trends of "tech startups"—such as neon gradients or heavy blurs—in favor of a grounded, "Institutional" presence. The emotional goal is to provide a sense of reassurance to citizens and legal professionals alike. 
 
-Visuals must celebrate Congolese identity through professional representation. Illustrations and imagery should feature individuals in traditional and contemporary Congolese professional attire (e.g., Abacost variations or structured local textiles) rather than generic Western business suits. The overall experience must be ultra-fast, prioritizing performance and clarity over decorative flourishes.
+Visuals must celebrate Congolese identity (République du Congo) through professional representation. Illustrations and imagery should feature individuals in traditional and contemporary Congolese professional attire (e.g., the tailored elegance of Brazzaville's Sape culture, or structured pagne/wax textiles) rather than generic Western business suits. Cultural references specific to the DRC (e.g., the Abacost) must not be used. The overall experience must be ultra-fast, prioritizing performance and clarity over decorative flourishes.
 
 ## Colors
 
