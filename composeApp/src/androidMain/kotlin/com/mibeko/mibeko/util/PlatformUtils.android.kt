@@ -44,4 +44,29 @@ actual fun copyToClipboard(text: String) {
     clipboard.setPrimaryClip(clip)
 }
 
+actual fun getAppVersionName(): String {
+    val context = PlatformContextProvider.context
+    return try {
+        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0.0"
+    } catch (e: Exception) {
+        "0.0.0"
+    }
+}
+
+actual fun requestInAppReview() {
+    // Le flux Play exige une Activity au premier plan ; sans elle, on ne
+    // fait rien (l'occasion se représentera).
+    val activity = ActivityProvider.getActivity() ?: return
+    try {
+        val manager = com.google.android.play.core.review.ReviewManagerFactory.create(activity)
+        manager.requestReviewFlow().addOnCompleteListener { request ->
+            if (request.isSuccessful) {
+                manager.launchReviewFlow(activity, request.result)
+            }
+        }
+    } catch (e: Exception) {
+        recordException(e, "in_app_review")
+    }
+}
+
 

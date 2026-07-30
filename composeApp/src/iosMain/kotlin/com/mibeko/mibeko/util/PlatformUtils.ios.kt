@@ -35,4 +35,18 @@ actual fun copyToClipboard(text: String) {
     UIPasteboard.generalPasteboard.string = text
 }
 
+actual fun getAppVersionName(): String {
+    return NSBundle.mainBundle
+        .objectForInfoDictionaryKey("CFBundleShortVersionString") as? String
+        ?: "0.0.0"
+}
+
+actual fun requestInAppReview() {
+    val scene = UIApplication.sharedApplication.connectedScenes
+        .filterIsInstance<UIWindowScene>()
+        .firstOrNull { it.activationState == UISceneActivationStateForegroundActive }
+        ?: return
+    platform.StoreKit.SKStoreReviewController.requestReviewInScene(scene)
+}
+
 

@@ -71,6 +71,8 @@ multiplatform-settings-test = { module = "com.russhwolf:multiplatform-settings-t
 # Chiffrement des SharedPreferences (jeton Sanctum) côté Android.
 androidx-security-crypto = { module = "androidx.security:security-crypto", version = "1.1.0" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version = "1.10.2" }
+play-review = { module = "com.google.android.play:review-ktx", version = "2.0.2" }
 
 # Firebase
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }

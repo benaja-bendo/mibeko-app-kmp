@@ -59,6 +59,7 @@ kotlin {
             implementation(libs.firebase.analytics)
             implementation(libs.firebase.crashlytics)
             implementation(libs.androidx.security.crypto)
+            implementation(libs.play.review)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -105,6 +106,7 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.multiplatform.settings.test)
+            implementation(libs.kotlinx.coroutines.test)
         }
         
         // Add KSP generated sources to the source set

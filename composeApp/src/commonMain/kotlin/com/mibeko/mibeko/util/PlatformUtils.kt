@@ -19,6 +19,21 @@ expect fun getDeviceId(): String
  */
 expect fun copyToClipboard(text: String)
 
+/**
+ * Version marketing réelle du binaire installé (versionName Android,
+ * CFBundleShortVersionString iOS) — remplace le « v1.0.0 » en dur des
+ * Réglages et alimente le comparateur de VersionGate.
+ */
+expect fun getAppVersionName(): String
+
+/**
+ * Demande de notation in-app (Play ReviewManager / SKStoreReviewController).
+ * Fire-and-forget : l'OS décide seul d'afficher ou non la boîte de dialogue,
+ * et la demande ne doit JAMAIS être conditionnée à un avis positif
+ * (guideline Apple 5.6.1).
+ */
+expect fun requestInAppReview()
+
 // shareText removed to use ContentSharer service instead
 
 /**
