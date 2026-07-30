@@ -7,6 +7,12 @@ on:
         description: 'Notes de version'
         required: true
         default: 'Nouvelle version de test'
+      marketing_version:
+        # App Store Connect refuse une soumission dont la version n'a pas été
+        # bumpée : la valeur du Config.xcconfig (1.0, déjà publiée) ne doit
+        # plus jamais partir telle quelle.
+        description: 'Version marketing (ex: 1.1.0) — doit être > à la version publiée'
+        required: true
 
 jobs:
   distribute-ios:
@@ -21,10 +27,10 @@ jobs:
       with:
         xcode-version: 'latest-stable'
 
-    - name: Set up JDK 17
+    - name: Set up JDK 21
       uses: actions/setup-java@v5
       with:
-        java-version: '17'
+        java-version: '21'
         distribution: 'temurin'
 
     - name: Setup Gradle
@@ -51,6 +57,32 @@ jobs:
         BUILD_NUM=$((${{ github.run_number }} + 25))
         echo "BUILD_NUM=$BUILD_NUM" >> $GITHUB_ENV
         echo "Build number set to: $BUILD_NUM"
+
+    # Le GoogleService-Info.plist ne vit jamais dans le dépôt. Secret absent =
+    # build sans Firebase (FirebaseApp.configure() est gardé côté Swift).
+    # Une livraison TestFlight/App Store sans Firebase serait un binaire sans
+    # Analytics ni Crashlytics — précisément ce que cette version corrige. On
+    # échoue donc bruyamment, et on valide le contenu du plist : un secret mal
+    # encodé (le google-services.json Android, par exemple) passerait le
+    # décodage base64 mais ferait crasher l'app au lancement.
+    - name: Setup GoogleService-Info.plist
+      env:
+        IOS_GOOGLE_SERVICES_PLIST: ${{ secrets.IOS_GOOGLE_SERVICES_PLIST }}
+      run: |
+        if [ -z "$IOS_GOOGLE_SERVICES_PLIST" ]; then
+          echo "::error::Secret IOS_GOOGLE_SERVICES_PLIST absent — livraison refusée (binaire sans Analytics ni Crashlytics)"
+          exit 1
+        fi
+        PLIST=iosApp/iosApp/GoogleService-Info.plist
+        echo "$IOS_GOOGLE_SERVICES_PLIST" | base64 -d > "$PLIST"
+        plutil -lint "$PLIST"
+        BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :BUNDLE_ID" "$PLIST")
+        /usr/libexec/PlistBuddy -c "Print :GOOGLE_APP_ID" "$PLIST" > /dev/null
+        if [ "$BUNDLE_ID" != "cg.mibeko.app" ]; then
+          echo "::error::GoogleService-Info.plist pour le mauvais bundle ($BUNDLE_ID)"
+          exit 1
+        fi
+        echo "GoogleService-Info.plist injecté et validé ($BUNDLE_ID)"
 
     - name: Install Apple Certificate and Provisioning Profile
       env:
@@ -90,7 +122,8 @@ jobs:
           CODE_SIGN_STYLE=Manual \
           PROVISIONING_PROFILE_SPECIFIER="${{ env.PP_UUID }}" \
           CODE_SIGN_IDENTITY="Apple Distribution" \
-          CURRENT_PROJECT_VERSION="${{ env.BUILD_NUM }}"
+          CURRENT_PROJECT_VERSION="${{ env.BUILD_NUM }}" \
+          MARKETING_VERSION="${{ github.event.inputs.marketing_version }}"
 
     - name: Export IPA
       run: |

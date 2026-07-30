@@ -81,7 +81,22 @@ jobs:
             -PversionCode="${{ steps.version.outputs.code }}" \
             --stacktrace
 
-      - name: Upload to Google Play
+      # Production = rollout progressif (20 %) : une régression découverte en
+      # prod ne touche qu'une fraction du parc, et se complète/interrompt
+      # depuis la Play Console. Les autres canaux publient à 100 % direct.
+      - name: Upload to Google Play (production, rollout 20%)
+        if: ${{ (github.event.inputs.track || 'internal') == 'production' }}
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: cg.mibeko.app
+          releaseFiles: composeApp/build/outputs/bundle/release/*.aab
+          track: production
+          status: inProgress
+          userFraction: 0.2
+
+      - name: Upload to Google Play (canaux de test)
+        if: ${{ (github.event.inputs.track || 'internal') != 'production' }}
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
