@@ -12,7 +12,12 @@ import kotlinx.coroutines.launch
 import com.mibeko.mibeko.data.preferences.RecentlyViewedManager
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.repository.DossierRepository
+import com.mibeko.mibeko.util.AnalyticsEvents
+import com.mibeko.mibeko.util.MibekoAnalytics
+import com.mibeko.mibeko.util.formatTimestampToDate
+import com.mibeko.mibeko.util.getAppVersionName
 import com.mibeko.mibeko.util.recordException
+import com.mibeko.mibeko.util.requestInAppReview
 import kotlinx.coroutines.flow.asStateFlow
 
 /** Entrée du sommaire : un article dans l'ordre du document. */
@@ -29,6 +34,10 @@ data class ReaderUiState(
     val documentType: String? = null,
     /** Slug d'URL publique du document (partage vers mibeko.fr) — `null` si inconnu. */
     val documentSlug: String? = null,
+    /** « À jour au » du texte consolidé — `null` pour un acte unitaire. */
+    val consolidationAsOf: String? = null,
+    /** Date de la dernière synchronisation locale de ce texte. */
+    val localVersionDate: String? = null,
     /** Articles du document dans l'ordre de lecture (navigation + sommaire). */
     val articleSequence: List<ReaderTocEntry> = emptyList(),
     val error: String? = null
@@ -47,7 +56,8 @@ class ReaderViewModel(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val dossierRepository: DossierRepository,
     private val contentSharer: com.mibeko.mibeko.util.ContentSharer,
-    private val recentlyViewedManager: RecentlyViewedManager
+    private val recentlyViewedManager: RecentlyViewedManager,
+    private val analytics: MibekoAnalytics
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReaderUiState())
@@ -76,9 +86,13 @@ class ReaderViewModel(
                     type = type,
                     description = description
                 )
-                _uiState.value = _uiState.value.copy(error = "Signalement envoyé avec succès. Merci !")
+                analytics.logEvent(AnalyticsEvents.REPORT_SUBMITTED, mapOf("type" to type))
+                // Snackbar, pas uiState.error : un signalement réussi
+                // s'affichait comme un écran d'erreur plein écran.
+                _snackbarMessage.value = "Signalement envoyé avec succès. Merci !"
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = "Erreur lors de l'envoi du signalement : ${e.message}")
+                recordException(e, context = "ReaderViewModel.reportError")
+                _snackbarMessage.value = "Erreur lors de l'envoi du signalement : ${e.message}"
             }
         }
     }
@@ -87,16 +101,38 @@ class ReaderViewModel(
         _snackbarMessage.value = null
     }
 
+    /**
+     * In-app review passive : au 3e article lu, au plus une fois par version
+     * installée. Jamais conditionnée à un avis positif ni précédée d'un
+     * pré-filtre (guideline Apple 5.6.1) ; l'OS reste seul juge de
+     * l'affichage réel.
+     */
+    private fun maybeRequestReview() {
+        val readCount = userPreferencesRepository.incrementArticlesReadCount()
+        val version = getAppVersionName()
+        if (readCount >= 3 && !userPreferencesRepository.wasReviewRequestedFor(version)) {
+            userPreferencesRepository.markReviewRequested(version)
+            analytics.logEvent(AnalyticsEvents.REVIEW_REQUESTED)
+            requestInAppReview()
+        }
+    }
+
     fun toggleOffline() {
         val currentArticle = _uiState.value.article ?: return
+        val downloading = !currentArticle.isDownloaded
         viewModelScope.launch {
             try {
-                repository.toggleArticleOffline(currentArticle, !currentArticle.isDownloaded)
+                repository.toggleArticleOffline(currentArticle, downloading)
+                if (downloading) {
+                    analytics.logEvent(AnalyticsEvents.OFFLINE_DOWNLOAD)
+                }
                 // Reload article to update UI state
                 loadArticle(currentArticle.id)
             } catch (e: Exception) {
                 recordException(e, context = "ReaderViewModel.toggleOffline")
-                _uiState.value = _uiState.value.copy(error = "Erreur: ${e.message}")
+                // Snackbar : l'article affiché reste lisible, inutile de le
+                // remplacer par un écran d'erreur.
+                _snackbarMessage.value = "Erreur : ${e.message}"
             }
         }
     }
@@ -118,13 +154,17 @@ class ReaderViewModel(
                     dossierRepository.removeArticleFromDossier(favoritesDossier.id, currentArticle.id)
                 }
                 
+                if (newStatus) {
+                    analytics.logEvent(AnalyticsEvents.FAVORITE_ADDED)
+                }
+
                 // Reload article to update UI state
                 loadArticle(currentArticle.id)
             } catch (e: Exception) {
                 // Chemin favoris = crash opaque historique (audit 07/2026) : on
                 // remonte l'exception au collecteur avant de l'afficher.
                 recordException(e, context = "ReaderViewModel.toggleFavorite")
-                _uiState.value = _uiState.value.copy(error = "Erreur: ${e.message}")
+                _snackbarMessage.value = "Erreur : ${e.message}"
             }
         }
     }
@@ -143,12 +183,18 @@ class ReaderViewModel(
 
                 if (articleResult != null) {
                     val docResult = repository.getLawCodeById(articleResult.codeId).firstOrNull()
+                    analytics.logEvent(AnalyticsEvents.ARTICLE_READ)
+                    maybeRequestReview()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         article = articleResult,
                         documentTitle = docResult?.title,
                         documentType = docResult?.type,
                         documentSlug = docResult?.slug,
+                        consolidationAsOf = docResult?.consolidationAsOf,
+                        localVersionDate = docResult?.lastUpdated
+                            ?.takeIf { it > 0 }
+                            ?.let { formatTimestampToDate(it) },
                         error = null
                     )
 
@@ -241,6 +287,7 @@ class ReaderViewModel(
             appendLine("Partagé via Mibeko - Le Droit numérique")
         }
         contentSharer.shareText(text, "Article ${currentArticle.number}")
+        analytics.logEvent(AnalyticsEvents.READER_SHARE, mapOf("format" to "text"))
         _snackbarMessage.value = "Préparation du partage..."
     }
 
@@ -265,6 +312,7 @@ class ReaderViewModel(
         }
 
         contentSharer.shareText(message, "Article ${currentArticle.number} - Mibeko")
+        analytics.logEvent(AnalyticsEvents.READER_SHARE, mapOf("format" to "link"))
         _snackbarMessage.value = "Ouverture du lien de partage..."
     }
 
@@ -295,8 +343,10 @@ class ReaderViewModel(
                 val bytes = repository.downloadFile(url)
                 val fileName = "Article_${currentArticle.number}.pdf"
                 contentSharer.shareFile(bytes, fileName, "application/pdf")
+                analytics.logEvent(AnalyticsEvents.READER_SHARE, mapOf("format" to "pdf"))
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = "Erreur lors du partage PDF: ${e.message}")
+                recordException(e, context = "ReaderViewModel.shareAsPdf")
+                _snackbarMessage.value = "Erreur lors du partage PDF : ${e.message}"
             } finally {
                 _isSharing.value = false
             }

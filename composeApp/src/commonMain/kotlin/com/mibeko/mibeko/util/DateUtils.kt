@@ -129,3 +129,18 @@ fun formatRelativeTime(epochMillis: Long, nowMillis: Long = getCurrentTimeMillis
         else -> formatEpochMillisDate(epochMillis)
     }
 }
+
+/**
+ * Convertit une date ISO `AAAA-MM-JJ` (format des API) en `JJ/MM/AAAA`.
+ *
+ * Affichée telle quelle, la date ISO jurait à côté des autres dates de l'app,
+ * toutes au format français. Toute valeur inattendue est renvoyée inchangée
+ * plutôt que masquée.
+ */
+fun formatIsoDateToFrench(isoDate: String): String {
+    val parts = isoDate.take(10).split("-")
+    if (parts.size != 3) return isoDate
+    val (year, month, day) = parts
+    if (year.length != 4 || month.length != 2 || day.length != 2) return isoDate
+    return "$day/$month/$year"
+}

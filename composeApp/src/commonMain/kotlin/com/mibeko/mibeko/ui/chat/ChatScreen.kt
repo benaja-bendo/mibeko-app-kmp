@@ -48,7 +48,9 @@ import androidx.compose.runtime.derivedStateOf
 @Composable
 fun ChatScreen(
     conversationId: String?,
-    initialPrompt: String?
+    initialPrompt: String?,
+    pinnedDocumentId: String? = null,
+    pinnedLabel: String? = null
 ) {
     val navController = LocalNavController.current
     val viewModel: ChatViewModel = koinViewModel()
@@ -84,6 +86,16 @@ fun ChatScreen(
 
     LaunchedEffect(conversationId, initialPrompt) {
         viewModel.initChat(conversationId, initialPrompt)
+    }
+
+    // Référence apportée par le lecteur : elle apparaît comme une puce
+    // épinglée, l'utilisateur pose ensuite sa question librement.
+    LaunchedEffect(pinnedDocumentId) {
+        if (pinnedDocumentId != null) {
+            viewModel.pinReference(
+                AssistantReference(id = pinnedDocumentId, title = pinnedLabel ?: "Texte consulté")
+            )
+        }
     }
 
     // Auto-scroll to bottom when messages change
@@ -160,6 +172,14 @@ fun ChatScreen(
                 is ChatState.Idle -> {
                     Spacer(modifier = Modifier.weight(1f))
                 }
+            }
+
+            // Échec d'envoi (quota, réseau…) : bannière locale avec retry.
+            (chatState as? ChatState.Content)?.inlineError?.let { error ->
+                ChatErrorBanner(
+                    error = error,
+                    onRetry = { viewModel.retryLastFailedMessage() }
+                )
             }
 
             // Références épinglées (« @ ») restreignant le périmètre de l'IA
@@ -601,5 +621,49 @@ fun ThinkingDots() {
         Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha1), RoundedCornerShape(50)))
         Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha2), RoundedCornerShape(50)))
         Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha3), RoundedCornerShape(50)))
+    }
+}
+
+@Composable
+private fun ChatErrorBanner(
+    error: ChatInlineError,
+    onRetry: () -> Unit
+) {
+    val text = when (error.kind) {
+        ChatErrorKind.QUOTA -> {
+            val minutes = error.retryAfterSeconds?.let { (it + 59) / 60 }
+            if (minutes != null && minutes > 0) {
+                "Limite temporaire de requêtes atteinte. Réessayez dans $minutes min."
+            } else {
+                "Limite temporaire de requêtes atteinte. Réessayez dans quelques minutes."
+            }
+        }
+        ChatErrorKind.NETWORK -> "Connexion impossible. Vérifiez votre accès internet."
+        ChatErrorKind.GENERIC -> "L'assistant a rencontré une erreur."
+    }
+
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f)
+            )
+            if (error.canRetry) {
+                TextButton(onClick = onRetry) {
+                    Text("Réessayer")
+                }
+            }
+        }
     }
 }

@@ -3,12 +3,17 @@ package com.mibeko.mibeko.ui.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.remote.AgentConversationMessage
-import com.mibeko.mibeko.data.remote.AiApiService
+import com.mibeko.mibeko.data.remote.AiChatApi
 import com.mibeko.mibeko.data.remote.AiChatReference
 import com.mibeko.mibeko.data.remote.AiMode
 import com.mibeko.mibeko.data.remote.AiStreamEvent
 import com.mibeko.mibeko.data.remote.AssistantReference
 import com.mibeko.mibeko.getCurrentTimeMillis
+import com.mibeko.mibeko.util.AnalyticsEvents
+import com.mibeko.mibeko.util.MibekoAnalytics
+import io.ktor.client.plugins.ResponseException
+import io.ktor.client.plugins.sse.SSEClientException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +25,32 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 
+/**
+ * Nature d'un échec d'envoi, dérivée du transport — jamais du texte serveur.
+ * QUOTA ne mentionne aucun abonnement : il n'existe pas de parcours d'achat
+ * dans l'app (exigence Apple 3.1.1).
+ */
+enum class ChatErrorKind { QUOTA, NETWORK, GENERIC }
+
+data class ChatInlineError(
+    val kind: ChatErrorKind,
+    val retryAfterSeconds: Int? = null,
+    val canRetry: Boolean = false
+)
+
+/**
+ * Classification pure d'un échec de transport (testable sans Ktor) :
+ * 429 → quota, aucune réponse reçue → réseau, autre statut → générique.
+ */
+fun classifyChatFailure(statusCode: Int?, retryAfterHeader: String?): ChatInlineError {
+    val kind = when (statusCode) {
+        429 -> ChatErrorKind.QUOTA
+        null -> ChatErrorKind.NETWORK
+        else -> ChatErrorKind.GENERIC
+    }
+    return ChatInlineError(kind, retryAfterHeader?.toIntOrNull())
+}
+
 sealed class ChatState {
     object Idle : ChatState()
     object Loading : ChatState()
@@ -27,7 +58,8 @@ sealed class ChatState {
     data class Content(
         val messages: List<AgentConversationMessage>,
         val conversationId: String?,
-        val isTyping: Boolean = false
+        val isTyping: Boolean = false,
+        val inlineError: ChatInlineError? = null
     ) : ChatState()
 }
 
@@ -40,7 +72,8 @@ data class ReferencePickerState(
 )
 
 class ChatViewModel(
-    private val aiApiService: AiApiService
+    private val aiApiService: AiChatApi,
+    private val analytics: MibekoAnalytics? = null
 ) : ViewModel() {
 
     private val _chatState = MutableStateFlow<ChatState>(ChatState.Idle)
@@ -59,6 +92,7 @@ class ChatViewModel(
     private val currentMessages = mutableListOf<AgentConversationMessage>()
     private var streamJob: Job? = null
     private var referenceSearchJob: Job? = null
+    private var lastFailedPrompt: String? = null
 
     fun setMode(mode: AiMode) {
         _mode.value = mode
@@ -141,8 +175,22 @@ class ChatViewModel(
         }
     }
 
+    /** Renvoie le dernier message dont l'envoi a échoué (bouton « Réessayer »). */
+    fun retryLastFailedMessage() {
+        val prompt = lastFailedPrompt ?: return
+        lastFailedPrompt = null
+        // La bulle utilisateur du message échoué est retirée : sendMessage la
+        // recrée, sinon elle apparaîtrait en double.
+        val lastUserIndex = currentMessages.indexOfLast { it.role == "user" }
+        if (lastUserIndex != -1 && currentMessages[lastUserIndex].content == prompt) {
+            currentMessages.removeAt(lastUserIndex)
+        }
+        sendMessage(prompt)
+    }
+
     fun sendMessage(message: String) {
         if (message.isBlank()) return
+        lastFailedPrompt = null
 
         val userMessage = AgentConversationMessage(
             id = "temp_${getCurrentTimeMillis()}",
@@ -166,6 +214,14 @@ class ChatViewModel(
         currentMessages.add(initialAiMessage)
         
         _chatState.value = ChatState.Content(currentMessages.toList(), currentConversationId, isTyping = true)
+
+        analytics?.logEvent(
+            AnalyticsEvents.CHAT_MESSAGE_SENT,
+            mapOf(
+                "mode" to _mode.value.apiValue,
+                "reference_count" to _pinnedReferences.value.size
+            )
+        )
 
         streamJob?.cancel()
         streamJob = viewModelScope.launch {
@@ -203,10 +259,18 @@ class ChatViewModel(
                             streamContent += event.text
                         }
                         is AiStreamEvent.Error -> {
+                            // Libellé toujours local : le texte serveur peut
+                            // contenir des détails techniques ou commerciaux.
+                            val label = when (event.code) {
+                                "AI_RATE_LIMITED" ->
+                                    "Limite temporaire de requêtes atteinte. Réessayez dans quelques minutes."
+                                else ->
+                                    "L'assistant a rencontré une erreur. Veuillez réessayer."
+                            }
                             streamContent = if (streamContent.startsWith("🔄 ") || streamContent.isEmpty()) {
-                                event.message
+                                label
                             } else {
-                                "$streamContent\n\n[Erreur: ${event.message}]"
+                                "$streamContent\n\n[$label]"
                             }
                         }
                     }
@@ -235,16 +299,58 @@ class ChatViewModel(
                 
                 // Final update after streaming is done
                 _chatState.value = ChatState.Content(currentMessages.toList(), currentConversationId, isTyping = false)
+            } catch (e: CancellationException) {
+                // Un nouvel envoi annule le stream en cours : laisser le job
+                // remplaçant piloter l'état au lieu de l'écraser ici.
+                throw e
             } catch (e: Exception) {
-                // If it fails completely and we have no content, show an error message
-                val lastIndex = currentMessages.indexOfLast { it.id == aiMessageId }
-                if (lastIndex != -1 && currentMessages[lastIndex].content.isEmpty()) {
-                    currentMessages[lastIndex] = currentMessages[lastIndex].copy(
-                        content = "Une erreur est survenue lors de la génération de la réponse."
-                    )
-                }
-                _chatState.value = ChatState.Content(currentMessages.toList(), currentConversationId, isTyping = false)
+                _chatState.value = buildFailureState(e, message, aiMessageId)
             }
         }
+    }
+
+    /**
+     * Traduit un échec de transport en état d'erreur affichable. Le status et
+     * le Retry-After sont lus sur la réponse portée par l'exception Ktor
+     * (SSEClientException pour le stream, ResponseException sinon) ; sans
+     * réponse, c'est une panne réseau.
+     */
+    private fun buildFailureState(
+        e: Exception,
+        prompt: String,
+        aiMessageId: String
+    ): ChatState.Content {
+        val response = when (e) {
+            is SSEClientException -> e.response
+            is ResponseException -> e.response
+            else -> null
+        }
+        val baseError = classifyChatFailure(
+            statusCode = response?.status?.value,
+            retryAfterHeader = response?.headers?.get("Retry-After")
+        )
+
+        // Rien n'a été reçu : on retire la bulle IA vide et on propose de
+        // réessayer. Si un contenu partiel existe, il reste affiché tel quel.
+        val emptyPlaceholderIndex = currentMessages.indexOfLast {
+            it.id == aiMessageId && it.content.isEmpty()
+        }
+        val canRetry = emptyPlaceholderIndex != -1
+        if (canRetry) {
+            currentMessages.removeAt(emptyPlaceholderIndex)
+            lastFailedPrompt = prompt
+        }
+
+        analytics?.logEvent(
+            AnalyticsEvents.CHAT_ERROR,
+            mapOf("kind" to baseError.kind.name.lowercase())
+        )
+
+        return ChatState.Content(
+            messages = currentMessages.toList(),
+            conversationId = currentConversationId,
+            isTyping = false,
+            inlineError = baseError.copy(canRetry = canRetry)
+        )
     }
 }

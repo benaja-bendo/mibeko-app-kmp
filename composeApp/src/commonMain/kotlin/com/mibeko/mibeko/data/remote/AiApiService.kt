@@ -2,6 +2,8 @@ package com.mibeko.mibeko.data.remote
 
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.HttpTimeoutConfig
+import io.ktor.client.plugins.timeout
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.client.plugins.sse.*
@@ -10,9 +12,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.decodeFromJsonElement
 
 @Serializable
@@ -123,13 +122,35 @@ sealed class AiStreamEvent {
     data class Delta(val text: String) : AiStreamEvent()
     data class Sources(val sources: List<ArticleSource>) : AiStreamEvent()
     data class Status(val message: String) : AiStreamEvent()
-    data class Error(val message: String) : AiStreamEvent()
+
+    /**
+     * Erreur émise en cours de stream. Ne transporte qu'un code machine
+     * optionnel (ex. AI_RATE_LIMITED) : le libellé affiché est toujours choisi
+     * localement, jamais le texte du serveur.
+     */
+    data class Error(val code: String?) : AiStreamEvent()
+}
+
+/**
+ * Sous-ensemble de l'API assistant consommé par le chat — extrait en interface
+ * pour rendre ChatViewModel testable sans client HTTP.
+ */
+interface AiChatApi {
+    suspend fun getConversationDetails(id: String): AgentConversation
+    suspend fun searchReferences(query: String? = null): List<AssistantReference>
+    suspend fun sendMessageStream(
+        message: String,
+        conversationId: String?,
+        mode: AiMode = AiMode.CONCISE,
+        references: List<AiChatReference> = emptyList(),
+        onConversationIdReceived: (String) -> Unit
+    ): Flow<AiStreamEvent>
 }
 
 class AiApiService(
     private val client: HttpClient,
     private val baseUrl: String
-) {
+) : AiChatApi {
     suspend fun getConversations(page: Int = 1, date: String? = null, title: String? = null): PaginatedConversations {
         return client.get("$baseUrl/v1/assistant/conversations") {
             parameter("page", page)
@@ -138,7 +159,7 @@ class AiApiService(
         }.body()
     }
 
-    suspend fun getConversationDetails(id: String): AgentConversation {
+    override suspend fun getConversationDetails(id: String): AgentConversation {
         return client.get("$baseUrl/v1/assistant/conversations/$id").body()
     }
 
@@ -154,7 +175,7 @@ class AiApiService(
     }
 
     /** Autocomplétion des documents épinglables dans le sélecteur « @ ». */
-    suspend fun searchReferences(query: String? = null): List<AssistantReference> {
+    override suspend fun searchReferences(query: String?): List<AssistantReference> {
         return client.get("$baseUrl/v1/assistant/references") {
             if (!query.isNullOrBlank()) parameter("q", query)
         }.body<AssistantReferencesResponse>().data
@@ -185,11 +206,11 @@ class AiApiService(
         }.body()
     }
 
-    suspend fun sendMessageStream(
+    override suspend fun sendMessageStream(
         message: String,
         conversationId: String?,
-        mode: AiMode = AiMode.CONCISE,
-        references: List<AiChatReference> = emptyList(),
+        mode: AiMode,
+        references: List<AiChatReference>,
         onConversationIdReceived: (String) -> Unit
     ): Flow<AiStreamEvent> = flow {
         val url = if (conversationId != null) {
@@ -198,12 +219,19 @@ class AiApiService(
             "$baseUrl/v1/assistant/chat"
         }
 
-        val lenientJson = Json { ignoreUnknownKeys = true }
-
         client.sse(
             urlString = url,
             request = {
                 method = HttpMethod.Post
+                // Le timeout global (60 s) tuerait un stream de génération long.
+                // Le timeout de socket, lui, reste FINI : il borne l'attente
+                // entre deux jetons. Sans lui, une perte de réseau en cours de
+                // réponse (sans coupure TCP franche) laisserait le chat sur
+                // « l'assistant écrit… » indéfiniment, sans bouton d'annulation.
+                timeout {
+                    requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+                    socketTimeoutMillis = 120_000
+                }
                 contentType(ContentType.Application.Json)
                 setBody(
                     AiChatRequest(
@@ -224,53 +252,7 @@ class AiApiService(
             }
 
             incoming.collect { event ->
-                val data = event.data
-                val type = event.event
-                if (data != null) {
-                    if (data == "[DONE]") {
-                        return@collect
-                    }
-                    if (type == "status") {
-                        try {
-                            val json = lenientJson.decodeFromString<JsonObject>(data)
-                            val statusMsg = json["message"]?.jsonPrimitive?.content
-                            if (statusMsg != null) {
-                                emit(AiStreamEvent.Status(statusMsg))
-                            }
-                        } catch (e: Exception) {
-                            // ignore
-                        }
-                    } else if (type == "sources") {
-                        try {
-                            val sources = lenientJson.decodeFromString<List<ArticleSource>>(data)
-                            emit(AiStreamEvent.Sources(sources))
-                        } catch (e: Exception) {
-                            // ignore malformed sources
-                        }
-                    } else if (type == "error") {
-                        try {
-                            val json = lenientJson.decodeFromString<JsonObject>(data)
-                            val errorMsg = json["message"]?.jsonPrimitive?.content
-                            if (errorMsg != null) {
-                                emit(AiStreamEvent.Error(errorMsg))
-                            }
-                        } catch (e: Exception) {
-                            // ignore
-                        }
-                    } else {
-                        try {
-                            val json = lenientJson.decodeFromString<JsonObject>(data)
-                            if (json["type"]?.jsonPrimitive?.content == "text_delta") {
-                                val delta = json["delta"]?.jsonPrimitive?.content
-                                if (delta != null) {
-                                    emit(AiStreamEvent.Delta(delta))
-                                }
-                            }
-                        } catch (e: Exception) {
-                            // ignore malformed JSON or other events
-                        }
-                    }
-                }
+                AiStreamEventParser.parse(event.event, event.data)?.let { emit(it) }
             }
         }
     }

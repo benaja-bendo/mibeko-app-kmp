@@ -43,6 +43,7 @@ import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
 import com.mibeko.mibeko.ui.components.ReportErrorDialog
 import com.mibeko.mibeko.ui.components.OfficialSourcesSheet
+import com.mibeko.mibeko.util.formatIsoDateToFrench
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -352,6 +353,17 @@ fun ReaderScreen(articleId: String) {
                     }
                 }
 
+                // Provenance : d'où vient ce texte et de quand date la copie
+                // consultée. Sur un corpus hors-ligne, l'utilisateur doit
+                // pouvoir juger la fraîcheur de ce qu'il lit.
+                item {
+                    ProvenanceBanner(
+                        consolidationAsOf = uiState.consolidationAsOf,
+                        localVersionDate = uiState.localVersionDate,
+                        textColor = textColor
+                    )
+                }
+
                 item {
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 24.dp, horizontal = 48.dp),
@@ -362,6 +374,26 @@ fun ReaderScreen(articleId: String) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            // Pont vers l'assistant : l'article est épinglé en
+                            // référence, la question reste celle de
+                            // l'utilisateur (posture assistive, pas de prompt
+                            // induit).
+                            OutlinedButton(
+                                onClick = {
+                                    navController.navigate(
+                                        com.mibeko.mibeko.ui.navigation.Screen.Chat(
+                                            pinnedDocumentId = currentArticle.codeId,
+                                            pinnedLabel = uiState.documentTitle
+                                        )
+                                    )
+                                },
+                                border = BorderStroke(1.dp, textColor.copy(alpha = 0.2f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = textColor.copy(alpha = 0.7f))
+                            ) {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Analyser avec l'assistant")
+                            }
                             OutlinedButton(
                                 onClick = { showSources = true },
                                 border = BorderStroke(1.dp, textColor.copy(alpha = 0.2f)),
@@ -757,4 +789,43 @@ fun ThemeOption(
     }
 
 
+}
+
+/**
+ * Bandeau de provenance affiché sous le texte.
+ *
+ * Un corpus consulté hors-ligne peut dater : afficher côte à côte le « à jour
+ * au » officiel et la date de la copie locale permet à l'utilisateur — un
+ * avocat, souvent — de juger lui-même s'il peut s'appuyer sur ce qu'il lit.
+ */
+@Composable
+private fun ProvenanceBanner(
+    consolidationAsOf: String?,
+    localVersionDate: String?,
+    textColor: Color
+) {
+    if (consolidationAsOf == null && localVersionDate == null) return
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+    ) {
+        HorizontalDivider(color = textColor.copy(alpha = 0.08f))
+        Spacer(modifier = Modifier.height(12.dp))
+        if (consolidationAsOf != null) {
+            Text(
+                text = "Texte consolidé à jour au ${formatIsoDateToFrench(consolidationAsOf)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = textColor.copy(alpha = 0.6f)
+            )
+        }
+        if (localVersionDate != null) {
+            Text(
+                text = "Copie locale du $localVersionDate",
+                style = MaterialTheme.typography.labelSmall,
+                color = textColor.copy(alpha = 0.45f)
+            )
+        }
+    }
 }
