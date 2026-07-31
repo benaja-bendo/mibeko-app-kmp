@@ -19,7 +19,7 @@
 	<key>provisioningProfiles</key>
 	<dict>
 		<key>cg.mibeko.app</key>
-		<string>iOS Team Store Provisioning Profile: cg.mibeko.app</string>
+		<string>PROFIL_INJECTE_PAR_LE_CI</string>
 	</dict>
 </dict>
 </plist>

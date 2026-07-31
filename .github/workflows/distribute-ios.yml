@@ -107,27 +107,62 @@ jobs:
 
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
         UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i $PP_PATH))
+        # Un UUID vide se propagerait en PROVISIONING_PROFILE_SPECIFIER vide, et
+        # xcodebuild renverrait alors « iosApp requires a provisioning profile »,
+        # message qui pointe vers l'éditeur Xcode et jamais vers le secret fautif.
+        if [ -z "$UUID" ]; then
+          echo "::error::UUID introuvable dans BUILD_PROVISION_PROFILE_BASE64 — secret absent ou mal encodé"
+          exit 1
+        fi
         cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
         echo "PP_UUID=$UUID" >> $GITHUB_ENV
 
+    # Ce contrôle échoue AVANT les ~20 min de compilation Kotlin + Firebase, et
+    # attrape le cas où l'onglet « Signing & Capabilities » de Xcode aurait
+    # silencieusement réécrit les réglages de signature dans le pbxproj.
+    - name: Verify Signing Configuration
+      run: |
+        cd iosApp
+        SETTINGS=$(xcodebuild -showBuildSettings \
+          -project iosApp.xcodeproj \
+          -scheme iosApp \
+          -configuration Release \
+          MIBEKO_PROVISIONING_PROFILE="${{ env.PP_UUID }}")
+
+        expect() {
+          ACTUAL=$(printf '%s\n' "$SETTINGS" | sed -n "s/^ *$1 = //p" | head -1)
+          if [ "$ACTUAL" != "$2" ]; then
+            echo "::error::$1 vaut « $ACTUAL » au lieu de « $2 » — signature non conforme, livraison interrompue"
+            exit 1
+          fi
+          echo "✓ $1 = $ACTUAL"
+        }
+
+        expect CODE_SIGN_STYLE Manual
+        expect CODE_SIGN_IDENTITY "Apple Distribution"
+        expect DEVELOPMENT_TEAM G2VC572UTM
+        expect PROVISIONING_PROFILE_SPECIFIER "${{ env.PP_UUID }}"
+
+    # Un réglage passé en ligne de commande à xcodebuild s'applique à TOUTES les
+    # targets, y compris aux projets synthétisés par SwiftPM. Depuis l'arrivée de
+    # Firebase, y forcer la signature cassait l'archive : les bundles de ressources
+    # (Firebase_*, GoogleUtilities_*, Promises_*, nanopb_*) réclamaient une équipe,
+    # puis refusaient le profil qu'on leur imposait. La signature vit donc dans la
+    # config Release de la target iosApp, et seul l'identifiant du profil — qui
+    # change à chaque run — transite par une variable maison, sans signification
+    # pour les targets SwiftPM.
     - name: Build and Archive iOS App
       run: |
         cd iosApp
-        # On injecte CURRENT_PROJECT_VERSION ici pour forcer le numéro de build
-        # DEVELOPMENT_TEAM est nécessaire même en signature manuelle : sans lui,
-        # les targets "produit" synthétisées par SwiftPM pour Firebase/GoogleUtilities
-        # (Firebase_FirebaseCore, GoogleUtilities_*, Promises_*, nanopb_*, ...) n'ont
-        # aucune équipe à qui rattacher leur signature et l'archive échoue, même si
-        # la target iosApp elle-même est correctement signée.
+        # CURRENT_PROJECT_VERSION / MARKETING_VERSION restent en ligne de commande :
+        # ils fuient vers les targets SwiftPM sans conséquence, et ExportOptions.plist
+        # a manageAppVersionAndBuildNumber=false, donc la version doit être juste ici.
         xcodebuild archive \
           -project iosApp.xcodeproj \
           -scheme iosApp \
           -configuration Release \
           -archivePath $RUNNER_TEMP/iosApp.xcarchive \
-          CODE_SIGN_STYLE=Manual \
-          DEVELOPMENT_TEAM="G2VC572UTM" \
-          PROVISIONING_PROFILE_SPECIFIER="${{ env.PP_UUID }}" \
-          CODE_SIGN_IDENTITY="Apple Distribution" \
+          MIBEKO_PROVISIONING_PROFILE="${{ env.PP_UUID }}" \
           CURRENT_PROJECT_VERSION="${{ env.BUILD_NUM }}" \
           MARKETING_VERSION="${{ github.event.inputs.marketing_version }}"
 
