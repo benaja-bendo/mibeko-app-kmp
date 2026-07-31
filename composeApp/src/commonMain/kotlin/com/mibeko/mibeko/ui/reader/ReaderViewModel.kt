@@ -269,11 +269,6 @@ class ReaderViewModel(
         userPreferencesRepository.setDyslexiaFontEnabled(enabled)
     }
 
-    fun exportPdf(): String {
-        val currentArticle = _uiState.value.article ?: return ""
-        return repository.getArticleExportUrl(currentArticle.id)
-    }
-
     fun shareAsText() {
         val currentArticle = _uiState.value.article ?: return
         val documentTitle = _uiState.value.documentTitle ?: "Document"
@@ -288,7 +283,6 @@ class ReaderViewModel(
         }
         contentSharer.shareText(text, "Article ${currentArticle.number}")
         analytics.logEvent(AnalyticsEvents.READER_SHARE, mapOf("format" to "text"))
-        _snackbarMessage.value = "Préparation du partage..."
     }
 
     fun shareAsLink() {
@@ -313,7 +307,6 @@ class ReaderViewModel(
 
         contentSharer.shareText(message, "Article ${currentArticle.number} - Mibeko")
         analytics.logEvent(AnalyticsEvents.READER_SHARE, mapOf("format" to "link"))
-        _snackbarMessage.value = "Ouverture du lien de partage..."
     }
 
     fun copyArticleText() {
@@ -321,16 +314,6 @@ class ReaderViewModel(
         val text = "Article ${currentArticle.number}\n\n${currentArticle.content ?: ""}"
         contentSharer.copyToClipboard(text)
         _snackbarMessage.value = "✓ Texte de l'article copié"
-    }
-
-    fun copyArticleLink() {
-        val currentArticle = _uiState.value.article ?: return
-        val url = com.mibeko.mibeko.util.PublicLinks.article(
-            documentSlug = _uiState.value.documentSlug,
-            articleNumber = currentArticle.number
-        )
-        contentSharer.copyToClipboard(url)
-        _snackbarMessage.value = "✓ Lien de l'article copié"
     }
 
     fun shareAsPdf() {
@@ -351,10 +334,5 @@ class ReaderViewModel(
                 _isSharing.value = false
             }
         }
-    }
-
-    // Legacy method for backward compatibility
-    fun shareArticle() {
-        shareAsPdf()
     }
 }

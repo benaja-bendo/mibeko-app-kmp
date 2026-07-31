@@ -58,10 +58,9 @@ class ContactViewModel(
 
     fun submit() {
         val state = _uiState.value
-        // `isSent` fait partie du garde : après succès l'écran ne se ferme
-        // qu'une fois le snackbar écoulé (~4 s), fenêtre pendant laquelle le
-        // bouton redevient actif — sans cela, un second tap crée un doublon
-        // de ticket support.
+        // `isSent` reste dans le garde même si l'écran de confirmation remplace
+        // le formulaire après succès : sans lui, tout chemin résiduel vers
+        // submit() créerait un doublon de ticket support.
         if (!state.canSubmit || state.isSending || state.isSent) return
         _uiState.value = state.copy(isSending = true)
         viewModelScope.launch {

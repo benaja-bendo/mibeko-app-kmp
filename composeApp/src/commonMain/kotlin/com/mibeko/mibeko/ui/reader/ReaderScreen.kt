@@ -488,24 +488,24 @@ fun ReaderScreen(articleId: String) {
                 ShareOptionsSheet(
                     title = "Partager l'article",
                     subtitle = "Article ${currentArticle.number} - ${uiState.documentTitle}",
-                    onSharePdf = { 
+                    onSharePdf = {
                         viewModel.shareAsPdf()
                         showShareSheet = false
                     },
-                    onShareText = { 
+                    onShareText = {
                         viewModel.shareAsText()
                         showShareSheet = false
                     },
-                    onShareLink = { 
-                        viewModel.shareAsLink()
-                        showShareSheet = false
-                    },
-                    onCopy = { 
+                    // Sans slug public, le lien retomberait sur l'accueil
+                    // mibeko.fr : on masque l'option plutôt que de mentir.
+                    onShareLink = if (uiState.documentSlug != null) {
+                        {
+                            viewModel.shareAsLink()
+                            showShareSheet = false
+                        }
+                    } else null,
+                    onCopy = {
                         viewModel.copyArticleText()
-                        showShareSheet = false
-                    },
-                    onCopyLink = {
-                        viewModel.copyArticleLink()
                         showShareSheet = false
                     },
                     isLoading = isSharing

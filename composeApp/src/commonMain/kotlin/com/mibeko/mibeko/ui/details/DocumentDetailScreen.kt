@@ -72,6 +72,13 @@ fun DocumentDetailScreen(documentId: String) {
             }
         }
 
+        LaunchedEffect(uiState.message) {
+            uiState.message?.let {
+                snackbarHostState.showSnackbar(it)
+                viewModel.clearMessage()
+            }
+        }
+
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
@@ -193,15 +200,15 @@ fun DocumentDetailScreen(documentId: String) {
                         }
                         
                         OutlinedButton(
-                            onClick = { 
+                            onClick = {
                                 showShareSheet = true
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            enabled = !uiState.isDownloading
+                            enabled = !uiState.isSharingPdf
                         ) {
-                            if (uiState.isDownloading) {
+                            if (uiState.isSharingPdf) {
                                 CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
                             } else {
                                 Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -413,30 +420,29 @@ fun DocumentDetailScreen(documentId: String) {
                 onDismissRequest = { showShareSheet = false },
                 containerColor = MaterialTheme.colorScheme.surface
             ) {
+                // Pas de « Partager le texte » pour un document entier (le
+                // message n'aurait ni contenu ni lien), et pas d'options lien
+                // quand le slug public est inconnu.
                 ShareOptionsSheet(
                     title = "Partager le document",
                     subtitle = uiState.document?.title ?: "Document juridique",
-                    onSharePdf = { 
+                    onSharePdf = {
                         viewModel.shareDocumentAsPdf()
                         showShareSheet = false
                     },
-                    onShareText = { 
-                        viewModel.shareDocumentAsText()
-                        showShareSheet = false
-                    },
-                    onShareLink = { 
-                        viewModel.shareDocumentAsLink()
-                        showShareSheet = false
-                    },
-                    onCopy = { 
-                        viewModel.shareDocumentAsText() // For documents, copying text might be too much, but sharing as text is better
-                        showShareSheet = false
-                    },
-                    onCopyLink = {
-                        viewModel.copyDocumentLink()
-                        showShareSheet = false
-                    },
-                    isLoading = uiState.isDownloading
+                    onShareLink = if (uiState.document?.slug != null) {
+                        {
+                            viewModel.shareDocumentAsLink()
+                            showShareSheet = false
+                        }
+                    } else null,
+                    onCopyLink = if (uiState.document?.slug != null) {
+                        {
+                            viewModel.copyDocumentLink()
+                            showShareSheet = false
+                        }
+                    } else null,
+                    isLoading = uiState.isSharingPdf
                 )
             }
         }

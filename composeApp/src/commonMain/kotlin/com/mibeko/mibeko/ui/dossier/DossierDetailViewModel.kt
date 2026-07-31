@@ -115,7 +115,9 @@ class DossierDetailViewModel(
 
     fun shareDossier() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            // État dédié : passer isLoading à true remplacerait toute la liste
+            // des articles par un spinner plein écran pendant l'export.
+            _uiState.update { it.copy(isExporting = true) }
             try {
                 val bytes = repository.exportDossierPdf(dossierId)
                 
@@ -130,7 +132,7 @@ class DossierDetailViewModel(
                 e.printStackTrace()
                 _uiState.update { it.copy(error = "Erreur lors de l'export: ${e.message}") }
             } finally {
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update { it.copy(isExporting = false) }
             }
         }
     }
@@ -138,6 +140,7 @@ class DossierDetailViewModel(
 
 data class DossierDetailUiState(
     val isLoading: Boolean = false,
+    val isExporting: Boolean = false,
     val dossier: DossierEntity? = null,
     val articles: List<DossierArticleWithDetails> = emptyList(),
     val articleCount: Int = 0,

@@ -60,26 +60,8 @@ class IosContentSharer : ContentSharer {
         }
     }
 
-    override fun viewFile(bytes: ByteArray, fileName: String, mimeType: String) {
-        // On iOS, UIActivityViewController is the standard way to provide viewing/saving options
-        shareFile(bytes, fileName, mimeType)
-    }
-
     override fun copyToClipboard(text: String) {
         UIPasteboard.generalPasteboard.string = text
-    }
-
-    override fun shareUrl(url: String, title: String?) {
-        val nsUrl = NSURL.URLWithString(url)
-        val viewController = getTopMostViewController() ?: return
-        
-        val items = if (nsUrl != null) listOf(nsUrl) else listOf(url)
-        val activityViewController = UIActivityViewController(items, null)
-        configurePopover(activityViewController, viewController)
-        
-        dispatch_async(dispatch_get_main_queue()) {
-            viewController.presentViewController(activityViewController, true, null)
-        }
     }
 
     /**

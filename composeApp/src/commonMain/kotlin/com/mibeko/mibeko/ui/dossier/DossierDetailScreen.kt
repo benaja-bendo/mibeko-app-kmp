@@ -78,14 +78,15 @@ fun DossierDetailScreen(dossierId: String) {
                 val canEdit = dossier?.tag != DossierTag.FAVORIS
 
                 DossierActionBar(
-                    onAddArticle = { 
+                    onAddArticle = {
                         scope.launch {
                              snackbarHostState.showSnackbar("Pour ajouter un article, utilisez le bouton 'Ajouter au dossier' lors de la lecture d'un article.")
                         }
                     },
                     onShare = { viewModel.shareDossier() },
                     onEdit = { viewModel.showEditDialog() },
-                    canEdit = canEdit
+                    canEdit = canEdit,
+                    isExporting = uiState.isExporting
                 )
             },
             containerColor = MaterialTheme.colorScheme.background
@@ -378,7 +379,8 @@ fun DossierActionBar(
     onAddArticle: () -> Unit,
     onShare: () -> Unit,
     onEdit: () -> Unit,
-    canEdit: Boolean
+    canEdit: Boolean,
+    isExporting: Boolean = false
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -390,10 +392,13 @@ fun DossierActionBar(
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
+            // « Exporter en PDF » : « Partager » laissait croire à un partage
+            // collaboratif du dossier alors que l'action envoie un PDF.
             ActionButton(
                 icon = Icons.Filled.Share,
-                label = "Partager",
-                onClick = onShare
+                label = "Exporter en PDF",
+                onClick = onShare,
+                isLoading = isExporting
             )
 
             if (canEdit) {
@@ -411,11 +416,12 @@ fun DossierActionBar(
 fun ActionButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isLoading: Boolean = false
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier.clickable(enabled = !isLoading, onClick = onClick)
     ) {
         Box(
             modifier = Modifier
@@ -424,11 +430,19 @@ fun ActionButton(
                 .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
         ) {
-            Icon(
-                icon,
-                contentDescription = label,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            } else {
+                Icon(
+                    icon,
+                    contentDescription = label,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(

@@ -50,12 +50,25 @@ juridique.
 
 ---
 
-## Nouveautés de version (1.0)
+## Nouveautés de version (1.1.1)
+
+```
+Recherche hors-ligne fiabilisée, veille légale pour être alerté des mises à
+jour de vos textes, fraîcheur automatique du corpus téléchargé, et
+traçabilité de la date des textes consultés.
+```
+
+Historique complet : voir `CHANGELOG.md` à la racine du dépôt.
+
+<details>
+<summary>Nouveautés de version (1.0, archivé)</summary>
 
 ```
 Première version de Mibeko sur iPhone : recherche, lecture et organisation
 des textes de loi congolais et OHADA.
 ```
+
+</details>
 
 ---
 

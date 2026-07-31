@@ -44,24 +44,6 @@ class AndroidContentSharer(private val context: Context) : ContentSharer {
         }
     }
 
-    override fun viewFile(bytes: ByteArray, fileName: String, mimeType: String) {
-        val uri = saveFileAndGetUri(bytes, fileName) ?: return
-        
-        try {
-            val viewIntent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, mimeType)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            
-            context.startActivity(viewIntent)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // Fallback if no PDF viewer is installed
-            Toast.makeText(context, "Aucune application trouvée pour ouvrir ce fichier", Toast.LENGTH_LONG).show()
-        }
-    }
-
     private fun saveFileAndGetUri(bytes: ByteArray, fileName: String): android.net.Uri? {
         val cachePath = java.io.File(context.cacheDir, "shares")
         cachePath.mkdirs()
@@ -102,22 +84,6 @@ class AndroidContentSharer(private val context: Context) : ContentSharer {
             e.printStackTrace()
             Toast.makeText(context, "Erreur: ${e.message}", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    override fun shareUrl(url: String, title: String?) {
-        val sendIntent = Intent().apply {
-            action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_TEXT, url)
-            title?.let { 
-                putExtra(Intent.EXTRA_SUBJECT, it) 
-                putExtra(Intent.EXTRA_TITLE, it)
-            }
-            type = "text/plain"
-        }
-        val shareIntent = Intent.createChooser(sendIntent, title ?: "Partager le lien").apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(shareIntent)
     }
 }
 

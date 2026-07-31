@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -150,6 +151,7 @@ fun SettingsScreen() {
                         onValueChange = { viewModel.updatePasswordField("currentPassword", it) },
                         label = { Text("Mot de passe actuel") },
                         modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -158,6 +160,7 @@ fun SettingsScreen() {
                         onValueChange = { viewModel.updatePasswordField("newPassword", it) },
                         label = { Text("Nouveau mot de passe") },
                         modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -166,6 +169,7 @@ fun SettingsScreen() {
                         onValueChange = { viewModel.updatePasswordField("confirmPassword", it) },
                         label = { Text("Confirmer le mot de passe") },
                         modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                     )
                 }
@@ -844,15 +848,18 @@ fun SettingsItem(
             Spacer(modifier = Modifier.width(16.dp))
         }
         
+        // Le sous-titre vit SOUS le titre, dans la colonne pondérée : posé en
+        // frère non pondéré dans la Row, un sous-titre long consommait toute la
+        // largeur et écrasait le titre à ~0 (rendu vertical, une lettre par ligne).
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            if (subtitle.isNotEmpty()) {
+                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+            }
         }
-        
-        if (subtitle.isNotEmpty()) {
-            Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        
+
+        Spacer(modifier = Modifier.width(8.dp))
+
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,

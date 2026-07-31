@@ -22,11 +22,17 @@ import kotlinx.coroutines.flow.first
 data class DocumentDetailUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
+    // Confirmations et infos (snackbar) : séparées de `error`, qui déclenche
+    // l'écran d'échec quand la structure est vide.
+    val message: String? = null,
     val document: LawCodeSpec? = null,
     val structure: Map<NodeEntity, List<ArticleEntity>> = emptyMap(),
     val filteredStructure: Map<NodeEntity, List<ArticleEntity>> = emptyMap(),
     val searchQuery: String = "",
-    val isDownloading: Boolean = false
+    val isDownloading: Boolean = false,
+    // Partage PDF distinct du téléchargement hors-ligne : chaque bouton de la
+    // bottom bar n'affiche que son propre état.
+    val isSharingPdf: Boolean = false
 )
 
 class DocumentDetailViewModel(
@@ -143,21 +149,6 @@ class DocumentDetailViewModel(
         return result
     }
 
-    fun shareDocumentAsText() {
-        val doc = _uiState.value.document ?: return
-        val text = buildString {
-            appendLine(doc.title)
-            appendLine(doc.type)
-            appendLine()
-            appendLine("Retrouvez ce document complet sur Mibeko.")
-            appendLine()
-            appendLine("---")
-            appendLine("Partagé via Mibeko - Le Droit numérique")
-        }
-        contentSharer.shareText(text, doc.title)
-        _uiState.value = _uiState.value.copy(error = "Préparation du partage...")
-    }
-
     fun shareDocumentAsLink() {
         val doc = _uiState.value.document ?: return
 
@@ -174,22 +165,21 @@ class DocumentDetailViewModel(
         }
 
         contentSharer.shareText(message, "${doc.title} - Mibeko")
-        _uiState.value = _uiState.value.copy(error = "Ouverture du lien de partage...")
     }
 
     fun copyDocumentLink() {
         val doc = _uiState.value.document ?: return
         val url = com.mibeko.mibeko.util.PublicLinks.document(doc.slug)
         contentSharer.copyToClipboard(url)
-        _uiState.value = _uiState.value.copy(error = "✓ Lien copié dans le presse-papiers")
+        _uiState.value = _uiState.value.copy(message = "✓ Lien copié dans le presse-papiers")
     }
 
     fun shareDocumentAsPdf() {
         val doc = _uiState.value.document ?: return
         val url = repository.getDocumentExportUrl(doc.id)
-        
+
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isDownloading = true)
+            _uiState.value = _uiState.value.copy(isSharingPdf = true)
             try {
                 val bytes = repository.downloadFile(url)
                 val fileName = "${doc.title.replace(" ", "_")}.pdf"
@@ -197,22 +187,9 @@ class DocumentDetailViewModel(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = "Erreur lors du partage PDF: ${e.message}")
             } finally {
-                _uiState.value = _uiState.value.copy(isDownloading = false)
+                _uiState.value = _uiState.value.copy(isSharingPdf = false)
             }
         }
-    }
-
-    // Keep legacy method for compatibility
-    fun shareDocument() {
-        shareDocumentAsPdf()
-    }
-
-    /**
-     * Retourne l'URL d'export PDF.
-     */
-    fun exportPdf(): String {
-        val docId = _uiState.value.document?.id ?: return ""
-        return repository.getDocumentExportUrl(docId)
     }
 
     /**
@@ -251,7 +228,7 @@ class DocumentDetailViewModel(
                     type = type,
                     description = description
                 )
-                _uiState.value = _uiState.value.copy(error = "Signalement envoyé avec succès. Merci pour votre contribution.")
+                _uiState.value = _uiState.value.copy(message = "Signalement envoyé avec succès. Merci pour votre contribution.")
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = "Erreur lors de l'envoi du signalement : ${e.message}")
             }
@@ -263,5 +240,12 @@ class DocumentDetailViewModel(
      */
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    /**
+     * Efface le message d'information actuel.
+     */
+    fun clearMessage() {
+        _uiState.value = _uiState.value.copy(message = null)
     }
 }

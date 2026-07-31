@@ -415,17 +415,16 @@ private fun AiAnswerCard(answer: String, viewModel: SearchViewModel) {
                     }
                     
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { 
+                        IconButton(onClick = {
                             copyToClipboard(answer)
-                            // We can't easily show snackbar here without access to scaffold state
-                            // but we can try to find it or just perform the action
+                            scope.launch { snackbarHostState.showSnackbar("✓ Analyse copiée") }
                         }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.ContentCopy, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copier l'analyse", tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                         }
-                        IconButton(onClick = { 
+                        IconButton(onClick = {
                             viewModel.shareAiAnswer(answer)
                         }, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Share, contentDescription = "Partager l'analyse", tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
                         }
                         IconButton(onClick = { isExpanded = !isExpanded }, modifier = Modifier.size(32.dp)) {
                             Icon(

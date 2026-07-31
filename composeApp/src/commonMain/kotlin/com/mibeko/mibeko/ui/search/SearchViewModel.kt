@@ -294,9 +294,11 @@ class SearchViewModel(
         }
     }
 
+    // Pas de message d'état : la feuille de partage système est le feedback.
+    // (Écrire dans errorMessage allumait l'indicateur « Hors-ligne » de la barre
+    // de recherche jusqu'à la recherche suivante.)
     fun shareAiAnswer(answer: String) {
         val title = "Analyse AI Mibeko"
         contentSharer.shareText(answer, title)
-        _uiState.value = _uiState.value.copy(errorMessage = "Partage de l'analyse AI...")
     }
 }

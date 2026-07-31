@@ -303,7 +303,9 @@ private fun JournalHeroHeader(
                             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                         }
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Partager")
+                        // Le PDF intégral est téléchargé avant l'envoi : le
+                        // libellé doit annoncer que c'est le fichier qui part.
+                        Text("Partager le PDF")
                     }
                 }
             }

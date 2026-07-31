@@ -20,16 +20,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Professional share options bottom sheet with multiple sharing methods.
+ * Feuille de partage commune. Chaque option est optionnelle : un écran ne
+ * propose que ce qui a du sens pour son contenu (ex : pas de « Partager le
+ * lien » quand le slug public est inconnu — le lien retomberait sur l'accueil).
+ * Le lien est volontairement la première option : c'est le format le plus
+ * léger en data et celui qui ramène le destinataire vers Mibeko.
  */
 @Composable
 fun ShareOptionsSheet(
     title: String = "Partager",
     subtitle: String = "Choisissez comment partager cet élément",
     onSharePdf: () -> Unit,
-    onShareText: () -> Unit,
-    onShareLink: () -> Unit,
-    onCopy: () -> Unit,
+    onShareText: (() -> Unit)? = null,
+    onShareLink: (() -> Unit)? = null,
+    onCopy: (() -> Unit)? = null,
     onCopyLink: (() -> Unit)? = null,
     isLoading: Boolean = false
 ) {
@@ -45,62 +49,68 @@ fun ShareOptionsSheet(
             fontSize = 20.sp,
             color = MaterialTheme.colorScheme.onSurface
         )
-        
+
         Text(
             subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
-        // Option: Export PDF
+
+        if (onShareLink != null) {
+            ShareOption(
+                icon = Icons.Default.Link,
+                title = "Partager le lien",
+                subtitle = "Lien vers l'élément sur mibeko.fr",
+                onClick = onShareLink
+            )
+        }
+
+        if (onShareText != null) {
+            ShareOption(
+                icon = Icons.AutoMirrored.Filled.Notes,
+                title = "Partager le texte",
+                subtitle = "Texte brut de l'élément",
+                onClick = onShareText
+            )
+        }
+
+        // « Partager », pas « Exporter » : l'action ouvre la feuille de partage
+        // système avec le fichier PDF, rien n'est enregistré localement.
         ShareOption(
             icon = Icons.Default.PictureAsPdf,
-            title = "Exporter en PDF",
-            subtitle = "Document formaté professionnel",
+            title = "Partager en PDF",
+            subtitle = "Envoyer le document en fichier PDF",
             isLoading = isLoading,
             onClick = onSharePdf
         )
-        
-        // Option: Share Text
-        ShareOption(
-            icon = Icons.AutoMirrored.Filled.Notes,
-            title = "Partager le texte",
-            subtitle = "Texte brut de l'élément",
-            onClick = onShareText
-        )
-        
-        // Option: Share Link
-        ShareOption(
-            icon = Icons.Default.Link,
-            title = "Partager le lien",
-            subtitle = "Lien vers l'élément en ligne",
-            onClick = onShareLink
-        )
-        
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = 8.dp),
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
-        
-        // Option: Copy
-        ShareOption(
-            icon = Icons.Default.ContentCopy,
-            title = "Copier le texte",
-            subtitle = "Dans le presse-papiers",
-            onClick = onCopy
-        )
+
+        if (onCopy != null || onCopyLink != null) {
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+        }
+
+        if (onCopy != null) {
+            ShareOption(
+                icon = Icons.Default.ContentCopy,
+                title = "Copier le texte",
+                subtitle = "Dans le presse-papiers",
+                onClick = onCopy
+            )
+        }
 
         if (onCopyLink != null) {
             ShareOption(
-                icon = Icons.Default.Link,
+                icon = Icons.Default.ContentCopy,
                 title = "Copier le lien",
-                subtitle = "Copier l'URL de partage",
+                subtitle = "Dans le presse-papiers",
                 onClick = onCopyLink
             )
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
