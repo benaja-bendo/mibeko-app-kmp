@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,7 +35,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import com.mibeko.mibeko.data.remote.RemoteDocument
 import com.mibeko.mibeko.ui.components.EmailVerificationBanner
+import com.mibeko.mibeko.ui.components.MibekoErrorBanner
 import com.mibeko.mibeko.ui.components.NetworkStatusBanner
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
@@ -102,6 +106,12 @@ fun HomeScreen() {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = { viewModel.refresh() },
+            state = rememberPullToRefreshState(),
+            modifier = Modifier.fillMaxSize()
+        ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 80.dp)
@@ -145,6 +155,18 @@ fun HomeScreen() {
                 )
             }
 
+            // Échec du chargement de l'accueil alors que le réseau était là (le cas
+            // pur hors-ligne est déjà couvert par NetworkStatusBanner ci-dessus).
+            uiState.homeDataError?.let { error ->
+                item {
+                    MibekoErrorBanner(
+                        offline = error.offline,
+                        onRetry = error.retry,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+            }
+
             // Accès secondaire : la recherche documentaire (sans IA) vit dans la Bibliothèque.
             item {
                 BrowseLibraryCard(onClick = {
@@ -153,6 +175,29 @@ fun HomeScreen() {
                         launchSingleTop = true
                     }
                 })
+            }
+
+            // Accueil documentaire : les données sont chargées depuis longtemps mais
+            // n'étaient jamais rendues — le corpus (différenciateur réel de l'app)
+            // restait invisible derrière le hero IA.
+            if (uiState.popularCodes.isNotEmpty()) {
+                item {
+                    HomeDocumentSection(
+                        title = "Codes populaires",
+                        documents = uiState.popularCodes,
+                        onOpenDocument = { navController.navigate(Screen.DocumentDetail(it)) }
+                    )
+                }
+            }
+
+            if (uiState.recentlyAdded.isNotEmpty()) {
+                item {
+                    HomeDocumentSection(
+                        title = "Récemment ajoutés",
+                        documents = uiState.recentlyAdded,
+                        onOpenDocument = { navController.navigate(Screen.DocumentDetail(it)) }
+                    )
+                }
             }
 
             // Journal Officiel — le flux d'actualité légale.
@@ -192,17 +237,7 @@ fun HomeScreen() {
                     }
                 }
             }
-
-            if (uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-            }
+        }
         }
     }
 }
@@ -439,6 +474,79 @@ private fun BrowseLibraryCard(onClick: () -> Unit) {
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+/** Section documentaire horizontale : « Codes populaires » / « Récemment ajoutés ». */
+@Composable
+private fun HomeDocumentSection(
+    title: String,
+    documents: List<RemoteDocument>,
+    onOpenDocument: (String) -> Unit
+) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp)
+        ) {
+            items(documents, key = { it.id }) { document ->
+                HomeDocumentCard(
+                    document = document,
+                    onClick = { onOpenDocument(document.id) }
+                )
+            }
+        }
+    }
+}
+
+/** Carte compacte d'un texte, pour les rangées horizontales de l'accueil. */
+@Composable
+private fun HomeDocumentCard(document: RemoteDocument, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.width(160.dp).heightIn(min = 108.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp).fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.MenuBook,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Column {
+                Text(
+                    text = document.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                document.type?.name?.let { typeName ->
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = typeName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }

@@ -11,6 +11,8 @@ import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.getCurrentTimeMillis
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
+import com.mibeko.mibeko.util.UiResult
+import com.mibeko.mibeko.util.recordException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +40,12 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     val isNetworkAvailable: Boolean = true,
     val isOfflineMode: Boolean = false,
+    /**
+     * Non-null quand le chargement de l'accueil (codes populaires, récemment
+     * ajoutés, suggestions) a échoué alors que le réseau était disponible —
+     * jamais posé en pur hors-ligne, déjà signalé par [NetworkStatusBanner].
+     */
+    val homeDataError: UiResult.Error? = null,
     val isLoggedIn: Boolean = false,
     val recentItems: List<RecentItem> = emptyList(),
     val popularCodes: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList(),
@@ -149,29 +157,31 @@ class HomeViewModel(
     
     private fun loadHomeData() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            
+            _uiState.value = _uiState.value.copy(isLoading = true, homeDataError = null)
+
             var validPopular: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList()
             var validRecentlyAdded: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList()
             var suggestions: List<String> = emptyList()
             var journals: List<com.mibeko.mibeko.data.remote.RemoteOfficialJournal> = emptyList()
             var isOffline = false
+            var homeDataFailed = false
 
             if (networkChecker.isNetworkAvailable()) {
                 // Fetch Home Data
                 try {
                     val homeResponse = repository.getHomeData()
                     if (homeResponse.success && homeResponse.data != null) {
-                        validPopular = homeResponse.data.popular_codes.filter { 
-                            it.id.isNotBlank() && it.title.isNotBlank() 
+                        validPopular = homeResponse.data.popular_codes.filter {
+                            it.id.isNotBlank() && it.title.isNotBlank()
                         }
-                        validRecentlyAdded = homeResponse.data.recently_added.filter { 
-                            it.id.isNotBlank() && it.title.isNotBlank() 
+                        validRecentlyAdded = homeResponse.data.recently_added.filter {
+                            it.id.isNotBlank() && it.title.isNotBlank()
                         }
                         suggestions = homeResponse.data.ai_suggestions
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    recordException(e, context = "HomeViewModel.loadHomeData")
+                    homeDataFailed = true
                 }
 
                 // Fetch Official Journals
@@ -181,7 +191,9 @@ class HomeViewModel(
                         journals = journalsResponse.data
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    recordException(e, context = "HomeViewModel.loadOfficialJournals")
+                    // Panne isolée : la section Journal Officiel reste simplement absente,
+                    // pas de bannière dédiée (aucune affirmation « aucune actualité » n'est faite).
                 }
             } else {
                 isOffline = true
@@ -202,7 +214,7 @@ class HomeViewModel(
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    recordException(e, context = "HomeViewModel.loadHomeData.fallback")
                 }
             }
 
@@ -212,9 +224,20 @@ class HomeViewModel(
                 officialJournals = journals,
                 aiSuggestions = suggestions,
                 isOfflineMode = isOffline,
-                isLoading = false
+                isLoading = false,
+                // Jamais posé en pur hors-ligne : NetworkStatusBanner le signale déjà.
+                homeDataError = if (homeDataFailed && !isOffline) {
+                    UiResult.Error(offline = !networkChecker.isNetworkAvailable(), retry = ::loadHomeData)
+                } else {
+                    null
+                }
             )
         }
+    }
+
+    /** Recharge l'accueil (tiré vers le bas). */
+    fun refresh() {
+        loadHomeData()
     }
 
 
@@ -300,9 +323,8 @@ class HomeViewModel(
             try {
                 repository.sync()
             } catch (e: Exception) {
-                e.printStackTrace()
-                val errorMsg = "Erreur de synchronisation: ${e.message ?: "Inconnue"}"
-                _uiEvent.emit(errorMsg)
+                recordException(e, context = "HomeViewModel.syncData")
+                _uiEvent.emit("La synchronisation a échoué. Réessayez plus tard.")
             } finally {
                 _uiState.value = _uiState.value.copy(isSyncing = false, isLoading = false)
             }
