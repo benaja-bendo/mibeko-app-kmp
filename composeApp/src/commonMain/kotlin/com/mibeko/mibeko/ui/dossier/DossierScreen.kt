@@ -44,6 +44,8 @@ fun DossierScreen() {
     val showCreateDialog by viewModel.showCreateDialog.collectAsState()
     val editingDossier by viewModel.editingDossier.collectAsState()
     var showSearch by remember { mutableStateOf(false) }
+    // Suppression irrécupérable (propagée au serveur à la sync) : jamais en un tap.
+    var pendingDelete by remember { mutableStateOf<DossierWithCount?>(null) }
 
     Scaffold(
         topBar = {
@@ -184,7 +186,7 @@ fun DossierScreen() {
                                             navController.navigate(NavScreen.DossierDetail(item.dossier.id))
                                         },
                                         onEdit = { viewModel.showEditDialog(item.dossier) },
-                                        onDelete = { viewModel.deleteDossier(item.dossier.id) }
+                                        onDelete = { pendingDelete = item }
                                     )
                                 }
                             }
@@ -201,7 +203,7 @@ fun DossierScreen() {
                                             navController.navigate(NavScreen.DossierDetail(item.dossier.id))
                                         },
                                         onEdit = { viewModel.showEditDialog(item.dossier) },
-                                        onDelete = { viewModel.deleteDossier(item.dossier.id) }
+                                        onDelete = { pendingDelete = item }
                                     )
                                 }
                             }
@@ -222,6 +224,34 @@ fun DossierScreen() {
                     viewModel.updateDossier(editing.id, name, domain, tag, desc, color)
                 } else {
                     viewModel.createDossier(name, domain, tag, desc, color)
+                }
+            }
+        )
+    }
+
+    pendingDelete?.let { toDelete ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Supprimer « ${toDelete.dossier.name} » ?") },
+            text = {
+                Text(
+                    "Les ${toDelete.articleCount} article${if (toDelete.articleCount > 1) "s" else ""} de ce " +
+                        "dossier seront retirés, y compris sur vos autres appareils. Cette action est irréversible."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteDossier(toDelete.dossier.id)
+                        pendingDelete = null
+                    }
+                ) {
+                    Text("Supprimer", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) {
+                    Text("Annuler")
                 }
             }
         )

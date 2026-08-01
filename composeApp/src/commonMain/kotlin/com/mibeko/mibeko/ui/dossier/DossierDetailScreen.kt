@@ -44,11 +44,20 @@ fun DossierDetailScreen(dossierId: String) {
         val uiState by viewModel.uiState.collectAsState()
         val showNoteDialog by viewModel.showNoteDialog.collectAsState()
         val showEditDialog by viewModel.showEditDialog.collectAsState()
-        val scope = rememberCoroutineScope()
+        var showArticleSelection by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
 
         val dossier = uiState.dossier
         val dossierColor = if (dossier != null) parseColor(dossier.color) else MaterialTheme.colorScheme.primary
+
+        // Erreurs de chargement ET d'export : le champ error du ViewModel n'était
+        // jusqu'ici jamais rendu (un SnackbarHost existait déjà, inutilisé).
+        LaunchedEffect(uiState.error) {
+            uiState.error?.let { message ->
+                snackbarHostState.showSnackbar(message)
+                viewModel.clearError()
+            }
+        }
 
 
 
@@ -78,11 +87,7 @@ fun DossierDetailScreen(dossierId: String) {
                 val canEdit = dossier?.tag != DossierTag.FAVORIS
 
                 DossierActionBar(
-                    onAddArticle = {
-                        scope.launch {
-                             snackbarHostState.showSnackbar("Pour ajouter un article, utilisez le bouton 'Ajouter au dossier' lors de la lecture d'un article.")
-                        }
-                    },
+                    onAddArticle = { showArticleSelection = true },
                     onShare = { viewModel.shareDossier() },
                     onEdit = { viewModel.showEditDialog() },
                     canEdit = canEdit,
@@ -109,7 +114,7 @@ fun DossierDetailScreen(dossierId: String) {
                             CircularProgressIndicator()
                         }
                     } else if (uiState.articles.isEmpty()) {
-                        EmptyDossierState()
+                        EmptyDossierState(onAddArticle = { showArticleSelection = true })
                     } else {
                         ArticlesList(
                             articles = uiState.articles,
@@ -139,6 +144,14 @@ fun DossierDetailScreen(dossierId: String) {
                 onConfirm = { name, domain, tag, desc, color ->
                     viewModel.updateDossier(name, domain, tag, desc, color)
                 }
+            )
+        }
+
+        // Ajout d'un article : recherche + ajout sans quitter le dossier.
+        if (showArticleSelection) {
+            ArticleSelectionSheet(
+                dossierId = dossierId,
+                onDismiss = { showArticleSelection = false }
             )
         }
     }
@@ -392,6 +405,14 @@ fun DossierActionBar(
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
+            // Seul moyen d'ajouter un article existant : le bookmark du lecteur.
+            // Un dossier vide était une impasse totale (aucune action possible).
+            ActionButton(
+                icon = Icons.Filled.Add,
+                label = "Ajouter un article",
+                onClick = onAddArticle
+            )
+
             // « Exporter en PDF » : « Partager » laissait croire à un partage
             // collaboratif du dossier alors que l'action envoie un PDF.
             ActionButton(
@@ -489,7 +510,7 @@ fun NoteDialog(
 }
 
 @Composable
-fun EmptyDossierState() {
+fun EmptyDossierState(onAddArticle: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -515,6 +536,12 @@ fun EmptyDossierState() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 fontSize = 12.sp
             )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onAddArticle) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ajouter un article")
+            }
         }
     }
 }

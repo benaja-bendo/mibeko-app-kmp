@@ -52,8 +52,9 @@ class DossierDetailViewModel(
             _uiState.update { it.copy(isLoading = true) }
             repository.getDossierArticles(dossierId)
                 .catch { e ->
-                    _uiState.update { 
-                        it.copy(isLoading = false, error = e.message) 
+                    com.mibeko.mibeko.util.recordException(e, context = "DossierDetailViewModel.loadArticles")
+                    _uiState.update {
+                        it.copy(isLoading = false, error = "Impossible de charger les articles de ce dossier.")
                     }
                 }
                 .collect { allArticles ->
@@ -89,6 +90,10 @@ class DossierDetailViewModel(
             repository.removeArticleFromDossier(dossierId, articleId)
             repository.syncNow()
         }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 
     fun showEditDialog() {
@@ -129,8 +134,8 @@ class DossierDetailViewModel(
                 
                 contentSharer.shareFile(bytes, fileName, "application/pdf")
             } catch (e: Exception) {
-                e.printStackTrace()
-                _uiState.update { it.copy(error = "Erreur lors de l'export: ${e.message}") }
+                com.mibeko.mibeko.util.recordException(e, context = "DossierDetailViewModel.shareDossier")
+                _uiState.update { it.copy(error = "L'export du PDF a échoué. Réessayez.") }
             } finally {
                 _uiState.update { it.copy(isExporting = false) }
             }
