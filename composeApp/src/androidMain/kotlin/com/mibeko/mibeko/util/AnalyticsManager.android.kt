@@ -1,15 +1,22 @@
 package com.mibeko.mibeko.util
 
+import android.content.Context
 import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
-import com.mibeko.mibeko.MibekoApp
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+
+/** Contexte applicatif injecté par Koin (cf. `Platform.android.kt`). */
+private object AnalyticsContextProvider : KoinComponent {
+    val context: Context by inject()
+}
 
 class AndroidAnalyticsManager : AnalyticsManager {
     // Contexte applicatif : l'ancienne résolution via ActivityProvider rendait
     // le SDK nul dès qu'aucune Activity n'était au premier plan (service FCM,
     // démarrage) et perdait silencieusement les événements.
     private val analytics: FirebaseAnalytics
-        get() = FirebaseAnalytics.getInstance(MibekoApp.INSTANCE)
+        get() = FirebaseAnalytics.getInstance(AnalyticsContextProvider.context)
 
     override fun logEvent(name: String, params: Map<String, Any>?) {
         val bundle = params?.let {

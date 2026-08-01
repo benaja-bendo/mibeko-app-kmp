@@ -4,10 +4,16 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.mibeko.mibeko.MibekoApp
 import com.mibeko.mibeko.util.recordException
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+
+/** Contexte applicatif injecté par Koin (cf. `Platform.android.kt`). */
+private object SecureSettingsContextProvider : KoinComponent {
+    val context: Context by inject()
+}
 
 /** Fichier de préférences chiffré dédié aux données sensibles (jeton Sanctum…). */
 private const val SECURE_PREFS_FILE = "mibeko_secure_prefs"
@@ -19,7 +25,7 @@ private const val SECURE_PREFS_FILE = "mibeko_secure_prefs"
  * no-arg), qui stockaient le jeton en clair.
  */
 actual fun createSecureSettings(): Settings {
-    val context = MibekoApp.INSTANCE
+    val context = SecureSettingsContextProvider.context
     val secure = SharedPreferencesSettings(createEncryptedPreferences(context))
 
     // Ancien stockage en clair : PreferenceManager.getDefaultSharedPreferences,
