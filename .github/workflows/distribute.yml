@@ -45,7 +45,7 @@ jobs:
         GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
       run: |
         if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-          echo $GOOGLE_SERVICES_JSON | base64 -di > composeApp/google-services.json
+          echo $GOOGLE_SERVICES_JSON | base64 -di > androidApp/google-services.json
         fi
 
     # Même calcul que release-play.yml : le nombre de commits est monotone, donc un
@@ -72,7 +72,7 @@ jobs:
         FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
       run: |
-        ./gradlew :composeApp:assembleRelease appDistributionUploadRelease \
+        ./gradlew :androidApp:assembleRelease :androidApp:appDistributionUploadRelease \
           -PversionName="${{ steps.version.outputs.name }}" \
           -PversionCode="${{ steps.version.outputs.code }}" \
           -PappDistribution-releaseNotes="${{ github.event.inputs.release_notes }}"

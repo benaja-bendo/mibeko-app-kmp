@@ -23,12 +23,12 @@ node_modules/
 keystore.properties
 *.jks
 /composeApp/release/
+/androidApp/release/
 /gradle/gradle-daemon-jvm.properties
 
 # Google Services secrets
 google-services.json
 GoogleService-Info.plist
-./composeApp/google-services.json
 
 .trae 
 AuthKey_*.p8

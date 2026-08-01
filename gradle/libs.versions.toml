@@ -92,6 +92,9 @@ compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.r
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
+# Remplace `com.android.library`/`com.android.application` dans un sous-projet KMP :
+# depuis AGP 9, eux seuls sont incompatibles avec `org.jetbrains.kotlin.multiplatform`.
+androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

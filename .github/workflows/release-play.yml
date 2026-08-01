@@ -51,7 +51,7 @@ jobs:
       - name: Decode google-services.json
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: echo "$GOOGLE_SERVICES_JSON" | base64 -di > composeApp/google-services.json
+        run: echo "$GOOGLE_SERVICES_JSON" | base64 -di > androidApp/google-services.json
 
       # --- Calcul des versions ---
       # versionName : vient du tag (v1.0.1 -> 1.0.1) ou de l'entrée manuelle.
@@ -76,7 +76,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          ./gradlew :composeApp:bundleRelease \
+          ./gradlew :androidApp:bundleRelease \
             -PversionName="${{ steps.version.outputs.name }}" \
             -PversionCode="${{ steps.version.outputs.code }}" \
             --stacktrace
@@ -90,7 +90,7 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: cg.mibeko.app
-          releaseFiles: composeApp/build/outputs/bundle/release/*.aab
+          releaseFiles: androidApp/build/outputs/bundle/release/*.aab
           track: production
           status: inProgress
           userFraction: 0.2
@@ -101,7 +101,7 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: cg.mibeko.app
-          releaseFiles: composeApp/build/outputs/bundle/release/*.aab
+          releaseFiles: androidApp/build/outputs/bundle/release/*.aab
           track: ${{ github.event.inputs.track || 'internal' }}
           status: completed
 

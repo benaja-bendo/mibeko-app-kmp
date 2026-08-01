@@ -27,16 +27,20 @@ jobs:
         GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
       run: |
         if [ -z "$GOOGLE_SERVICES_JSON" ]; then
-          echo '{"project_info":{"project_number":"123","project_id":"mock"},"client":[{"client_info":{"mobilesdk_app_id":"1:123:android:abc","android_client_info":{"package_name":"cg.mibeko.app"}},"api_key":[{"current_key":"mock"}]}],"configuration_version":"1"}' > composeApp/google-services.json
+          echo '{"project_info":{"project_number":"123","project_id":"mock"},"client":[{"client_info":{"mobilesdk_app_id":"1:123:android:abc","android_client_info":{"package_name":"cg.mibeko.app"}},"api_key":[{"current_key":"mock"}]}],"configuration_version":"1"}' > androidApp/google-services.json
         else
-          echo "$GOOGLE_SERVICES_JSON" | base64 -di > composeApp/google-services.json
+          echo "$GOOGLE_SERVICES_JSON" | base64 -di > androidApp/google-services.json
         fi
 
+    # Compile les deux modules : `:androidApp:compileDebugKotlin` dépend de
+    # `:composeApp:compileAndroidMain`. Le module KMP n'a plus de variantes de
+    # build depuis la séparation AGP 9 — d'où la disparition du « Debug » dans
+    # ses noms de tâches.
     - name: Build Android Debug
-      run: ./gradlew compileDebugKotlinAndroid --stacktrace
+      run: ./gradlew :androidApp:compileDebugKotlin --stacktrace
 
     - name: Run Android Tests
-      run: ./gradlew testDebugUnitTest --stacktrace
+      run: ./gradlew :composeApp:testAndroidHostTest --stacktrace
 
   # Le binaire publié est minifié par R8 : une régression visible uniquement
   # après obfuscation (règles proguard manquantes sur un modèle sérialisé) ne
@@ -62,9 +66,9 @@ jobs:
         GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
       run: |
         if [ -z "$GOOGLE_SERVICES_JSON" ]; then
-          echo '{"project_info":{"project_number":"123","project_id":"mock"},"client":[{"client_info":{"mobilesdk_app_id":"1:123:android:abc","android_client_info":{"package_name":"cg.mibeko.app"}},"api_key":[{"current_key":"mock"}]}],"configuration_version":"1"}' > composeApp/google-services.json
+          echo '{"project_info":{"project_number":"123","project_id":"mock"},"client":[{"client_info":{"mobilesdk_app_id":"1:123:android:abc","android_client_info":{"package_name":"cg.mibeko.app"}},"api_key":[{"current_key":"mock"}]}],"configuration_version":"1"}' > androidApp/google-services.json
         else
-          echo "$GOOGLE_SERVICES_JSON" | base64 -di > composeApp/google-services.json
+          echo "$GOOGLE_SERVICES_JSON" | base64 -di > androidApp/google-services.json
         fi
 
     # versionCode obligatoire depuis le garde-fou anti-rejet Play (build.gradle.kts) :
@@ -73,7 +77,7 @@ jobs:
     # peut pas entrer en collision avec un versionCode de la Play Console.
     - name: Build release AAB (unsigned, R8)
       run: |
-        ./gradlew :composeApp:bundleRelease \
+        ./gradlew :androidApp:bundleRelease \
           -PversionCode=1 \
           -PversionName=0.0.0-ci \
           --stacktrace

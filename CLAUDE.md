@@ -24,9 +24,10 @@ Gratuit (site + mobile + compte gratuit) : corpus, recherche hybride, veille JO,
    Avant de le créer : regarder `SearchViewModel` (mort, à supprimer, mais contient déjà ce pattern — branche `Error` qui affiche le message tout en gardant les résultats locaux de repli) et `LocalLegalRepository.SearchResult` (sealed existant, dans la couche data).
 
 ## Build & tests
+Deux modules Gradle : **`:composeApp`** porte tout le code partagé (KMP, plugin `com.android.kotlin.multiplatform.library`, sans variantes de build) et **`:androidApp`** la seule coquille applicative Android (Activity, Application, service FCM, manifeste, ressources, signature, R8). Séparation imposée par AGP 9 — voir `docs/migration-agp10.md`. Le module iOS ne bouge pas : il consomme toujours `:composeApp`.
 ```bash
-./gradlew :composeApp:assembleDebug              # build Android debug
-./gradlew :composeApp:testDebugUnitTest           # tests commonMain + Android
+./gradlew :androidApp:assembleDebug               # build Android debug
+./gradlew :composeApp:testAndroidHostTest         # tests commonMain + Android
 ./gradlew :composeApp:compileKotlinIosSimulatorArm64  # compile iOS — PAS lancé en CI aujourd'hui (dette connue)
 ```
 Release : voir `.github/workflows/release-play.yml` (déclenché par un tag `v*.*.*`, canal Play `internal` par défaut) et `distribute-ios.yml` (manuel uniquement, `workflow_dispatch` avec `marketing_version` explicite — jamais automatique). Chaque version livrée doit avoir sa section dans `CHANGELOG.md` **avant** le tag.

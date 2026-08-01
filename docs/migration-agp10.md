@@ -1,6 +1,6 @@
 # Migration AGP 10 — séparation KMP / application Android
 
-> Statut : à jour au 1er août 2026 · **Fait autorité sur** : l'état des lieux des dépréciations AGP 9 du dépôt `mibeko-app-kmp` et le plan de migration vers la structure en sous-projets. Plan en cours — ce document meurt une fois la migration exécutée.
+> Statut : à jour au 2 août 2026 · **Fait autorité sur** : l'état des lieux des dépréciations AGP 9 du dépôt `mibeko-app-kmp` et la migration vers la structure en sous-projets, exécutée le 2 août 2026. Reste : vérifier `distribute-ios.yml` en conditions réelles (§6).
 
 ## 1. Ce que dit la CI, et ce qu'elle ne dit pas
 
@@ -89,7 +89,7 @@ Noms de tâches, relevés sur le banc d'essai :
 | --- | --- | --- |
 | `:composeApp:bundleRelease` | `:androidApp:bundleRelease` | `release-play.yml`, `build.yml` |
 | `:composeApp:assembleRelease` | `:androidApp:assembleRelease` | `distribute.yml` |
-| `:composeApp:compileDebugKotlinAndroid` | `:composeApp:compileAndroidMain` | `build.yml` |
+| `:composeApp:compileDebugKotlinAndroid` | `:androidApp:compileDebugKotlin` (dépend de `:composeApp:compileAndroidMain`) | `build.yml` |
 | `:composeApp:testDebugUnitTest` | `:composeApp:testAndroidHostTest` | `build.yml`, `CLAUDE.md` |
 | `:composeApp:assembleDebug` | `:androidApp:assembleDebug` | `CLAUDE.md` |
 | `:composeApp:linkDebugFrameworkIosArm64` | **inchangé** | `build.yml` |
@@ -103,13 +103,33 @@ Deux conséquences :
 
 Le garde-fou `versionCode` (`build.gradle.kts`, rejet Play du 01/08/2026) et les `signingConfigs` déménagent tels quels dans `:androidApp`.
 
-## 6. Ordre d'exécution proposé
+## 6. Exécution — faite le 2 août 2026
 
-1. Créer `:androidApp` (manifeste, `res/`, `MainActivity`, `MibekoApp`, `MyFirebaseMessagingService`, `google-services.json`, `proguard-rules.pro`, signature, `buildTypes`, plugins Firebase) — `composeApp` reste inchangé et cassé à ce stade.
-2. Découpler les 5 points du §4 dans `composeApp/src/androidMain`.
-3. Basculer `composeApp` sur `com.android.kotlin.multiplatform.library` + `kotlin { android { } }`, retirer le bloc `android { }`.
-4. Retirer `android.newDsl=false` et `android.builtInKotlin=false` de `gradle.properties`.
-5. Réécrire les 4 workflows et `CLAUDE.md` (§5).
-6. Vérifier : `:androidApp:bundleRelease`, `:composeApp:testAndroidHostTest`, `:composeApp:linkDebugFrameworkIosArm64`, et une archive Xcode.
+Ordre réellement suivi (le découplage est passé **avant** la création du module : c'est le seul découpage qui garde l'arbre vert à chaque palier) :
 
-Étape 1 et 2 sont indépendantes de la 3 et peuvent être committées séparément.
+1. **Découpler `composeApp/src/androidMain`** des symboles de l'application (§4) — arbre vert, commit atomique possible seul.
+2. **Créer `:androidApp`** et y déplacer manifeste, `res/`, `MainActivity`, `MibekoApp`, `MyFirebaseMessagingService`, `google-services.json`, `proguard-rules.pro`, signature, `buildTypes`, plugins Firebase.
+3. **Basculer `composeApp`** sur `com.android.kotlin.multiplatform.library` + `kotlin { android { } }`, bloc `android { }` supprimé.
+4. **Retirer** `android.newDsl=false` et `android.builtInKotlin=false`.
+5. **Réécrire** les 3 workflows Android et `CLAUDE.md` (§5).
+
+Les étapes 2 à 4 forment un tout indivisible : prises séparément, elles laissent l'arbre rouge.
+
+### Vérifications passées
+
+| Vérification | Résultat |
+| --- | --- |
+| `:androidApp:assembleDebug` | ✅ APK produit |
+| `:androidApp:bundleRelease` (R8, signature, mapping Crashlytics) | ✅ AAB produit |
+| `:composeApp:testAndroidHostTest` | ✅ 68 tests, 0 échec — identique au relevé de référence sous `testDebugUnitTest` |
+| `:composeApp:linkDebugFrameworkIosArm64` | ✅ |
+| `:composeApp:embedAndSignAppleFrameworkForXcode` | ✅ tâche intacte (phase de build Xcode non modifiée) |
+| Avertissements de dépréciation AGP | **0** (`-Pandroid.debug.obsoleteApi=true`) |
+
+Manifeste fusionné du bundle release, contrôlé point par point : `package="cg.mibeko.app"`, les 3 permissions du projet, `MibekoApp` / `MainActivity` / `MyFirebaseMessagingService` résolus, `authorities="cg.mibeko.app.provider"`, App Links `mibeko.fr/textes` avec `autoVerify`, schémas `mibeko://`, `networkSecurityConfig`. Le fournisseur `cg.mibeko.app.resources.AndroidContextProvider` est présent : les ressources Compose Multiplatform restent embarquées.
+
+### Reste à faire
+
+- **Archive Xcode** non rejouée localement (elle demande les certificats de signature, qui vivent dans les secrets CI). Le risque est faible — la phase de build Xcode et le nom de tâche Gradle sont inchangés, et `linkDebugFrameworkIosArm64` passe — mais la première exécution de `distribute-ios.yml` après cette migration reste le vrai contrôle.
+- **Effet de bord constaté** : le `bundleRelease` de vérification a déclenché `uploadCrashlyticsMappingFileRelease`, qui a envoyé un fichier de mapping à Firebase pour la version fictive `0.0.0-verif` (versionCode 1). Sans conséquence, mais pour les vérifications suivantes : `-x uploadCrashlyticsMappingFileRelease`.
+- **Doublon repéré au passage, non traité** (hors périmètre) : le binding Koin `AppConfig` est écrit deux fois à l'identique, dans `MibekoApp` (Android) et `KoinHelper.kt` (iOS). Il gagnerait à descendre dans `commonModule`.

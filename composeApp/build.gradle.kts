@@ -3,18 +3,19 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 import java.io.FileInputStream
 
+// Module KMP partagé (Android + iOS). La coquille applicative Android — Activity,
+// Application, service FCM, manifeste, ressources, signature, R8 — vit dans
+// `:androidApp` : depuis AGP 9, `com.android.application` ne peut plus cohabiter
+// avec `org.jetbrains.kotlin.multiplatform` dans un même sous-projet.
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlinxSerialization)
     alias(libs.plugins.room)
     alias(libs.plugins.buildConfig)
-    alias(libs.plugins.googleServices)
-    alias(libs.plugins.firebaseAppDistribution)
-    alias(libs.plugins.firebaseCrashlytics)
 }
 
 kotlin {
@@ -28,12 +29,23 @@ kotlin {
         }
     }
 
-    androidTarget {
+    // Architecture mono-variante : ce module n'a ni buildTypes, ni signature, ni
+    // BuildConfig généré par AGP (tout cela vit dans `:androidApp`). Les tests
+    // hôte doivent être demandés explicitement — ils sont désactivés par défaut.
+    android {
+        namespace = "com.mibeko.mibeko.shared"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+        minSdk = libs.versions.android.minSdk.get().toInt()
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
         }
+        androidResources {
+            enable = true
+        }
+        withHostTestBuilder {}
     }
-    
+
+
     listOf(
         iosArm64(),
         iosX64(),
@@ -50,8 +62,8 @@ kotlin {
 
     sourceSets {
         androidMain.dependencies {
-            implementation(libs.compose.ui.tooling.preview)
-            implementation(libs.androidx.activity.compose)
+            // `activity-compose` et `ui-tooling-preview` sont partis dans
+            // `:androidApp` avec MainActivity et son @Preview.
             implementation(libs.ktor.client.android)
             implementation(libs.koin.android)
             implementation(project.dependencies.platform(libs.firebase.bom))
@@ -116,121 +128,7 @@ kotlin {
     }
 }
 
-// Les secrets de signature vivent HORS du dépôt (voir audit 2026-07, P0.10).
-// Chemin surchargeable : -PkeystorePropertiesFile=/chemin/keystore.properties
-// ou variable d'environnement MIBEKO_KEYSTORE_PROPERTIES.
-// Défaut : ../../secrets/mibeko-app-kmp/keystore.properties (relatif à la racine
-// du projet). Absent => pas de signature locale (le build debug fonctionne,
-// la CI passe par les variables KEYSTORE_FILE/KEYSTORE_PASSWORD/...).
-val keystorePropertiesFile: File = (
-    (project.findProperty("keystorePropertiesFile") as String?)
-        ?: System.getenv("MIBEKO_KEYSTORE_PROPERTIES")
-    )?.let { rootProject.file(it) }
-    ?: rootProject.file("../../secrets/mibeko-app-kmp/keystore.properties")
-
-android {
-    namespace = "com.mibeko.mibeko"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-
-    defaultConfig {
-        applicationId = "cg.mibeko.app"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-        // Surchargables par la CI : ./gradlew bundleRelease -PversionCode=12 -PversionName=1.2.0
-        // En debug, un -PversionCode manquant retombe sur 2 (jamais publié, sans
-        // conséquence). En assemble/bundle release, il est obligatoire : le repli
-        // silencieux sur 2 a provoqué un rejet Play Console le 01/08/2026 (release
-        // "internal" refusée car versionCode déjà utilisé par un build CI antérieur).
-        val isReleasePackagingTask = project.gradle.startParameter.taskNames.any { taskName ->
-            val name = taskName.substringAfterLast(":")
-            name.contains("Release") && (name.startsWith("assemble") || name.startsWith("bundle") || name.startsWith("package"))
-        }
-        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull()
-            ?: if (isReleasePackagingTask) {
-                throw GradleException(
-                    "versionCode manquant pour un build release. Passe -PversionCode=<n> " +
-                        "(la CI le calcule via `git rev-list --count HEAD`, voir .github/workflows/release-play.yml)."
-                )
-            } else {
-                2
-            }
-        versionName = (project.findProperty("versionName") as String?) ?: "1.0.0"
-    }
-    
-    buildFeatures {
-        buildConfig = true
-        resValues = true
-    }
-
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-
-    signingConfigs {
-        create("release") {
-            if (keystorePropertiesFile.exists()) {
-                val keystoreProperties = Properties()
-                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-                // Chemin du .jks résolu depuis l'emplacement du fichier de
-                // propriétés (le keystore vit à côté, hors du dépôt).
-                storeFile = keystorePropertiesFile.parentFile
-                    .resolve(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
-            } else if (System.getenv("KEYSTORE_FILE") != null) {
-                storeFile = file(System.getenv("KEYSTORE_FILE")!!)
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
-            }
-        }
-    }
-
-    buildTypes {
-        debug {
-            // BASE_URL is now provided by gmazzo buildConfig plugin
-
-            // Crashlytics : en debug on n'upload PAS le fichier de mapping
-            // (obfuscation désactivée de toute façon) → build debug rapide et
-            // sans dépendance à une config release absente. Le report d'exception
-            // à l'exécution (recordException) reste actif.
-            configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
-                mappingFileUploadEnabled = false
-            }
-        }
-        getByName("release") {
-            isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            
-            // On s'assure que la configuration de signature est utilisée si elle a été configurée
-            if (keystorePropertiesFile.exists() || System.getenv("KEYSTORE_FILE") != null) {
-                signingConfig = signingConfigs.getByName("release")
-            }
-
-            // Configuration Firebase App Distribution
-            configure<com.google.firebase.appdistribution.gradle.AppDistributionExtension> {
-                artifactType = "APK"
-                
-                // Utilise la propriété passée par la CI ou la version courante
-                val ciReleaseNotes = project.findProperty("appDistribution-releaseNotes") as? String
-                val currentVersion = defaultConfig.versionName
-                releaseNotes = ciReleaseNotes ?: "Version $currentVersion"
-                
-                groups = "utilisateur-lambda"
-            }
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-}
-
 dependencies {
-    debugImplementation(libs.compose.ui.tooling)
     add("kspAndroid", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
     add("kspIosX64", libs.room.compiler)
@@ -243,6 +141,12 @@ room {
 
 buildConfig {
     packageName("cg.mibeko.app.common")
+
+    // Le plugin génère du Kotlin `internal` par défaut, ce qui suffisait tant que
+    // tout Android vivait dans ce module. Depuis la séparation, `MibekoApp`
+    // (module `:androidApp`) lit BASE_URL : `internal` est borné au module Kotlin,
+    // donc il faut le rendre public.
+    useKotlinOutput { internalVisibility = false }
 
     // URL de production par défaut : impossible d'embarquer par accident une
     // adresse de dev dans un binaire release. Pour pointer vers un serveur
