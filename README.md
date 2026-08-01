@@ -63,6 +63,22 @@ Le code de `commonMain` est organisé par domaine sous `com.mibeko.mibeko` : `ui
 
 L'URL de base de l'API est injectée à la compilation via le plugin BuildConfig (`BASE_URL`), avec `https://api.mibeko.fr/api` par défaut ; en développement, définir `mibeko.dev.baseUrl` dans `local.properties`.
 
+### Tester contre un backend local (simulateur ou appareil réel)
+
+`local.properties` n'est pas versionné et contient une IP en dur : elle devient fausse dès que la machine change de réseau. Symptôme typique — l'app affiche « Hors-ligne » / « Je n'ai pas pu vérifier » quel que soit le code testé.
+
+```bash
+ipconfig getifaddr en0    # IP LAN courante du Mac → mibeko.dev.baseUrl
+```
+
+Puis, côté `mibeko-tableau-de-bord`, lancer l'API en écoutant sur toutes les interfaces (le seul Docker Postgres/MinIO ne suffit pas — il faut le serveur PHP lui-même) :
+
+```bash
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+Reconstruire l'app après toute modification de `local.properties` (la valeur est injectée à la compilation).
+
 ## Prérequis
 
 - Android Studio récent (avec le plugin Kotlin Multiplatform).
