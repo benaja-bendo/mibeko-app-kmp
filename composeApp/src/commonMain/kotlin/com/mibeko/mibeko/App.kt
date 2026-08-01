@@ -55,7 +55,6 @@ import com.mibeko.mibeko.ui.onboarding.DisclaimerScreen
 import com.mibeko.mibeko.ui.onboarding.OnboardingScreen
 import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.resolver.TexteResolverScreen
-import com.mibeko.mibeko.ui.search.SearchResultsScreen
 import com.mibeko.mibeko.ui.settings.SettingsScreen
 import com.mibeko.mibeko.ui.splash.SplashScreen
 import com.mibeko.mibeko.ui.theme.MibekoTheme
@@ -166,8 +165,7 @@ fun App() {
                     Screen.Home::class.qualifiedName,
                     Screen.Library::class.qualifiedName,
                     Screen.Dossiers::class.qualifiedName,
-                    Screen.Settings::class.qualifiedName,
-                    Screen.SearchResults::class.qualifiedName
+                    Screen.Settings::class.qualifiedName
                 )
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -234,11 +232,6 @@ fun App() {
                         composable<Screen.Downloads> { DownloadsScreen() }
                         composable<Screen.Notifications> { NotificationsScreen() }
                         composable<Screen.Contact> { ContactScreen() }
-
-                        composable<Screen.SearchResults> { backStackEntry ->
-                            val route = backStackEntry.toRoute<Screen.SearchResults>()
-                            SearchResultsScreen(query = route.query, tag = route.tag)
-                        }
 
                         // Le domaine mibeko.cg n'a jamais été le nôtre : seuls
                         // le scheme mibeko:// et mibeko.fr (TexteResolver plus

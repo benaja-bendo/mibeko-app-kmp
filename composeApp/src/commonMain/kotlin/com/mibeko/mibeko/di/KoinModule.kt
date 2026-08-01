@@ -4,7 +4,6 @@ import com.mibeko.mibeko.data.auth.SessionEvents
 import com.mibeko.mibeko.data.local.AppDatabase
 import com.mibeko.mibeko.data.local.getDatabaseBuilder
 import com.mibeko.mibeko.data.preferences.RecentlyViewedManager
-import com.mibeko.mibeko.data.preferences.SearchHistoryManager
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.preferences.createSecureSettings
 import com.mibeko.mibeko.getContentSharer
@@ -24,7 +23,6 @@ import com.mibeko.mibeko.ui.auth.LoginViewModel
 import com.mibeko.mibeko.ui.auth.RegisterViewModel
 import com.mibeko.mibeko.ui.auth.ProfileSetupViewModel
 import com.mibeko.mibeko.ui.home.HomeViewModel
-import com.mibeko.mibeko.ui.search.SearchViewModel
 import com.mibeko.mibeko.ui.reader.ReaderViewModel
 import com.mibeko.mibeko.ui.details.DocumentDetailViewModel
 import com.mibeko.mibeko.ui.resolver.TexteResolverViewModel
@@ -78,7 +76,6 @@ private val PUBLIC_AUTH_ROUTES = listOf(
 val commonModule = module {
     // User Preferences (stockage sécurisé : EncryptedSharedPreferences / Keychain)
     single { UserPreferencesRepository(createSecureSettings()) }
-    single { SearchHistoryManager() }
     single { RecentlyViewedManager() }
 
     // Événements de session (expiration du jeton observée par l'UI)
@@ -194,7 +191,6 @@ val commonModule = module {
     viewModel { ProfileSetupViewModel(get(), get(), get()) }
 
     viewModel { HomeViewModel(get(), get(), get(), get()) }
-    viewModel { SearchViewModel(get(), get(), get(), get(), get()) }
     viewModel { ReaderViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { DocumentDetailViewModel(get(), get(), get()) }
     viewModel { TexteResolverViewModel(get(), get(), get()) }

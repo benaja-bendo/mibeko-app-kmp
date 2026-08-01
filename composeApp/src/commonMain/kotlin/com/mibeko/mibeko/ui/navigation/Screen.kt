@@ -42,10 +42,7 @@ sealed class Screen {
 
     @Serializable
     data object Settings : Screen()
-    
-    @Serializable
-    data class SearchResults(val query: String? = null, val tag: String? = null) : Screen()
-    
+
     @Serializable
     data object Onboarding : Screen()
     
