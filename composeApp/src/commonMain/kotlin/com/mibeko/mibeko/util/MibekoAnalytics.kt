@@ -57,6 +57,7 @@ object AnalyticsEvents {
     const val NOTIFICATION_OPT_IN = "notification_opt_in"
     const val LOGIN_WALL_SHOWN = "login_wall_shown"
     const val LOGIN_COMPLETED = "login_completed"
+    const val PROFILE_TYPE_SELECTED = "profile_type_selected"
     const val DEEP_LINK_OPENED = "deep_link_opened"
     const val DEEP_LINK_RESOLUTION_FAILED = "deep_link_resolution_failed"
     const val REPORT_SUBMITTED = "report_submitted"

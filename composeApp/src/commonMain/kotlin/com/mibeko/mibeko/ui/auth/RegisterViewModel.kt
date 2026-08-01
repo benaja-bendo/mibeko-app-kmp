@@ -102,11 +102,10 @@ class RegisterViewModel(
                 if (response.success && response.data != null) {
                     userPreferences.setAuthToken(response.data.token)
                     authApiService.invalidateTokenCache()
-                    val profileComplete = response.data.user?.mobile_profile?.let { profile ->
-                        !profile.phone.isNullOrBlank() &&
-                            !profile.profession.isNullOrBlank() &&
-                            !profile.company.isNullOrBlank()
-                    } ?: false
+                    // Le choix Citoyen/Professionnel (ProfileSetupScreen) pose ce
+                    // seul champ : ne plus exiger téléphone/entreprise, sinon
+                    // l'écran se redéclencherait à chaque connexion.
+                    val profileComplete = !response.data.user?.mobile_profile?.profession.isNullOrBlank()
                     userPreferences.setProfileSetupCompleted(profileComplete)
                     if (response.data.user != null) {
                         userPreferences.setUserInfo(response.data.user.name, response.data.user.email)

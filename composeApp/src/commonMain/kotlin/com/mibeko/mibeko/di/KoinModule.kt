@@ -190,7 +190,7 @@ val commonModule = module {
     viewModel { LoginViewModel(get(), get(), get(), get()) }
     viewModel { RegisterViewModel(get(), get(), get(), get()) }
     viewModel { ForgotPasswordViewModel(get()) }
-    viewModel { ProfileSetupViewModel(get(), get()) }
+    viewModel { ProfileSetupViewModel(get(), get(), get()) }
 
     viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModel { SearchViewModel(get(), get(), get(), get(), get()) }
