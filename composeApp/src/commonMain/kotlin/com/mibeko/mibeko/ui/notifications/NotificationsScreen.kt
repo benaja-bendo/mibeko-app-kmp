@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.ui.components.MibekoErrorState
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.util.formatRelativeTime
@@ -35,9 +38,13 @@ fun NotificationsScreen() {
         val uiState by viewModel.uiState.collectAsState()
         val snackbarHostState = remember { SnackbarHostState() }
 
-        LaunchedEffect(uiState.error) {
-            uiState.error?.let {
-                snackbarHostState.showSnackbar(it)
+        // Une panne au rafraîchissement, alors que des notifications sont déjà
+        // affichées avec succès, ne doit pas les remplacer par un écran
+        // d'erreur — un snackbar suffit. Liste vide : voir MibekoErrorState
+        // plus bas, qui reste affiché (pas de disparition automatique).
+        LaunchedEffect(uiState.error, uiState.notifications.isNotEmpty()) {
+            if (uiState.error != null && uiState.notifications.isNotEmpty()) {
+                snackbarHostState.showSnackbar("Je n'ai pas pu vérifier — liste non actualisée")
                 viewModel.clearError()
             }
         }
@@ -74,38 +81,59 @@ fun NotificationsScreen() {
                     // État invité honnête : les alertes sont liées au compte,
                     // l'ancien « Vous êtes à jour ! » était mensonger.
                     GuestNotificationsView(onLogin = { navController.navigate(Screen.Login) })
-                } else if (uiState.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else if (uiState.notifications.isEmpty()) {
-                    EmptyNotificationsView()
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    PullToRefreshBox(
+                        isRefreshing = uiState.isLoading,
+                        onRefresh = { viewModel.loadNotifications() },
+                        state = rememberPullToRefreshState(),
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        items(uiState.notifications) { notification ->
-                            NotificationItem(
-                                notification = notification,
-                                onClick = {
-                                    viewModel.markAsRead(notification.id)
-                                    // Une alerte de veille désigne un texte :
-                                    // la marquer lue sans y conduire laissait
-                                    // l'utilisateur le chercher lui-même.
-                                    notification.targetSlug()?.let { slug ->
-                                        navController.navigate(
-                                            Screen.TexteResolver(
-                                                docSlug = slug,
-                                                articleNumber = notification.data?.get("article")
-                                            )
+                        when {
+                            // Premier chargement : l'indicateur de PullToRefreshBox
+                            // suffit, pas de « Aucune notification » qui clignote.
+                            uiState.isLoading && uiState.notifications.isEmpty() -> {
+                                Box(modifier = Modifier.fillMaxSize())
+                            }
+                            // Panne réseau/API : jamais confondue avec une boîte
+                            // vide (règle produit non négociable).
+                            uiState.error != null && uiState.notifications.isEmpty() -> {
+                                MibekoErrorState(
+                                    offline = uiState.error!!.offline,
+                                    onRetry = uiState.error!!.retry,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            }
+                            uiState.notifications.isEmpty() -> {
+                                EmptyNotificationsView()
+                            }
+                            else -> {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(vertical = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    items(uiState.notifications) { notification ->
+                                        NotificationItem(
+                                            notification = notification,
+                                            onClick = {
+                                                viewModel.markAsRead(notification.id)
+                                                // Une alerte de veille désigne un texte :
+                                                // la marquer lue sans y conduire laissait
+                                                // l'utilisateur le chercher lui-même.
+                                                notification.targetSlug()?.let { slug ->
+                                                    navController.navigate(
+                                                        Screen.TexteResolver(
+                                                            docSlug = slug,
+                                                            articleNumber = notification.data?.get("article")
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            onDelete = { viewModel.deleteNotification(notification.id) }
                                         )
                                     }
-                                },
-                                onDelete = { viewModel.deleteNotification(notification.id) }
-                            )
+                                }
+                            }
                         }
                     }
                 }

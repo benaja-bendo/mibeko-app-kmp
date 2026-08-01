@@ -201,7 +201,7 @@ val commonModule = module {
     viewModel { OfficialJournalViewModel(get(), get()) }
     viewModel { LibraryViewModel(get(), get(), get(), get(), get()) }
     viewModel { DownloadsViewModel(get()) }
-    viewModel { NotificationsViewModel(get()) }
+    viewModel { NotificationsViewModel(get(), get()) }
     viewModel { DossierViewModel(get(), get()) }
     viewModel { DossierSelectionViewModel(get(), get()) }
     viewModel { params -> DossierDetailViewModel(params.get(), get(), get()) }

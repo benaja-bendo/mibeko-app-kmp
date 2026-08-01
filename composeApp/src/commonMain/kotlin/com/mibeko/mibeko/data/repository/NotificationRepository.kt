@@ -17,9 +17,12 @@ class NotificationRepository(
     private val baseUrl: String
 ) {
     /**
-     * Récupère les notifications depuis l'API.
+     * Récupère les notifications depuis l'API. [Result.failure] distingue un
+     * réel échec d'une liste vide — jamais avalé en `emptyList()` silencieux
+     * (une boîte vide mensongère sur panne réseau, règle produit non
+     * négociable).
      */
-    fun getNotifications(): Flow<List<NotificationRemote>> = flow {
+    fun getNotifications(): Flow<Result<List<NotificationRemote>>> = flow {
         try {
             val response = httpClient.get("$baseUrl/v1/notifications")
             if (response.status.value in 200..299) {
@@ -29,13 +32,13 @@ class NotificationRepository(
                 // bas, rendait la liste TOUJOURS vide — même quand le serveur
                 // avait des notifications à donner.
                 val body: ApiResponse<List<NotificationRemote>> = response.body()
-                emit(body.data ?: emptyList())
+                emit(Result.success(body.data ?: emptyList()))
             } else {
-                emit(emptyList())
+                emit(Result.failure(IllegalStateException("HTTP ${response.status.value}")))
             }
         } catch (e: Exception) {
             recordException(e, context = "NotificationRepository.getNotifications")
-            emit(emptyList())
+            emit(Result.failure(e))
         }
     }
 

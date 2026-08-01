@@ -7,6 +7,8 @@ import kotlinx.coroutines.launch
 import kotlin.time.Instant as DateTimeInstant
 import com.mibeko.mibeko.data.repository.NotificationRepository
 import com.mibeko.mibeko.getCurrentTimeMillis
+import com.mibeko.mibeko.util.NetworkConnectivityChecker
+import com.mibeko.mibeko.util.UiResult
 
 /**
  * Modèle de données pour une notification dans l'UI.
@@ -33,11 +35,16 @@ data class NotificationUiModel(
 data class NotificationsUiState(
     val notifications: List<NotificationUiModel> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    /**
+     * Non-null quand le dernier chargement a échoué — jamais confondu avec
+     * une liste réellement vide (voir [UiResult.Error]).
+     */
+    val error: UiResult.Error? = null
 )
 
 class NotificationsViewModel(
-    private val repository: NotificationRepository
+    private val repository: NotificationRepository,
+    private val networkChecker: NetworkConnectivityChecker
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(NotificationsUiState())
     val uiState: StateFlow<NotificationsUiState> = _uiState.asStateFlow()
@@ -51,28 +58,45 @@ class NotificationsViewModel(
      */
     fun loadNotifications() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            
-            repository.getNotifications().collect { remotes ->
-                val models = remotes.map { remote ->
-                    NotificationUiModel(
-                        id = remote.id,
-                        title = remote.title,
-                        message = remote.message,
-                        type = remote.type,
-                        timestamp = try {
-                                DateTimeInstant.parse(remote.created_at).toEpochMilliseconds()
-                            } catch (e: Exception) {
-                                getCurrentTimeMillis()
-                            },
-                        isRead = remote.read_at != null,
-                        data = remote.data
-                    )
-                }
-                
-                _uiState.value = _uiState.value.copy(
-                    notifications = models,
-                    isLoading = false
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+
+            repository.getNotifications().collect { result ->
+                result.fold(
+                    onSuccess = { remotes ->
+                        val models = remotes.map { remote ->
+                            NotificationUiModel(
+                                id = remote.id,
+                                title = remote.title,
+                                message = remote.message,
+                                type = remote.type,
+                                timestamp = try {
+                                        DateTimeInstant.parse(remote.created_at).toEpochMilliseconds()
+                                    } catch (e: Exception) {
+                                        getCurrentTimeMillis()
+                                    },
+                                isRead = remote.read_at != null,
+                                data = remote.data
+                            )
+                        }
+
+                        _uiState.value = _uiState.value.copy(
+                            notifications = models,
+                            isLoading = false,
+                            error = null
+                        )
+                    },
+                    onFailure = {
+                        // On ne touche pas à la liste existante : une panne au
+                        // rafraîchissement ne doit pas effacer des notifications
+                        // déjà affichées avec succès.
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = UiResult.Error(
+                                offline = !networkChecker.isNetworkAvailable(),
+                                retry = ::loadNotifications
+                            )
+                        )
+                    }
                 )
             }
         }
