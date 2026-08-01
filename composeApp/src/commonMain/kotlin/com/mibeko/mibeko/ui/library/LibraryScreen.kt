@@ -25,6 +25,8 @@ import com.mibeko.mibeko.data.preferences.RecentlyViewedItem
 import com.mibeko.mibeko.data.remote.LibraryHomeDocument
 import com.mibeko.mibeko.data.remote.LibrarySearchItem
 import com.mibeko.mibeko.data.remote.LibrarySuggestions
+import com.mibeko.mibeko.ui.components.MibekoErrorBanner
+import com.mibeko.mibeko.ui.components.MibekoErrorState
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.util.formatRemoteDateForUi
@@ -752,28 +754,19 @@ private fun LibraryResultsContent(
             }
         }
 
-        if (!state.isSearching && state.searchError != null) {
+        // Échec réseau/API sans aucun résultat de repli : jamais l'état vide
+        // générique (règle produit — « Je n'ai pas pu vérifier » + Réessayer).
+        if (!state.isSearching && state.searchError != null && state.results.isEmpty()) {
             item {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        Icons.Default.SearchOff,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = state.searchError,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                MibekoErrorState(
+                    offline = state.searchError.offline,
+                    onRetry = state.searchError.retry
+                )
             }
         }
 
+        // Recherche réellement vide (Success avec liste vide) : seul cas où
+        // l'état vide est autorisé.
         if (!state.isSearching && state.searchError == null && state.results.isEmpty()) {
             item {
                 Column(
@@ -788,16 +781,36 @@ private fun LibraryResultsContent(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Aucun texte pour « ${state.submittedQuery} ».",
+                        text = if (state.resultsFromNetwork) {
+                            "Aucun texte pour « ${state.submittedQuery} »."
+                        } else {
+                            "Aucun texte téléchargé ne correspond à « ${state.submittedQuery} »."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Reformulez ou élargissez les filtres.",
+                        text = if (state.resultsFromNetwork) {
+                            "Reformulez ou élargissez les filtres."
+                        } else {
+                            "Connectez-vous pour chercher dans tout le corpus, ou téléchargez des textes pour la recherche hors-ligne."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+        }
+
+        // Échec réseau/API mais des résultats de repli existent : on les
+        // affiche quand même (jamais de faux négatif), avec un bandeau
+        // explicite plutôt qu'un écran d'erreur qui les masquerait.
+        if (!state.isSearching && state.searchError != null && state.results.isNotEmpty()) {
+            item {
+                MibekoErrorBanner(
+                    offline = state.searchError.offline,
+                    onRetry = state.searchError.retry
+                )
             }
         }
 

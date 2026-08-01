@@ -13,9 +13,11 @@ import com.mibeko.mibeko.data.remote.LibrarySearchItem
 import com.mibeko.mibeko.data.remote.LibrarySuggestions
 import com.mibeko.mibeko.data.remote.RemoteDocumentType
 import com.mibeko.mibeko.data.remote.RemoteInstitution
+import com.mibeko.mibeko.data.ArticleSpec
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.repository.SearchResult
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
+import com.mibeko.mibeko.util.UiResult
 import com.mibeko.mibeko.util.parseRemoteDateToEpochMillis
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -55,7 +57,12 @@ data class LibraryUiState(
     val isLoadingMore: Boolean = false,
     /** false quand les résultats viennent de la base locale (mode hors-ligne). */
     val resultsFromNetwork: Boolean = true,
-    val searchError: String? = null,
+    /**
+     * Non-null quand la dernière tentative de recherche a échoué — que des
+     * résultats de repli soient affichés ou non (voir [UiResult.Error]).
+     * Jamais null simplement parce que [results] est vide.
+     */
+    val searchError: UiResult.Error? = null,
     // ── Autocomplétion ────────────────────────────────────────────────────
     val suggestions: LibrarySuggestions? = null,
     // ── Filtres (appliqués côté serveur) ─────────────────────────────────
@@ -252,41 +259,63 @@ class LibraryViewModel(
         }
     }
 
-    /** Recherche FTS locale (documents téléchargés) quand le réseau manque. */
+    /** Recherche FTS locale (documents téléchargés) quand le réseau manque ou a échoué. */
     private suspend fun searchLocallyAsFallback(query: String, append: Boolean) {
         try {
-            val local = repository.searchHybrid(query = query)
-            val items = when (local) {
-                is SearchResult.Success -> local.articles.map { article ->
-                    LibrarySearchItem(
-                        id = article.id,
-                        number = article.number,
-                        content = article.content,
-                        document_id = article.codeId,
-                        document_title = article.breadcrumb.substringBefore(">").trim()
-                            .ifBlank { article.title },
-                        document_type = article.typeCode,
-                        breadcrumb = article.breadcrumb
+            when (val local = repository.searchHybrid(query = query)) {
+                is SearchResult.Success -> {
+                    val items = local.articles.map { it.toLibrarySearchItem() }
+                    _uiState.value = _uiState.value.copy(
+                        results = if (append) _uiState.value.results + items else items,
+                        pagination = null,
+                        resultsFromNetwork = false,
+                        isSearching = false,
+                        isLoadingMore = false,
+                        searchError = null
                     )
                 }
 
-                else -> emptyList()
+                is SearchResult.Error -> {
+                    // Panne API : ne jamais jeter les résultats locaux de repli
+                    // déjà calculés — un « aucun résultat » serait un faux
+                    // négatif juridique (règle produit non négociable).
+                    val items = local.fallbackArticles.map { it.toLibrarySearchItem() }
+                    _uiState.value = _uiState.value.copy(
+                        results = if (append) _uiState.value.results + items else items,
+                        pagination = null,
+                        resultsFromNetwork = false,
+                        isSearching = false,
+                        isLoadingMore = false,
+                        searchError = UiResult.Error(
+                            offline = !networkChecker.isNetworkAvailable(),
+                            retry = { runSearch(page = 1) }
+                        )
+                    )
+                }
+
+                SearchResult.Loading -> Unit // Variant jamais produit par searchHybrid.
             }
-            _uiState.value = _uiState.value.copy(
-                results = if (append) _uiState.value.results + items else items,
-                pagination = null,
-                resultsFromNetwork = false,
-                isSearching = false,
-                isLoadingMore = false
-            )
         } catch (e: Exception) {
             _uiState.value = _uiState.value.copy(
                 isSearching = false,
                 isLoadingMore = false,
-                searchError = "La recherche a échoué. Vérifiez votre connexion."
+                searchError = UiResult.Error(
+                    offline = !networkChecker.isNetworkAvailable(),
+                    retry = { runSearch(page = 1) }
+                )
             )
         }
     }
+
+    private fun ArticleSpec.toLibrarySearchItem(): LibrarySearchItem = LibrarySearchItem(
+        id = id,
+        number = number,
+        content = content,
+        document_id = codeId,
+        document_title = breadcrumb.substringBefore(">").trim().ifBlank { title },
+        document_type = typeCode,
+        breadcrumb = breadcrumb
+    )
 
     // ── Filtres (chaque changement relance la recherche en cours) ────────────
 
