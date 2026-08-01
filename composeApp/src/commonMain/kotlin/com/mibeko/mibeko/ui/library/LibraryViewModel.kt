@@ -16,6 +16,8 @@ import com.mibeko.mibeko.data.remote.RemoteInstitution
 import com.mibeko.mibeko.data.ArticleSpec
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.repository.SearchResult
+import com.mibeko.mibeko.util.AnalyticsEvents
+import com.mibeko.mibeko.util.MibekoAnalytics
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import com.mibeko.mibeko.util.UiResult
 import com.mibeko.mibeko.util.parseRemoteDateToEpochMillis
@@ -95,7 +97,8 @@ class LibraryViewModel(
     private val recentlyViewedManager: RecentlyViewedManager,
     private val libraryApi: LibraryApiService,
     private val legalApi: LegalApiService,
-    private val networkChecker: NetworkConnectivityChecker
+    private val networkChecker: NetworkConnectivityChecker,
+    private val analytics: MibekoAnalytics
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -249,6 +252,7 @@ class LibraryViewModel(
                         isSearching = false,
                         isLoadingMore = false
                     )
+                    if (!append) logSearchPerformed(query, response.data.size, offline = false)
                     return@launch
                 } catch (e: Exception) {
                     // L'API a échoué : on tente le repli local avant d'afficher une erreur.
@@ -273,6 +277,7 @@ class LibraryViewModel(
                         isLoadingMore = false,
                         searchError = null
                     )
+                    if (!append) logSearchPerformed(query, items.size, offline = true)
                 }
 
                 is SearchResult.Error -> {
@@ -291,6 +296,7 @@ class LibraryViewModel(
                             retry = { runSearch(page = 1) }
                         )
                     )
+                    if (!append) logSearchFailed(query)
                 }
 
                 SearchResult.Loading -> Unit // Variant jamais produit par searchHybrid.
@@ -304,7 +310,30 @@ class LibraryViewModel(
                     retry = { runSearch(page = 1) }
                 )
             )
+            if (!append) logSearchFailed(query)
         }
+    }
+
+    /** Jamais le texte de la requête : longueur et compteurs only. */
+    private fun logSearchPerformed(query: String, resultCount: Int, offline: Boolean) {
+        analytics.logEvent(
+            AnalyticsEvents.SEARCH_PERFORMED,
+            mapOf(
+                "query_length" to query.length,
+                "result_count" to resultCount,
+                "source" to if (offline) "offline" else "online"
+            )
+        )
+    }
+
+    private fun logSearchFailed(query: String) {
+        analytics.logEvent(
+            AnalyticsEvents.SEARCH_FAILED,
+            mapOf(
+                "query_length" to query.length,
+                "offline" to !networkChecker.isNetworkAvailable()
+            )
+        )
     }
 
     private fun ArticleSpec.toLibrarySearchItem(): LibrarySearchItem = LibrarySearchItem(

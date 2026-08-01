@@ -10,6 +10,8 @@ import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.remote.LoginRequest
 import com.mibeko.mibeko.data.remote.TwoFactorRequiredException
 import com.mibeko.mibeko.data.repository.PushTokenRegistrar
+import com.mibeko.mibeko.util.AnalyticsEvents
+import com.mibeko.mibeko.util.MibekoAnalytics
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,7 +30,8 @@ sealed class LoginState {
 class LoginViewModel(
     private val authApiService: AuthApiService,
     private val userPreferences: UserPreferencesRepository,
-    private val pushTokenRegistrar: PushTokenRegistrar
+    private val pushTokenRegistrar: PushTokenRegistrar,
+    private val analytics: MibekoAnalytics
 ) : ViewModel() {
 
     private val _loginState = MutableStateFlow<LoginState>(LoginState.Idle)
@@ -96,6 +99,7 @@ class LoginViewModel(
                     }
                     // Un token push a pu être renouvelé hors session : l'envoyer maintenant.
                     pushTokenRegistrar.flushPendingToken()
+                    analytics.logEvent(AnalyticsEvents.LOGIN_COMPLETED, mapOf("method" to "email"))
                     _loginState.value = LoginState.Success(requiresProfileSetup = !profileComplete)
                 } else {
                     val errorMessage = response.errors?.values?.firstOrNull()?.firstOrNull()

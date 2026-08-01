@@ -41,10 +41,13 @@ import com.mibeko.mibeko.ui.components.MibekoErrorBanner
 import com.mibeko.mibeko.ui.components.NetworkStatusBanner
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
+import com.mibeko.mibeko.util.AnalyticsEvents
+import com.mibeko.mibeko.util.MibekoAnalytics
 import com.mibeko.mibeko.util.formatIsoDate
 import mibeko.composeapp.generated.resources.Res
 import mibeko.composeapp.generated.resources.logo
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -91,12 +94,14 @@ fun HomeScreen() {
         }
     }
     val canResendVerification = now >= cooldownUntil
+    val analytics = koinInject<MibekoAnalytics>()
 
     val askAssistant: (String) -> Unit = { prompt ->
         if (prompt.isNotBlank()) {
             if (uiState.isLoggedIn) {
                 navController.navigate(Screen.Chat(initialPrompt = prompt))
             } else {
+                analytics.logEvent(AnalyticsEvents.LOGIN_WALL_SHOWN, mapOf("context" to "assistant"))
                 navController.navigate(Screen.Login)
             }
         }
@@ -122,6 +127,10 @@ fun HomeScreen() {
                         if (uiState.isLoggedIn) {
                             navController.navigate(Screen.ConversationHistory)
                         } else {
+                            analytics.logEvent(
+                                AnalyticsEvents.LOGIN_WALL_SHOWN,
+                                mapOf("context" to "conversation_history")
+                            )
                             navController.navigate(Screen.Login)
                         }
                     },

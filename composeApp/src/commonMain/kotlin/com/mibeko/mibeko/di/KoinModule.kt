@@ -187,8 +187,8 @@ val commonModule = module {
     single { NotificationRepository(get(), get<AppConfig>().baseUrl) }
     single { PushTokenRegistrar(get(), get()) }
 
-    viewModel { LoginViewModel(get(), get(), get()) }
-    viewModel { RegisterViewModel(get(), get(), get()) }
+    viewModel { LoginViewModel(get(), get(), get(), get()) }
+    viewModel { RegisterViewModel(get(), get(), get(), get()) }
     viewModel { ForgotPasswordViewModel(get()) }
     viewModel { ProfileSetupViewModel(get(), get()) }
 
@@ -199,7 +199,7 @@ val commonModule = module {
     viewModel { TexteResolverViewModel(get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { OfficialJournalViewModel(get(), get()) }
-    viewModel { LibraryViewModel(get(), get(), get(), get(), get()) }
+    viewModel { LibraryViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { DownloadsViewModel(get()) }
     viewModel { NotificationsViewModel(get(), get()) }
     viewModel { DossierViewModel(get(), get()) }
