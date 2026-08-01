@@ -204,7 +204,16 @@ class DocumentDetailViewModel(
                 if (doc.isDownloaded) {
                     repository.removeDownload(doc.id)
                 } else {
-                    repository.downloadDocument(doc.id)
+                    val cached = repository.downloadDocument(doc.id)
+                    if (!cached) {
+                        // PDF-only : rien n'est mis en cache (voir PdfViewer),
+                        // le badge « Hors-ligne » ne doit pas s'allumer pour
+                        // autant — dire pourquoi plutôt que de laisser le
+                        // bouton ne rien faire visiblement.
+                        _uiState.value = _uiState.value.copy(
+                            error = "Ce document (PDF non structuré) ne peut pas être mis à disposition hors-ligne."
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = "Erreur lors du téléchargement : ${e.message}")

@@ -366,7 +366,8 @@ class LocalLegalRepository(
      * Crucially preserves the 'is_favorite' and 'is_offline' status of existing articles 
      * by querying their current IDs before performing the bulk upsert.
      */
-    suspend fun downloadDocument(documentId: String) {
+    /** @return false si rien n'a pu être mis en cache (document PDF-only, sans article structuré). */
+    suspend fun downloadDocument(documentId: String): Boolean {
         val response = apiService.downloadDocument(documentId)
         val data = response.data
         
@@ -413,8 +414,15 @@ class LocalLegalRepository(
             nodes = nodes,
             articles = articles
         )
-        
-        mibekoDao.updateDocumentDownloadStatus(documentId, true)
+
+        // Un document PDF-only (aucun article structuré, ex. certains JO) n'a
+        // rien de mis en cache ici — le PDF lui-même n'est jamais téléchargé
+        // (voir PdfViewer). Le marquer « disponible hors-ligne » serait un
+        // badge menteur : rien de consultable une fois hors connexion.
+        if (articles.isNotEmpty()) {
+            mibekoDao.updateDocumentDownloadStatus(documentId, true)
+        }
+        return articles.isNotEmpty()
     }
 
     suspend fun removeDownload(documentId: String) {

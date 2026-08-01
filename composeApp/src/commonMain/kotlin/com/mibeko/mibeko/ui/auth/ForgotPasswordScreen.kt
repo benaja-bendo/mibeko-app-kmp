@@ -232,8 +232,11 @@ private fun CodeStep(
             }
         }
 
+        // Ce bouton n'envoie rien lui-même : il ramène à l'étape e-mail, où
+        // « Envoyer le code » (déjà pré-rempli) en déclenche réellement un
+        // nouveau. « Renvoyer un code » ici aurait promis un envoi immédiat.
         TextButton(onClick = viewModel::backToEmail, modifier = Modifier.padding(top = 8.dp)) {
-            Text("Renvoyer un code")
+            Text("Revenir à la saisie de l'e-mail")
         }
     }
 }
