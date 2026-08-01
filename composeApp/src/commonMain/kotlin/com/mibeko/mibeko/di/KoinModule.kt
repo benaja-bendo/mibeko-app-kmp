@@ -196,7 +196,7 @@ val commonModule = module {
     viewModel { SearchViewModel(get(), get(), get(), get(), get()) }
     viewModel { ReaderViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { DocumentDetailViewModel(get(), get(), get()) }
-    viewModel { TexteResolverViewModel(get(), get()) }
+    viewModel { TexteResolverViewModel(get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { OfficialJournalViewModel(get(), get()) }
     viewModel { LibraryViewModel(get(), get(), get(), get(), get()) }

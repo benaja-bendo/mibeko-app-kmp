@@ -55,6 +55,7 @@ object AnalyticsEvents {
     const val CHAT_ERROR = "chat_error"
     const val NOTIFICATION_OPT_IN = "notification_opt_in"
     const val DEEP_LINK_OPENED = "deep_link_opened"
+    const val DEEP_LINK_RESOLUTION_FAILED = "deep_link_resolution_failed"
     const val REPORT_SUBMITTED = "report_submitted"
     const val APP_UPDATE_PROMPTED = "app_update_prompted"
     const val APP_UPDATE_FORCED = "app_update_forced"

@@ -13,6 +13,7 @@ import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.LegalApiService
 import com.mibeko.mibeko.data.remote.ApiResponse
 import com.mibeko.mibeko.data.remote.RemoteNode
+import com.mibeko.mibeko.data.remote.SlugFetchResult
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import com.mibeko.mibeko.util.recordException
 import kotlinx.coroutines.flow.Flow
@@ -45,6 +46,17 @@ sealed class SlugResolution {
 
     /** Ouvrir le détail du document (article inconnu ou lien document seul). */
     data class Document(val documentId: String) : SlugResolution()
+
+    /** Slug syntaxiquement valide mais réellement inconnu du corpus publié (404). */
+    data object NotFound : SlugResolution()
+
+    /**
+     * Résolution impossible à vérifier (réseau indisponible sans cache local,
+     * panne serveur) — jamais confondu avec [NotFound] : l'app n'affirme
+     * jamais qu'un texte n'existe pas quand elle n'a simplement pas pu
+     * vérifier.
+     */
+    data object Failed : SlugResolution()
 }
 
 class LocalLegalRepository(
@@ -709,11 +721,13 @@ class LocalLegalRepository(
      * hors-ligne), puis via l'endpoint public par slug si nécessaire. En cas de
      * succès, le document est stocké localement (le lecteur lit depuis Room) et
      * un [SlugResolution] indique quoi ouvrir : l'article demandé si son numéro
-     * a pu être résolu, sinon le document parent. `null` si rien n'a pu être
-     * résolu (slug inconnu, hors-ligne sans cache) — l'appelant reste alors sur
-     * l'accueil.
+     * a pu être résolu, sinon le document parent. [SlugResolution.NotFound] si
+     * le slug est réellement inconnu (404) ; [SlugResolution.Failed] si la
+     * résolution n'a simplement pas pu être vérifiée (hors-ligne sans cache,
+     * panne réseau/serveur) — jamais confondus, l'app n'affirme jamais qu'un
+     * texte n'existe pas quand elle n'a pas pu vérifier.
      */
-    suspend fun resolveTexteBySlug(slug: String, articleNumber: String?): SlugResolution? {
+    suspend fun resolveTexteBySlug(slug: String, articleNumber: String?): SlugResolution {
         // 1) Cache local : le document est-il déjà connu par son slug ?
         val cached = mibekoDao.getAllDocuments().firstOrNull()
             ?.firstOrNull { it.slug == slug }
@@ -724,19 +738,28 @@ class LocalLegalRepository(
         val canUseNetwork = networkChecker.isNetworkAvailable() &&
             !userPreferencesRepository.isOfflineModeEnabled()
 
-        if (documentId == null && canUseNetwork) {
-            val data = apiService.fetchDocumentBySlug(slug)
-            val remoteDoc = data?.document
-            if (remoteDoc != null) {
-                documentId = remoteDoc.id
-                remoteArticles = data.articles
-                // Stocke le document + sa structure pour une lecture depuis Room.
-                fetchAndStoreDocument(remoteDoc.id)
-                runCatching { fetchAndStoreDocumentStructure(remoteDoc.id) }
+        if (documentId == null) {
+            if (!canUseNetwork) {
+                // Hors-ligne (ou mode forcé) et rien en cache : impossible de
+                // vérifier — surtout pas « introuvable ».
+                return SlugResolution.Failed
+            }
+            when (val result = apiService.fetchDocumentBySlug(slug)) {
+                is SlugFetchResult.Found -> {
+                    documentId = result.document.id
+                    remoteArticles = result.articles
+                    // Stocke le document + sa structure pour une lecture depuis Room.
+                    fetchAndStoreDocument(result.document.id)
+                    runCatching { fetchAndStoreDocumentStructure(result.document.id) }
+                }
+                SlugFetchResult.NotFound -> return SlugResolution.NotFound
+                SlugFetchResult.Failed -> return SlugResolution.Failed
             }
         }
 
-        val resolvedDocId = documentId ?: return null
+        // documentId est forcément non-null ici : soit trouvé en cache, soit
+        // posé par la branche Found ci-dessus (les deux autres retournent).
+        val resolvedDocId = documentId
 
         // Pas de numéro d'article demandé → on ouvre le document.
         if (articleNumber.isNullOrBlank()) {

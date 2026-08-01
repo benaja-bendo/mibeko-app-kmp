@@ -1,7 +1,9 @@
 package com.mibeko.mibeko.data.remote
 
+import com.mibeko.mibeko.util.recordException
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -10,6 +12,21 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
+
+/**
+ * Résultat de [LegalApiService.fetchDocumentBySlug] : distingue un slug
+ * réellement inconnu (404 — sûr d'affirmer que le lien est mauvais) d'un
+ * échec de vérification (réseau/serveur — l'app ne doit jamais dire qu'un
+ * texte n'existe pas quand elle n'a simplement pas pu vérifier).
+ */
+sealed class SlugFetchResult {
+    data class Found(
+        val document: RemoteDocument,
+        val articles: List<RemotePublicArticleRef>
+    ) : SlugFetchResult()
+    data object NotFound : SlugFetchResult()
+    data object Failed : SlugFetchResult()
+}
 
 class LegalApiService(
     private val client: HttpClient,
@@ -67,18 +84,29 @@ class LegalApiService(
 
     /**
      * Résout un document publié par son slug d'URL publique (lien profond
-     * `mibeko.fr/textes/{slug}`). Route publique, publiés uniquement. Renvoie
-     * le document (avec son id interne) et l'index de ses articles ; `null` si
-     * le slug est introuvable (404) ou en cas d'erreur réseau.
+     * `mibeko.fr/textes/{slug}`). Route publique, publiés uniquement.
      */
-    suspend fun fetchDocumentBySlug(slug: String): RemotePublicDocumentData? {
+    suspend fun fetchDocumentBySlug(slug: String): SlugFetchResult {
         return try {
-            client.get("$baseUrl/v1/legal-documents/slug/${slug.encodeURLPathPart()}")
+            val data = client.get("$baseUrl/v1/legal-documents/slug/${slug.encodeURLPathPart()}")
                 .body<RemotePublicDocumentResponse>()
                 .data
+            val document = data?.document
+            if (document != null) {
+                SlugFetchResult.Found(document, data.articles)
+            } else {
+                SlugFetchResult.NotFound
+            }
+        } catch (e: ClientRequestException) {
+            if (e.response.status == HttpStatusCode.NotFound) {
+                SlugFetchResult.NotFound
+            } else {
+                recordException(e, context = "LegalApiService.fetchDocumentBySlug")
+                SlugFetchResult.Failed
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
-            null
+            recordException(e, context = "LegalApiService.fetchDocumentBySlug")
+            SlugFetchResult.Failed
         }
     }
 
