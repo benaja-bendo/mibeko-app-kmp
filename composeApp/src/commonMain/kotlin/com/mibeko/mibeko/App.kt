@@ -151,7 +151,10 @@ fun App() {
 
         val forceUpdate = updateState as? UpdateState.ForceUpdate
         if (forceUpdate != null) {
-            ForceUpdateScreen(forceUpdate)
+            ForceUpdateScreen(
+                state = forceUpdate,
+                onUpdateClick = { analytics.logEvent(AnalyticsEvents.APP_UPDATE_FORCED_CLICKED) }
+            )
             return@MibekoTheme
         }
 
@@ -192,8 +195,18 @@ fun App() {
                         (updateState as? UpdateState.SoftUpdate)?.let { soft ->
                             UpdateBanner(
                                 state = soft,
-                                modifier = Modifier.statusBarsPadding()
+                                modifier = Modifier.statusBarsPadding(),
+                                onUpdateClick = {
+                                    analytics.logEvent(
+                                        AnalyticsEvents.APP_UPDATE_BANNER_CLICKED,
+                                        mapOf("latest_version" to soft.latestVersion)
+                                    )
+                                }
                             ) {
+                                analytics.logEvent(
+                                    AnalyticsEvents.APP_UPDATE_BANNER_DISMISSED,
+                                    mapOf("latest_version" to soft.latestVersion)
+                                )
                                 userPreferencesRepository.dismissUpdateBanner(soft.latestVersion)
                                 updateState = UpdateState.UpToDate
                             }

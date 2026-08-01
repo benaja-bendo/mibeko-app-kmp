@@ -33,7 +33,7 @@ import com.mibeko.mibeko.util.UpdateState
  * d'achat (conforme stores), pas de bouton fermer.
  */
 @Composable
-fun ForceUpdateScreen(state: UpdateState.ForceUpdate) {
+fun ForceUpdateScreen(state: UpdateState.ForceUpdate, onUpdateClick: () -> Unit = {}) {
     val uriHandler = LocalUriHandler.current
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -65,7 +65,10 @@ fun ForceUpdateScreen(state: UpdateState.ForceUpdate) {
             val storeUrl = state.storeUrl
             if (storeUrl != null) {
                 Button(
-                    onClick = { uriHandler.openUri(storeUrl) },
+                    onClick = {
+                        onUpdateClick()
+                        uriHandler.openUri(storeUrl)
+                    },
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("Mettre à jour")
@@ -80,6 +83,7 @@ fun ForceUpdateScreen(state: UpdateState.ForceUpdate) {
 fun UpdateBanner(
     state: UpdateState.SoftUpdate,
     modifier: Modifier = Modifier,
+    onUpdateClick: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -102,7 +106,10 @@ fun UpdateBanner(
             )
             val storeUrl = state.storeUrl
             if (storeUrl != null) {
-                androidx.compose.material3.TextButton(onClick = { uriHandler.openUri(storeUrl) }) {
+                androidx.compose.material3.TextButton(onClick = {
+                    onUpdateClick()
+                    uriHandler.openUri(storeUrl)
+                }) {
                     Text("Mettre à jour")
                 }
             }

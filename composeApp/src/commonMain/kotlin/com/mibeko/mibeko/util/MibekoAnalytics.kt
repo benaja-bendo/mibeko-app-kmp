@@ -63,6 +63,9 @@ object AnalyticsEvents {
     const val REPORT_SUBMITTED = "report_submitted"
     const val APP_UPDATE_PROMPTED = "app_update_prompted"
     const val APP_UPDATE_FORCED = "app_update_forced"
+    const val APP_UPDATE_BANNER_CLICKED = "app_update_banner_clicked"
+    const val APP_UPDATE_BANNER_DISMISSED = "app_update_banner_dismissed"
+    const val APP_UPDATE_FORCED_CLICKED = "app_update_forced_clicked"
     const val REVIEW_REQUESTED = "review_requested"
     const val CONTACT_SUBMITTED = "contact_submitted"
 }
