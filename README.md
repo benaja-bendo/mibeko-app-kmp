@@ -1,6 +1,6 @@
 # Mibeko Mobile — Lois de la République du Congo
 
-> Statut : à jour au 2 juillet 2026 · application mobile Kotlin Multiplatform (Android + iOS) donnant accès aux textes juridiques du Congo-Brazzaville.
+> Statut : à jour au 2 août 2026 · application mobile Kotlin Multiplatform (Android + iOS) donnant accès aux textes juridiques du Congo-Brazzaville.
 
 **Mibeko Mobile** est l'application mobile de l'écosystème Mibeko, destinée aux citoyens et à la diaspora du Congo-Brazzaville. Elle offre un accès mobile, structuré et partiellement hors-ligne aux textes législatifs et réglementaires (OHADA/CEMAC, monnaie FCFA/XAF). Elle s'appuie sur l'API Laravel `api.mibeko.fr` partagée avec le site public et le dashboard professionnel.
 
@@ -31,15 +31,16 @@ Limites connues à ce jour : la vérification d'e-mail n'est pas encore impléme
 
 ## Architecture et structure des modules
 
-Le projet Gradle (`rootProject.name = "mibeko"`) n'inclut qu'un seul module de code partagé, `:composeApp` (voir `settings.gradle.kts`). Le point d'entrée iOS vit dans le dossier Xcode `iosApp/` ; l'application Android est assemblée depuis la cible `androidTarget` de `:composeApp`.
+Le projet Gradle (`rootProject.name = "mibeko"`) a deux modules Android (voir `settings.gradle.kts`) : **`:composeApp`** porte tout le code partagé (KMP, plugin `com.android.kotlin.multiplatform.library`, sans variantes de build) et **`:androidApp`** la seule coquille applicative Android (Activity, Application, service FCM, manifeste, ressources, signature, R8). Séparation imposée par AGP 9 — `com.android.application` ne peut plus cohabiter avec `org.jetbrains.kotlin.multiplatform` dans un même sous-projet (détail : `docs/migration-agp10.md`). Le point d'entrée iOS vit dans le dossier Xcode `iosApp/` et consomme directement `:composeApp`, sans changement.
 
 ```
 mibeko-app-kmp/
-├── composeApp/          # module KMP unique : commonMain (~90 %) + androidMain + iosMain
+├── composeApp/          # module KMP partagé : commonMain (~90 %) + androidMain + iosMain
 │   └── src/
 │       ├── commonMain/  # UI Compose, ViewModels, data (Ktor/Room), DI (Koin), navigation
-│       ├── androidMain/ # Ktor Android, Firebase, activité Android
+│       ├── androidMain/ # Ktor Android, Firebase, implémentations expect/actual
 │       └── iosMain/     # Ktor Darwin, ponts iOS
+├── androidApp/          # coquille applicative Android (Activity, Application, service FCM)
 ├── iosApp/              # projet Xcode (framework ComposeApp, bundleId cg.mibeko.app)
 └── docs/                # documentation technique (voir ci-dessous)
 ```
@@ -90,7 +91,7 @@ Reconstruire l'app après toute modification de `local.properties` (la valeur es
 Android (debug) :
 
 ```bash
-./gradlew :composeApp:assembleDebug
+./gradlew :androidApp:assembleDebug
 ```
 
 iOS : ouvrir `iosApp/` dans Xcode, ou lancer la configuration iOS depuis Android Studio. Le framework partagé est produit par la cible KMP `:composeApp`.
@@ -98,7 +99,7 @@ iOS : ouvrir `iosApp/` dans Xcode, ou lancer la configuration iOS depuis Android
 Pour une release Android signée, renseigner un `keystore.properties` **hors du dépôt** — par défaut `../../secrets/mibeko-app-kmp/keystore.properties`, surchargeable via `-PkeystorePropertiesFile=...` ou la variable d'environnement `MIBEKO_KEYSTORE_PROPERTIES` (voir `keystore.properties.template`) — puis :
 
 ```bash
-./gradlew :composeApp:bundleRelease -PversionCode=<n> -PversionName=<x.y.z>
+./gradlew :androidApp:bundleRelease -PversionCode=<n> -PversionName=<x.y.z>
 ```
 
 ## Documentation
@@ -109,6 +110,7 @@ La documentation technique se trouve dans [`docs/`](./docs/) :
 - [`docs/design-system.md`](./docs/design-system.md) — design system (palette forêt, typographie, tokens).
 - [`docs/prd-mvp.md`](./docs/prd-mvp.md) — cahier des charges du MVP.
 - [`docs/publication-ios.md`](./docs/publication-ios.md) — procédure de publication iOS.
+- [`docs/migration-agp10.md`](./docs/migration-agp10.md) — migration vers la structure à deux modules `:composeApp`/`:androidApp` (AGP 10).
 
 ## Licence
 

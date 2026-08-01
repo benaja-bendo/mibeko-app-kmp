@@ -72,12 +72,17 @@ D'où les points de contact réels avec le code existant :
 
 | Point | Fichier | Traitement |
 | --- | --- | --- |
-| `BuildConfig.DEBUG` (généré par AGP) | `Platform.android.kt:13` | passer par le plugin `buildConfig` gmazzo, déjà en place et déjà commun aux 2 OS |
+| `BuildConfig.DEBUG` (généré par AGP) | `Platform.android.kt:13` | *(diagnostic initial — non retenu, voir « Traitement réel » ci-dessous)* |
 | `R.string` / `R.mipmap` | `MyFirebaseMessagingService.kt:88,91` | le fichier part dans `:androidApp` (il importe déjà `MainActivity`) |
 | `MibekoApp.INSTANCE` | `Platform.android.kt:16`, `AnalyticsManager.android.kt:12`, `SecureSettings.android.kt:22` | résoudre le `Context` par Koin, comme le font **déjà** `Database.android.kt`, `PlatformUtils.android.kt`, `NetworkConnectivityChecker.android.kt` et `NotificationManager.android.kt` |
-| `import MainActivity` | `NotificationManager.android.kt:11` | intent implicite (`getLaunchIntentForPackage`) |
+| `import MainActivity` | `NotificationManager.android.kt:11` | *(diagnostic initial — non retenu, voir « Traitement réel » ci-dessous)* |
 | `res/xml/network_security_config.xml` variante debug | `src/androidDebug/` | part dans `:androidApp`, qui garde les `buildTypes` |
 | `debugImplementation(compose.ui.tooling)` | `build.gradle.kts` | part dans `:androidApp` |
+
+**Traitement réel** (le tableau ci-dessus date du diagnostic initial ; deux cases ont été résolues différemment à l'exécution — voir commit `5f938f9`) :
+
+- `BuildConfig.DEBUG` — pas de passage par le plugin `buildConfig` gmazzo (il n'expose que `BASE_URL`, pas un équivalent de `DEBUG`). Retenu : lire `ApplicationInfo.FLAG_DEBUGGABLE` sur le paquet installé via le même `Context` injecté par Koin. Même valeur qu'avant sous la config actuelle, mais nature différente — une lecture à l'exécution plutôt qu'une constante de compilation, qui suppose Koin démarré (seul appelant : `KoinModule.kt`, résolu paresseusement, sans risque aujourd'hui).
+- `import MainActivity` dans `NotificationManager.android.kt` — ce n'était pas un intent à réécrire : l'import était déjà mort avant la migration (aucune autre occurrence de `MainActivity` dans le fichier). Simple suppression.
 
 Le gros du travail est donc **déjà fait** : 4 des 7 fichiers `androidMain` qui ont besoin d'un `Context` passent par Koin. Il reste 3 usages de `MibekoApp.INSTANCE` et 2 imports de `MainActivity`.
 
