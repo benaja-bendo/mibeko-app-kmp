@@ -137,7 +137,23 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         // Surchargables par la CI : ./gradlew bundleRelease -PversionCode=12 -PversionName=1.2.0
-        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 2
+        // En debug, un -PversionCode manquant retombe sur 2 (jamais publié, sans
+        // conséquence). En assemble/bundle release, il est obligatoire : le repli
+        // silencieux sur 2 a provoqué un rejet Play Console le 01/08/2026 (release
+        // "internal" refusée car versionCode déjà utilisé par un build CI antérieur).
+        val isReleasePackagingTask = project.gradle.startParameter.taskNames.any { taskName ->
+            val name = taskName.substringAfterLast(":")
+            name.contains("Release") && (name.startsWith("assemble") || name.startsWith("bundle") || name.startsWith("package"))
+        }
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull()
+            ?: if (isReleasePackagingTask) {
+                throw GradleException(
+                    "versionCode manquant pour un build release. Passe -PversionCode=<n> " +
+                        "(la CI le calcule via `git rev-list --count HEAD`, voir .github/workflows/release-play.yml)."
+                )
+            } else {
+                2
+            }
         versionName = (project.findProperty("versionName") as String?) ?: "1.0.0"
     }
     
