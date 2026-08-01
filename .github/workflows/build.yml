@@ -67,8 +67,16 @@ jobs:
           echo "$GOOGLE_SERVICES_JSON" | base64 -di > composeApp/google-services.json
         fi
 
+    # versionCode obligatoire depuis le garde-fou anti-rejet Play (build.gradle.kts) :
+    # tout packaging release doit l'annoncer explicitement. Cet AAB n'est ni signé ni
+    # publié — il n'existe que pour exercer R8 — d'où une valeur fixe assumée, qui ne
+    # peut pas entrer en collision avec un versionCode de la Play Console.
     - name: Build release AAB (unsigned, R8)
-      run: ./gradlew :composeApp:bundleRelease --stacktrace
+      run: |
+        ./gradlew :composeApp:bundleRelease \
+          -PversionCode=1 \
+          -PversionName=0.0.0-ci \
+          --stacktrace
 
   # La moitié iOS du parc était invisible en CI : iosMain n'était jamais
   # compilé, les casses Kotlin/Native se découvraient à la soumission.

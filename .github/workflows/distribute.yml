@@ -13,8 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout Repository
+    - name: Checkout Repository (historique complet pour le versionCode)
       uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
 
     - name: Set up JDK 17
       uses: actions/setup-java@v5
@@ -46,6 +48,19 @@ jobs:
           echo $GOOGLE_SERVICES_JSON | base64 -di > composeApp/google-services.json
         fi
 
+    # Même calcul que release-play.yml : le nombre de commits est monotone, donc un
+    # testeur Firebase peut toujours installer par-dessus la build précédente. Un
+    # versionCode figé bloquerait la mise à jour sur les appareils déjà équipés.
+    - name: Compute version
+      id: version
+      run: |
+        VERSION_NAME="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
+        VERSION_NAME="${VERSION_NAME:-0.0.0}"
+        VERSION_CODE="$(git rev-list --count HEAD)"
+        echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+        echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+        echo "Version $VERSION_NAME (code $VERSION_CODE)"
+
     - name: Build and Distribute App to Firebase
       env:
         # Variables pour la signature de l'application
@@ -58,4 +73,6 @@ jobs:
         FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
       run: |
         ./gradlew :composeApp:assembleRelease appDistributionUploadRelease \
+          -PversionName="${{ steps.version.outputs.name }}" \
+          -PversionCode="${{ steps.version.outputs.code }}" \
           -PappDistribution-releaseNotes="${{ github.event.inputs.release_notes }}"
