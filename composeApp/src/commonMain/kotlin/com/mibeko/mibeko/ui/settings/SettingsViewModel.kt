@@ -122,7 +122,10 @@ class SettingsViewModel(
                     )
                 }
             } catch (e: Exception) {
-                // Ignore for now or handle silently
+                // Dégradation silencieuse assumée : userName/userEmail restent
+                // les valeurs locales posées au login (voir loadInitialState),
+                // donc l'écran reste correct même si ce rafraîchissement échoue.
+                recordException(e, context = "SettingsViewModel.fetchProfile")
             }
         }
     }
@@ -375,7 +378,14 @@ class SettingsViewModel(
             isLegalMonitoringEnabled = userPreferencesRepository.isLegalMonitoringEnabled(),
             isDossierAlertsEnabled = userPreferencesRepository.isDossierAlertsEnabled(),
             isTelemetryEnabled = analytics.isTelemetryEnabled(),
-            appVersion = "v${getAppVersionName()}"
+            appVersion = "v${getAppVersionName()}",
+            // isAuthenticated (Screen) dépend de userName/userEmail : les lire
+            // localement d'abord évite qu'un utilisateur connecté hors-ligne
+            // retombe sur l'en-tête « Invité » (setUserInfo les pose déjà au
+            // login/inscription). fetchProfile() les rafraîchit ensuite si le
+            // réseau est là.
+            userName = userPreferencesRepository.getUserName() ?: "",
+            userEmail = userPreferencesRepository.getUserEmail() ?: ""
         )
         
         // Load available documents

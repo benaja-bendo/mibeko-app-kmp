@@ -31,7 +31,10 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen() {
+fun LoginScreen(
+    redirectChatPrompt: String? = null,
+    redirectToHistory: Boolean = false
+) {
     val navController = LocalNavController.current
     val viewModel: LoginViewModel = koinViewModel()
     val loginState by viewModel.loginState.collectAsState()
@@ -40,13 +43,21 @@ fun LoginScreen() {
 
     LaunchedEffect(loginState) {
         if (loginState is LoginState.Success) {
-            val destination = if ((loginState as LoginState.Success).requiresProfileSetup) {
-                Screen.ProfileSetup
-            } else {
-                Screen.Home
+            val requiresProfileSetup = (loginState as LoginState.Success).requiresProfileSetup
+            // Le mur de connexion transporte la question de l'invité (ou son
+            // intention de voir l'historique) jusqu'ici — un nouveau compte
+            // passe d'abord par ProfileSetup, qui la reçoit à son tour.
+            val destination = when {
+                requiresProfileSetup -> Screen.ProfileSetup(
+                    redirectChatPrompt = redirectChatPrompt,
+                    redirectToHistory = redirectToHistory
+                )
+                redirectChatPrompt != null -> Screen.Chat(initialPrompt = redirectChatPrompt)
+                redirectToHistory -> Screen.ConversationHistory
+                else -> Screen.Home
             }
             navController.navigate(destination) {
-                popUpTo(Screen.Login) { inclusive = true }
+                popUpTo(Screen.Login()) { inclusive = true }
             }
         }
     }

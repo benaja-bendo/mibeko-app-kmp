@@ -80,7 +80,7 @@ fun NotificationsScreen() {
                 if (!isLoggedIn) {
                     // État invité honnête : les alertes sont liées au compte,
                     // l'ancien « Vous êtes à jour ! » était mensonger.
-                    GuestNotificationsView(onLogin = { navController.navigate(Screen.Login) })
+                    GuestNotificationsView(onLogin = { navController.navigate(Screen.Login()) })
                 } else {
                     PullToRefreshBox(
                         isRefreshing = uiState.isLoading,

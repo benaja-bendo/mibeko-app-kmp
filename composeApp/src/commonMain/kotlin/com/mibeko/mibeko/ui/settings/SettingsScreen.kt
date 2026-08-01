@@ -610,7 +610,7 @@ fun SettingsScreen() {
                         horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
                     ) {
                         Button(
-                            onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Login) },
+                            onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Login()) },
                             modifier = Modifier.weight(1f).height(48.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(8.dp)

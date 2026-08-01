@@ -103,7 +103,7 @@ fun App() {
         LaunchedEffect(navController) {
             sessionEvents.sessionExpired.collect {
                 authApiService.invalidateTokenCache()
-                navController.navigate(Screen.Login) {
+                navController.navigate(Screen.Login()) {
                     popUpTo(0) { inclusive = true }
                 }
             }
@@ -209,10 +209,22 @@ fun App() {
                                 .padding(bottom = innerPadding.calculateBottomPadding())
                         ) {
                         composable<Screen.Splash> { SplashScreen() }
-                        composable<Screen.Login> { LoginScreen() }
+                        composable<Screen.Login> { backStackEntry ->
+                            val route = backStackEntry.toRoute<Screen.Login>()
+                            LoginScreen(
+                                redirectChatPrompt = route.redirectChatPrompt,
+                                redirectToHistory = route.redirectToHistory
+                            )
+                        }
                         composable<Screen.Register> { RegisterScreen() }
                         composable<Screen.ForgotPassword> { ForgotPasswordScreen() }
-                        composable<Screen.ProfileSetup> { ProfileSetupScreen() }
+                        composable<Screen.ProfileSetup> { backStackEntry ->
+                            val route = backStackEntry.toRoute<Screen.ProfileSetup>()
+                            ProfileSetupScreen(
+                                redirectChatPrompt = route.redirectChatPrompt,
+                                redirectToHistory = route.redirectToHistory
+                            )
+                        }
                         composable<Screen.Disclaimer> { DisclaimerScreen() }
                         composable<Screen.Onboarding> { OnboardingScreen() }
                         composable<Screen.Home> { HomeScreen() }

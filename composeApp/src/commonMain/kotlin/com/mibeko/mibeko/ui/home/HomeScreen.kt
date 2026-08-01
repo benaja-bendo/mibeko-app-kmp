@@ -102,7 +102,10 @@ fun HomeScreen() {
                 navController.navigate(Screen.Chat(initialPrompt = prompt))
             } else {
                 analytics.logEvent(AnalyticsEvents.LOGIN_WALL_SHOWN, mapOf("context" to "assistant"))
-                navController.navigate(Screen.Login)
+                // La question tapée en invité ne doit pas se perdre au passage
+                // par la connexion — Login (et ProfileSetup pour un nouveau
+                // compte) la renvoie vers Screen.Chat une fois connecté.
+                navController.navigate(Screen.Login(redirectChatPrompt = prompt))
             }
         }
     }
@@ -131,7 +134,7 @@ fun HomeScreen() {
                                 AnalyticsEvents.LOGIN_WALL_SHOWN,
                                 mapOf("context" to "conversation_history")
                             )
-                            navController.navigate(Screen.Login)
+                            navController.navigate(Screen.Login(redirectToHistory = true))
                         }
                     },
                     onNotificationsClick = { navController.navigate(Screen.Notifications) }

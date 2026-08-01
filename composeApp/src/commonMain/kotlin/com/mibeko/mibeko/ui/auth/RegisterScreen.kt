@@ -41,7 +41,7 @@ fun RegisterScreen() {
     LaunchedEffect(registerState) {
         if (registerState is RegisterState.Success) {
             val destination = if ((registerState as RegisterState.Success).requiresProfileSetup) {
-                Screen.ProfileSetup
+                Screen.ProfileSetup()
             } else {
                 Screen.Home
             }

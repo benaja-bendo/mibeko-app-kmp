@@ -9,8 +9,17 @@ sealed class Screen {
     @Serializable
     data object Splash : Screen()
 
+    /**
+     * [redirectChatPrompt]/[redirectToHistory] transportent l'intention d'un
+     * invité qui heurte le mur de connexion (question à l'assistant tapée sans
+     * compte, ou historique des conversations) — sans eux, la connexion
+     * réussie renvoyait toujours vers l'accueil et la question était perdue.
+     */
     @Serializable
-    data object Login : Screen()
+    data class Login(
+        val redirectChatPrompt: String? = null,
+        val redirectToHistory: Boolean = false
+    ) : Screen()
 
     @Serializable
     data object Register : Screen()
@@ -18,8 +27,12 @@ sealed class Screen {
     @Serializable
     data object ForgotPassword : Screen()
 
+    /** Voir [Login] : mêmes champs, propagés depuis Login pour un tout nouveau compte. */
     @Serializable
-    data object ProfileSetup : Screen()
+    data class ProfileSetup(
+        val redirectChatPrompt: String? = null,
+        val redirectToHistory: Boolean = false
+    ) : Screen()
 
     @Serializable
     data object Disclaimer : Screen()

@@ -65,8 +65,15 @@ fun MibekoBottomBar(navController: NavController) {
                     ),
                     onClick = {
                         navController.navigate(item.screen) {
-                            popUpTo(Screen.Home) { inclusive = item.screen == Screen.Home }
+                            // saveState/restoreState : sans eux, changer d'onglet
+                            // détruisait l'écran quitté (ViewModel, scroll, champs
+                            // de recherche) au lieu de le mettre en pause.
+                            popUpTo(Screen.Home) {
+                                saveState = true
+                                inclusive = item.screen == Screen.Home
+                            }
                             launchSingleTop = true
+                            restoreState = true
                         }
                     }
                 )

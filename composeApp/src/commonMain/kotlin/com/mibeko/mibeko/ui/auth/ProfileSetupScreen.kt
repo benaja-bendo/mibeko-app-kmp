@@ -26,15 +26,24 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileSetupScreen() {
+fun ProfileSetupScreen(
+    redirectChatPrompt: String? = null,
+    redirectToHistory: Boolean = false
+) {
     val navController = LocalNavController.current
     val viewModel: ProfileSetupViewModel = koinViewModel()
     val setupState by viewModel.setupState.collectAsState()
 
     LaunchedEffect(setupState) {
         if (setupState is ProfileSetupState.Success) {
-            navController.navigate(Screen.Home) {
-                popUpTo(Screen.ProfileSetup) { inclusive = true }
+            // Reçoit à son tour ce que Login a transporté (voir LoginScreen).
+            val destination = when {
+                redirectChatPrompt != null -> Screen.Chat(initialPrompt = redirectChatPrompt)
+                redirectToHistory -> Screen.ConversationHistory
+                else -> Screen.Home
+            }
+            navController.navigate(destination) {
+                popUpTo(Screen.ProfileSetup()) { inclusive = true }
             }
         }
     }
