@@ -104,3 +104,11 @@ jobs:
           releaseFiles: composeApp/build/outputs/bundle/release/*.aab
           track: ${{ github.event.inputs.track || 'internal' }}
           status: completed
+
+      # L'annonce de latest_version au backend (force-update mobile) N'EST PAS
+      # automatique ici : la prod part en rollout progressif (20 %, ligne 96),
+      # alors qu'annoncer la version pousserait la bannière à 100 % du parc
+      # immédiatement — 80 % des utilisateurs taperaient « Mettre à jour » sur
+      # une version pas encore disponible pour eux. Déclencher manuellement le
+      # workflow announce-mobile-version.yml une fois le rollout à 100 % dans
+      # la Play Console.

@@ -1,0 +1,33 @@
+name: Annoncer la version mobile (force-update)
+
+# Déclenchement manuel UNIQUEMENT — à lancer quand le rollout production
+# (release-play.yml, upload à 20 %) a été porté à 100 % dans la Play Console.
+# Sépare « la version est publiée » (upload, automatique) de « la version est
+# disponible pour tout le monde » (ce workflow) : la bannière de mise à jour
+# de l'app (VersionGate, cf. mobile-app-kmp) ne doit annoncer une version
+# qu'une fois que le store peut réellement la servir à tout le parc, sous
+# peine d'un bouton « Mettre à jour » qui ne mène nulle part pour les
+# utilisateurs pas encore couverts par le rollout.
+#
+# iOS : distribute-ios.yml reste manuel et indépendant. `latest_version` est
+# partagé entre les deux plateformes (un seul champ côté API) — n'annoncer
+# une version Android que si sa contrepartie iOS est réellement sortie (ou
+# assumer la légère incohérence : bannière non bloquante, sans conséquence
+# grave pour les utilisateurs iOS en avance).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version à annoncer (ex: 1.2.0) — doit déjà être à 100 % en production'
+        required: true
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Signaler latest_version au backend
+        run: |
+          curl -fsS -X POST "https://api.mibeko.fr/api/v1/app-config/latest-version" \
+            -H "X-Mobile-Release-Secret: ${{ secrets.MOBILE_RELEASE_WEBHOOK_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"version\": \"${{ github.event.inputs.version }}\"}"
