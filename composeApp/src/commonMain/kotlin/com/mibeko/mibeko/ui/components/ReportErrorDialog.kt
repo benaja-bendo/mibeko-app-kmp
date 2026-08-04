@@ -73,8 +73,18 @@ fun ReportErrorDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Description (Optionnel)") },
-                    placeholder = { Text("Précisez l'erreur...") },
+                    label = { Text("Description") },
+                    placeholder = { Text("Que devrait dire ce texte ?") },
+                    supportingText = {
+                        Text(
+                            if (description.isBlank()) {
+                                "Décrivez l'erreur : sans détail, une équipe réduite ne peut pas la corriger."
+                            } else {
+                                "${description.trim().length} caractère(s)"
+                            }
+                        )
+                    },
+                    isError = description.isBlank(),
                     modifier = Modifier.fillMaxWidth().height(120.dp),
                     maxLines = 4
                 )
@@ -83,9 +93,10 @@ fun ReportErrorDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onSubmit(selectedType, description)
+                    onSubmit(selectedType, description.trim())
                     onDismiss()
-                }
+                },
+                enabled = description.trim().length >= 10
             ) {
                 Text("Envoyer")
             }
