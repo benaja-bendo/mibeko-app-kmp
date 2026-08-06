@@ -117,6 +117,17 @@ jobs:
         cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
         echo "PP_UUID=$UUID" >> $GITHUB_ENV
 
+        # L'app réclame « Associated Domains » (Universal Links mibeko.fr, cf.
+        # iosApp/iosApp.entitlements). Si le profil ne porte pas la capability,
+        # xcodebuild échoue après ~20 min de compilation sur un message qui ne
+        # la nomme pas. On tranche ici, en trois secondes et en clair.
+        security cms -D -i $PP_PATH > $RUNNER_TEMP/pp.plist
+        if ! /usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.associated-domains" $RUNNER_TEMP/pp.plist > /dev/null 2>&1; then
+          echo "::error::Le profil de provisioning ne porte pas « Associated Domains ». Activer la capability sur l'App ID cg.mibeko.app (developer.apple.com), régénérer le profil de distribution, puis mettre à jour le secret BUILD_PROVISION_PROFILE_BASE64."
+          exit 1
+        fi
+        echo "✓ Associated Domains présent dans le profil"
+
     # Ce contrôle échoue AVANT les ~20 min de compilation Kotlin + Firebase, et
     # attrape le cas où l'onglet « Signing & Capabilities » de Xcode aurait
     # silencieusement réécrit les réglages de signature dans le pbxproj.

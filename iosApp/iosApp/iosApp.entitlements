@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	Universal Links : autorise l'app à prendre en charge les liens
+	https://mibeko.fr/textes/… partagés depuis le portail citoyen.
+
+	Sans cette entitlement, iOS n'interroge JAMAIS le fichier
+	/.well-known/apple-app-site-association du site : les liens partagés
+	s'ouvrent dans Safari même quand l'app est installée. Le pendant Android
+	(intent-filter android:autoVerify) vit dans androidApp/src/main/AndroidManifest.xml.
+
+	La déclaration doit rester alignée sur le site (route Astro
+	mibeko-site/src/pages/.well-known/apple-app-site-association.ts, appID
+	G2VC572UTM.cg.mibeko.app, chemins /textes/*).
+
+	Prérequis de signature : la capability « Associated Domains » doit être
+	activée sur l'App ID cg.mibeko.app et le profil de provisioning régénéré —
+	sinon xcodebuild échoue à l'archive.
+	-->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:mibeko.fr</string>
+	</array>
+</dict>
+</plist>
