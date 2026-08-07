@@ -67,7 +67,6 @@ import org.koin.dsl.module
 private val PUBLIC_AUTH_ROUTES = listOf(
     "/v1/login",
     "/v1/register",
-    "/v1/auth/firebase",
     "/v1/forgot-password",
     "/v1/reset-password",
     "/v1/logout"

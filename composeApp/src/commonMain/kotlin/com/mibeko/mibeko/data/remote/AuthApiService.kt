@@ -10,12 +10,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
 @Serializable
-data class FirebaseLoginRequest(
-    val id_token: String,
-    val device_name: String
-)
-
-@Serializable
 data class LoginRequest(
     val email: String,
     val password: String,
@@ -230,13 +224,6 @@ class AuthApiService(
 
     suspend fun logout(): AuthResponse = safeApiCall {
         client.post("$baseUrl/v1/logout")
-    }
-
-    suspend fun loginWithFirebase(idToken: String, deviceName: String): AuthResponse = safeApiCall {
-        client.post("$baseUrl/v1/auth/firebase") {
-            contentType(ContentType.Application.Json)
-            setBody(FirebaseLoginRequest(idToken, deviceName))
-        }
     }
 
     /**
