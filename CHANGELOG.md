@@ -6,6 +6,86 @@ publique. Chaque nouvelle mise à jour ajoute une section en haut du fichier.
 
 ---
 
+## 1.2.0 — 7 août 2026
+
+Version de fiabilité. Le fil conducteur : **l'application ne doit jamais
+affirmer qu'un texte n'existe pas alors qu'elle n'a simplement pas pu
+vérifier**. Plusieurs écrans affichaient un résultat vide en cas de panne
+réseau, ce qui revenait à annoncer une absence de droit. Ils distinguent
+désormais « rien trouvé » de « je n'ai pas pu vérifier », avec un bouton
+Réessayer. S'y ajoute l'ouverture des liens partagés dans l'application.
+
+### Nouveau
+
+- **Les liens de textes partagés ouvrent l'application** : un lien
+  `mibeko.fr/textes/…` reçu par WhatsApp ou par courriel ouvre directement le
+  texte dans l'app quand elle est installée, et la page web sinon. Sur iPhone,
+  ces liens ouvraient jusqu'ici systématiquement le navigateur.
+- **Choix « Citoyen » ou « Professionnel »** à la première connexion, à la
+  place de l'ancien écran de profil : deux usages du droit, deux entrées.
+- **Partage depuis le site** : les pages de textes de `mibeko.fr` proposent
+  désormais un partage direct (partage natif, WhatsApp, copie du lien) — c'est
+  le principal chemin d'arrivée de nouveaux utilisateurs vers l'app.
+
+### Corrigé
+
+- **Recherche dans la Bibliothèque** : une coupure réseau affichait « aucun
+  résultat », donnant à croire que le texte cherché n'existait pas. L'échec
+  est maintenant annoncé comme tel, et réessayable.
+- **Centre de notifications** : même confusion entre une boîte réellement vide
+  et une panne de connexion.
+- **Écran d'accueil** : le contenu documentaire ne s'affichait pas, et les
+  erreurs de chargement passaient inaperçues.
+- **Ouverture d'un lien partagé** : en cas d'échec de résolution,
+  l'application revenait en silence à l'accueil sans rien dire ; elle explique
+  désormais ce qui s'est passé et propose de réessayer.
+- **Dossiers** : ajout d'un article à un dossier, confirmation avant
+  suppression, et erreurs enfin visibles au lieu d'être avalées.
+- **Barre de navigation après connexion** : son état ne suivait pas toujours
+  la session réellement ouverte.
+- **Libellés trompeurs** : un bouton annonçait un effet immédiat qu'il n'avait
+  pas, un badge décrivait mal l'état du contenu téléchargé.
+- **Signalement d'une anomalie** : la description est maintenant obligatoire,
+  un signalement vide n'étant pas exploitable.
+
+### Sous le capot (fiabilité — pas pour la communication publique)
+
+- Application Android extraite dans son propre module (`:androidApp`),
+  prérequis de la montée de version des outils de build Android.
+- Un build de publication échoue désormais si le numéro de version interne est
+  absent, au lieu de produire un paquet que le store refusera.
+- Écran de recherche hérité (`ui/search/`) supprimé : injoignable depuis le
+  lancement, il dupliquait la Bibliothèque.
+- Mesure d'usage de la bannière de mise à jour (clic et fermeture), pour savoir
+  si elle sert réellement.
+- iOS : déclaration des domaines associés — c'est elle qui manquait pour que
+  les liens `mibeko.fr` ouvrent l'app. Nécessite un profil de distribution
+  régénéré avec la capacité « Associated Domains ».
+
+---
+
+## Pistes de communication publique — 1.2.0
+
+**À mettre en avant** :
+
+1. **Le partage** — la nouveauté la plus concrète : « Partagez un article de
+   loi à un proche : il l'ouvre directement dans l'application. »
+2. **La fiabilité de la recherche** — à formuler en positif : « Quand la
+   connexion flanche, Mibeko vous le dit au lieu de vous laisser croire que le
+   texte n'existe pas. »
+
+**À éviter** : dire que les liens ne fonctionnaient pas du tout sur iPhone, et
+tout terme technique (domaines associés, modules de build, réseau).
+
+**Suggestion de texte court** (champ « Nouveautés » App Store / Play Store) :
+
+> Partagez un texte de loi : votre destinataire l'ouvre directement dans
+> l'application. Recherche, accueil et notifications plus fiables en connexion
+> instable — Mibeko distingue désormais « aucun résultat » de « connexion
+> indisponible ».
+
+---
+
 ## 1.1.1 — 31 juillet 2026
 
 Première mise à jour depuis le lancement (1.0). Deux chantiers menés en parallèle :
