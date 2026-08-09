@@ -29,6 +29,7 @@ import com.mibeko.mibeko.ui.theme.MibekoTheme
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
 import com.mibeko.mibeko.ui.components.ReportErrorDialog
+import com.mibeko.mibeko.util.articlePlainText
 
 import org.koin.compose.viewmodel.koinViewModel
 import com.mibeko.mibeko.ui.components.PdfViewer
@@ -491,9 +492,12 @@ fun ArticleItem(article: ArticleEntity, textColor: Color, onClick: () -> Unit) {
                 )
             }
             
-            if (!article.content.isNullOrBlank()) {
+            // Aperçu en texte pur : un article hérité porte encore du HTML de
+            // tableau, et trois lignes de balises ne disent rien du texte.
+            val preview = articlePlainText(article.content)
+            if (preview.isNotBlank()) {
                 Text(
-                    text = article.content,
+                    text = preview,
                     style = MaterialTheme.typography.bodyMedium,
                     color = textColor.copy(alpha = 0.8f),
                     maxLines = 3,

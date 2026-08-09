@@ -38,6 +38,7 @@ import com.mikepenz.markdown.m3.markdownTypography
 import androidx.compose.ui.text.TextStyle
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
+import com.mibeko.mibeko.util.articlePlainText
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.animation.core.*
 
@@ -563,7 +564,9 @@ fun ArticleSourceCard(source: ArticleSource) {
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = "\"${source.content}\"",
+                // Citation en texte pur : l'extrait vient du même corpus que le
+                // lecteur, donc peut porter du HTML de tableau hérité.
+                text = "\"${articlePlainText(source.content)}\"",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 4,

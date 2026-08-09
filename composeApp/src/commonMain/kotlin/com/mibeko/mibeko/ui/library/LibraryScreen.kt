@@ -29,6 +29,7 @@ import com.mibeko.mibeko.ui.components.MibekoErrorBanner
 import com.mibeko.mibeko.ui.components.MibekoErrorState
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
+import com.mibeko.mibeko.util.articlePlainText
 import com.mibeko.mibeko.util.formatRemoteDateForUi
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -896,10 +897,13 @@ private fun SearchResultCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            if (!item.content.isNullOrBlank()) {
+            // Aperçu en texte pur : un article hérité porte encore du HTML de
+            // tableau, illisible en trois lignes d'extrait.
+            val preview = articlePlainText(item.content)
+            if (preview.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = item.content,
+                    text = preview,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 3,

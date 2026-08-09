@@ -30,6 +30,7 @@ import com.mibeko.mibeko.data.local.dao.DossierArticleWithDetails
 import com.mibeko.mibeko.data.local.entities.DossierEntity
 import com.mibeko.mibeko.data.local.entities.DossierTag
 import com.mibeko.mibeko.ui.navigation.LocalNavController
+import com.mibeko.mibeko.util.articlePlainText
 import com.mibeko.mibeko.ui.navigation.Screen as NavScreen
 import androidx.navigation.NavController
 import org.koin.compose.viewmodel.koinViewModel
@@ -316,7 +317,9 @@ fun DossierArticleCard(
                 )
                 
                 Text(
-                    text = (article.article.content ?: "").take(80) + "...",
+                    // Aperçu en texte pur : sur 80 caractères, un article
+                    // hérité n'afficherait que le début de ses balises.
+                    text = articlePlainText(article.article.content).take(80) + "...",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,

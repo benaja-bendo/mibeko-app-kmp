@@ -38,12 +38,17 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.graphics.Color
 import com.mibeko.mibeko.ui.components.DossierSelectionSheet
+import com.mibeko.mibeko.ui.components.LegalTableBlock
 import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
 import com.mibeko.mibeko.ui.components.ReportErrorDialog
 import com.mibeko.mibeko.ui.components.OfficialSourcesSheet
+import com.mibeko.mibeko.util.ContentSegment
+import com.mibeko.mibeko.util.articleLeafLabel
+import com.mibeko.mibeko.util.articleSegments
 import com.mibeko.mibeko.util.formatIsoDateToFrench
+import com.mibeko.mibeko.util.readableText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -168,6 +173,13 @@ fun ReaderScreen(articleId: String) {
 
         val currentArticle = article
 
+        // Repli hérité : un article ingéré avant la normalisation du corpus
+        // porte encore le HTML de tableau produit par MinerU. La segmentation
+        // le sépare du texte pour qu'aucune balise n'arrive à l'écran.
+        val segments = remember(currentArticle.id, currentArticle.content) {
+            articleSegments(currentArticle.content)
+        }
+
         Scaffold(
             topBar = {
                 Column(
@@ -177,8 +189,11 @@ fun ReaderScreen(articleId: String) {
                         title = {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    "Article ${currentArticle.number}", 
-                                    fontWeight = FontWeight.Bold, 
+                                    // Certaines feuilles portent un numéro
+                                    // technique (« TABLEAU_1 », « PREAMBULE ») :
+                                    // « Article TABLEAU_1 » n'est pas un titre.
+                                    articleLeafLabel(currentArticle.number),
+                                    fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.titleMedium,
                                     color = textColor
                                 )
@@ -323,7 +338,13 @@ fun ReaderScreen(articleId: String) {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = currentArticle.breadcrumb.split(">").last().uppercase(),
+                            // Le fil d'Ariane porte le titre du nœud parent. Il
+                            // est vide sur les actes courts, dont les articles
+                            // pendent d'un nœud racine synthétique : le libellé
+                            // de la feuille prend alors le relais.
+                            text = currentArticle.breadcrumb.split(">").last().trim()
+                                .ifBlank { articleLeafLabel(currentArticle.number) }
+                                .uppercase(),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold,
                             color = textColor,
@@ -334,22 +355,34 @@ fun ReaderScreen(articleId: String) {
                 }
                 
                 // Article content with optimized typography
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = currentArticle.content ?: "",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = fontSizeValue,
-                                lineHeight = lineSpacingValue,
-                                letterSpacing = if (isDyslexiaFontEnabled) 0.8.sp else 0.3.sp,
-                                fontWeight = if (isDyslexiaFontEnabled) FontWeight.Medium else FontWeight.Normal
-                            ),
-                            color = textColor
-                        )
+                segments.forEachIndexed { index, segment ->
+                    item(key = "segment_${currentArticle.id}_$index") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 8.dp)
+                        ) {
+                            when (segment) {
+                                is ContentSegment.Text -> Text(
+                                    text = readableText(segment.text),
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontSize = fontSizeValue,
+                                        lineHeight = lineSpacingValue,
+                                        letterSpacing = if (isDyslexiaFontEnabled) 0.8.sp else 0.3.sp,
+                                        fontWeight = if (isDyslexiaFontEnabled) FontWeight.Medium else FontWeight.Normal
+                                    ),
+                                    color = textColor
+                                )
+
+                                is ContentSegment.Table -> LegalTableBlock(
+                                    table = segment.table,
+                                    textColor = textColor,
+                                    fontSize = fontSizeValue,
+                                    lineHeight = lineSpacingValue,
+                                    dyslexiaFriendly = isDyslexiaFontEnabled
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -487,7 +520,7 @@ fun ReaderScreen(articleId: String) {
                 ) {
                 ShareOptionsSheet(
                     title = "Partager l'article",
-                    subtitle = "Article ${currentArticle.number} - ${uiState.documentTitle}",
+                    subtitle = "${articleLeafLabel(currentArticle.number)} - ${uiState.documentTitle}",
                     onSharePdf = {
                         viewModel.shareAsPdf()
                         showShareSheet = false
@@ -643,7 +676,7 @@ private fun ReaderTocSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Article ${entry.number}",
+                            text = articleLeafLabel(entry.number),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                             color = if (isCurrent) MaterialTheme.colorScheme.primary

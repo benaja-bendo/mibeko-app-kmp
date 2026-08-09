@@ -14,6 +14,8 @@ import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.repository.DossierRepository
 import com.mibeko.mibeko.util.AnalyticsEvents
 import com.mibeko.mibeko.util.MibekoAnalytics
+import com.mibeko.mibeko.util.articleLeafLabel
+import com.mibeko.mibeko.util.articlePlainText
 import com.mibeko.mibeko.util.formatTimestampToDate
 import com.mibeko.mibeko.util.getAppVersionName
 import com.mibeko.mibeko.util.recordException
@@ -203,7 +205,7 @@ class ReaderViewModel(
                     // Log to recently viewed
                     recentlyViewedManager.addRecentlyViewed(
                         id = articleResult.id,
-                        title = "Article ${articleResult.number}",
+                        title = articleLeafLabel(articleResult.number),
                         typeCode = docResult?.type ?: "Inconnu"
                     )
                 } else {
@@ -272,16 +274,19 @@ class ReaderViewModel(
     fun shareAsText() {
         val currentArticle = _uiState.value.article ?: return
         val documentTitle = _uiState.value.documentTitle ?: "Document"
+        val label = articleLeafLabel(currentArticle.number)
         val text = buildString {
-            appendLine("Article ${currentArticle.number}")
+            appendLine(label)
             appendLine(documentTitle)
             appendLine()
-            append(currentArticle.content ?: "")
+            // Jamais `content` brut : un article hérité porte encore du HTML de
+            // tableau, que le destinataire recevrait tel quel.
+            append(articlePlainText(currentArticle.content))
             appendLine()
             appendLine("---")
             appendLine("Partagé via Mibeko - Le Droit numérique")
         }
-        contentSharer.shareText(text, "Article ${currentArticle.number}")
+        contentSharer.shareText(text, label)
         analytics.logEvent(AnalyticsEvents.READER_SHARE, mapOf("format" to "text"))
     }
 
@@ -297,21 +302,26 @@ class ReaderViewModel(
         )
 
         // Create a rich message with context and the link
+        val label = articleLeafLabel(currentArticle.number)
         val message = buildString {
-            appendLine("📚 Article ${currentArticle.number}")
+            appendLine("📚 $label")
             appendLine(documentTitle)
             appendLine()
             appendLine("Découvrez cet article sur Mibeko :")
             appendLine(link)
         }
 
-        contentSharer.shareText(message, "Article ${currentArticle.number} - Mibeko")
+        contentSharer.shareText(message, "$label - Mibeko")
         analytics.logEvent(AnalyticsEvents.READER_SHARE, mapOf("format" to "link"))
     }
 
     fun copyArticleText() {
         val currentArticle = _uiState.value.article ?: return
-        val text = "Article ${currentArticle.number}\n\n${currentArticle.content ?: ""}"
+        val text = buildString {
+            append(articleLeafLabel(currentArticle.number))
+            append("\n\n")
+            append(articlePlainText(currentArticle.content))
+        }
         contentSharer.copyToClipboard(text)
         _snackbarMessage.value = "✓ Texte de l'article copié"
     }
