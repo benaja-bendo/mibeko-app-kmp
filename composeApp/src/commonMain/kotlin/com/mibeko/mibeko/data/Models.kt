@@ -1,5 +1,6 @@
 package com.mibeko.mibeko.data
 
+import com.mibeko.mibeko.util.ArticleTable
 data class LawCodeSpec(
     val id: String,
     val title: String,
@@ -27,7 +28,13 @@ data class ArticleSpec(
     val breadcrumb: String,
     val typeCode: String = "", // Added for filtering
     val isFavorite: Boolean = false,
-    val isDownloaded: Boolean = false
+    val isDownloaded: Boolean = false,
+    /**
+     * Tableaux de l'article. Vide pour la quasi-totalité du corpus, et pour tout
+     * article synchronisé avant que l'API ne les transporte : le rendu retombe
+     * alors sur le texte, qui reste lisible.
+     */
+    val tables: List<ArticleTable> = emptyList()
 )
 
 @kotlinx.serialization.Serializable

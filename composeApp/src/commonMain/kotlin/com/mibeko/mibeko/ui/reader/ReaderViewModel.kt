@@ -281,7 +281,7 @@ class ReaderViewModel(
             appendLine()
             // Jamais `content` brut : un article hérité porte encore du HTML de
             // tableau, que le destinataire recevrait tel quel.
-            append(articlePlainText(currentArticle.content))
+            append(articlePlainText(currentArticle.content, currentArticle.tables))
             appendLine()
             appendLine("---")
             appendLine("Partagé via Mibeko - Le Droit numérique")
@@ -320,7 +320,7 @@ class ReaderViewModel(
         val text = buildString {
             append(articleLeafLabel(currentArticle.number))
             append("\n\n")
-            append(articlePlainText(currentArticle.content))
+            append(articlePlainText(currentArticle.content, currentArticle.tables))
         }
         contentSharer.copyToClipboard(text)
         _snackbarMessage.value = "✓ Texte de l'article copié"

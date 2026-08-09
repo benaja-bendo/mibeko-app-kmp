@@ -1,21 +1,24 @@
 package com.mibeko.mibeko.util
 
+import kotlinx.serialization.Serializable
+
 /**
  * Tableaux d'un article juridique — modèle canonique et segmentation du contenu.
  *
  * Invariant du corpus : `contenu_texte` ne contient jamais de balisage. Un
  * tableau y est **linéarisé** (une ligne par rangée, cellules séparées par
- * « | ») et sa forme structurée voyage à côté. Ce fichier est donc un **repli
- * transitoire** : il ne sert qu'aux articles ingérés avant cette normalisation,
- * dont le contenu porte encore du HTML MinerU brut. Il doit disparaître le jour
- * où le corpus est rétro-corrigé — rien d'autre ne doit s'appuyer dessus
- * entre-temps.
+ * « | ») et sa forme structurée voyage à côté.
  *
- * Jumeau faisant autorité : `mibeko-site/src/lib/tables.ts`. Toute correction
- * ici doit être reportée là-bas, et réciproquement. Le chemin « tableaux
- * structurés fournis par l'API » du jumeau n'a pas d'équivalent ici : la charge
- * utile de synchronisation (`ArticleSyncResource`, côté Laravel) ne transporte
- * ni `source_locator` ni `tables`.
+ * Deux chemins, dans cet ordre de confiance :
+ *   1. `tables` synchronisés depuis l'API, ancrés sur les lignes qu'ils
+ *      occupent — le cas normal depuis la normalisation du corpus ;
+ *   2. repli hérité : du HTML MinerU encore présent dans le texte d'articles
+ *      synchronisés avant. Ce second chemin est **transitoire** et disparaîtra
+ *      quand plus aucun appareil ne portera de corpus d'avant la bascule.
+ *
+ * Jumeau faisant autorité : `mibeko-site/src/lib/tables.ts`, dont les cas sont
+ * testés dans `mibeko-front/src/shared/lib/tables.test.ts`. Toute correction
+ * ici doit être reportée là-bas, et réciproquement.
  *
  * Analyse à la main plutôt qu'avec `Regex` : le moteur d'expressions régulières
  * de Kotlin/Native n'est pas celui de la JVM, et les tests ne tournent que sur
@@ -36,6 +39,25 @@ data class LegalTable(
     /** Rangées de données, hors en-tête. */
     val rows: List<List<String>> = emptyList()
 )
+
+/**
+ * Tableau tel que servi par l'API et stocké dans le corpus hors-ligne.
+ *
+ * Jumeau de `ApiTable` côté TypeScript. Les bornes sont des indices de lignes
+ * de `content` (début inclus, fin exclue) : elles disent quelles lignes du
+ * texte linéarisé ce tableau occupe, sans qu'aucun marqueur n'ait à transiter
+ * par le texte lui-même.
+ */
+@Serializable
+data class ArticleTable(
+    val caption: String? = null,
+    val headers: List<String> = emptyList(),
+    val rows: List<List<String>> = emptyList(),
+    val line_start: Int? = null,
+    val line_end: Int? = null
+) {
+    fun toLegalTable(): LegalTable = LegalTable(caption = caption, headers = headers, rows = rows)
+}
 
 /** Morceau de contenu à rendre : du texte, ou un tableau. */
 sealed interface ContentSegment {
@@ -74,10 +96,44 @@ private val TABLE_TAGS = listOf("table", "tr", "td", "th")
  * Les surfaces n'ont pas à savoir si l'article a déjà été normalisé : sans
  * balise de tableau, le contenu ressort en un unique segment de texte, intact.
  */
-fun articleSegments(content: String?): List<ContentSegment> {
+fun articleSegments(content: String?, tables: List<ArticleTable> = emptyList()): List<ContentSegment> {
     if (content.isNullOrEmpty()) return emptyList()
+    if (tables.isNotEmpty()) return segmentsFromTables(content, tables)
     if (!hasRawTableMarkup(content)) return textSegment(content)
     return segmentsFromHtml(content)
+}
+
+/**
+ * Segmente le contenu à partir des tableaux structurés servis par l'API.
+ *
+ * Une borne absente ou incohérente fait retomber le tableau en fin de contenu
+ * plutôt que de tronquer le texte : mieux vaut un tableau mal placé qu'un texte
+ * officiel amputé.
+ */
+fun segmentsFromTables(content: String, tables: List<ArticleTable>): List<ContentSegment> {
+    val lines = content.split("\n")
+    val ancres = tables
+        .filter { it.line_start != null && it.line_end != null && it.line_start >= 0 && it.line_end > it.line_start }
+        .sortedBy { it.line_start }
+
+    val segments = mutableListOf<ContentSegment>()
+    var cursor = 0
+
+    for (table in ancres) {
+        val start = minOf(table.line_start!!, lines.size)
+        val end = minOf(table.line_end!!, lines.size)
+        if (start < cursor) continue // Chevauchement : on garde le premier.
+        segments += textSegment(lines.subList(cursor, start).joinToString("\n"))
+        segments += ContentSegment.Table(table.toLegalTable())
+        cursor = end
+    }
+
+    segments += textSegment(lines.subList(cursor, lines.size).joinToString("\n"))
+
+    // Tableaux sans ancrage exploitable : rendus à la suite, jamais perdus.
+    tables.filterNot { it in ancres }.forEach { segments += ContentSegment.Table(it.toLegalTable()) }
+
+    return segments
 }
 
 /**
@@ -148,8 +204,8 @@ fun linearizeTable(table: LegalTable): String {
  * part dans le presse-papier et dans le partage, où du HTML serait à la fois
  * illisible et faux.
  */
-fun articlePlainText(content: String?): String =
-    articleSegments(content).joinToString("\n") { segment ->
+fun articlePlainText(content: String?, tables: List<ArticleTable> = emptyList()): String =
+    articleSegments(content, tables).joinToString("\n") { segment ->
         when (segment) {
             is ContentSegment.Text -> readableText(segment.text)
             is ContentSegment.Table -> linearizeTable(segment.table)

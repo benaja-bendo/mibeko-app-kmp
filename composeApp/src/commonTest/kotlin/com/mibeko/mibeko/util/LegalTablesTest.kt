@@ -240,3 +240,84 @@ class LegalTablesTest {
         assertEquals(listOf(listOf("a", "1")), table.rows)
     }
 }
+
+/**
+ * Chemin structuré : les tableaux arrivent par la synchronisation, ancrés sur
+ * les lignes qu'ils occupent dans le texte linéarisé. C'est le cas normal
+ * depuis la normalisation du corpus ; le HTML n'est plus qu'un repli hérité.
+ */
+class LegalTablesStructureesTest {
+
+    private val budget = ArticleTable(
+        caption = "Crédits ouverts",
+        headers = listOf("Chapitre", "Montant"),
+        rows = listOf(listOf("3-2-1", "50.000.000")),
+        line_start = 1,
+        line_end = 3
+    )
+
+    @Test
+    fun remplaceLesLignesAncreesEtGardeLeTexteAutour() {
+        val content = "Introduction.\nChapitre | Montant\n3-2-1 | 50.000.000\nFait à Brazzaville."
+
+        val segments = articleSegments(content, listOf(budget))
+
+        assertEquals(3, segments.size)
+        assertEquals("Introduction.", (segments[0] as ContentSegment.Text).text)
+        val table = (segments[1] as ContentSegment.Table).table
+        assertEquals(listOf("Chapitre", "Montant"), table.headers)
+        assertEquals("Crédits ouverts", table.caption)
+        assertEquals("Fait à Brazzaville.", (segments[2] as ContentSegment.Text).text)
+    }
+
+    @Test
+    fun laStructurePrimeSurLeBalisageResiduel() {
+        // Un corpus à moitié migré peut porter les deux : la structure fait foi.
+        val content = "<table><tr><td>vieux</td></tr></table>"
+
+        val segments = articleSegments(content, listOf(budget.copy(line_start = null, line_end = null)))
+
+        assertEquals(1, segments.count { it is ContentSegment.Table })
+        assertEquals(listOf("Chapitre", "Montant"), (segments.first { it is ContentSegment.Table } as ContentSegment.Table).table.headers)
+    }
+
+    @Test
+    fun unTableauSansAncrageEstRenduEnFinPlutotQuePerdu() {
+        val segments = articleSegments("Texte seul.", listOf(budget.copy(line_start = null, line_end = null)))
+
+        assertEquals(2, segments.size)
+        assertTrue(segments[0] is ContentSegment.Text)
+        assertTrue(segments[1] is ContentSegment.Table)
+    }
+
+    @Test
+    fun desBornesAuDelaDuTexteNAmputentRien() {
+        val segments = articleSegments("une seule ligne", listOf(budget.copy(line_start = 0, line_end = 99)))
+
+        assertEquals(1, segments.size)
+        assertTrue(segments[0] is ContentSegment.Table)
+    }
+
+    @Test
+    fun deuxAncragesQuiSeChevauchentNeProduisentQuUnTableau() {
+        val content = "a\nb\nc\nd"
+
+        val segments = articleSegments(
+            content,
+            listOf(budget.copy(line_start = 0, line_end = 3), budget.copy(line_start = 1, line_end = 2))
+        )
+
+        assertEquals(1, segments.count { it is ContentSegment.Table })
+    }
+
+    @Test
+    fun leTextePurLinearisePasseParLaStructure() {
+        val content = "Introduction.\nChapitre | Montant\n3-2-1 | 50.000.000"
+
+        val plain = articlePlainText(content, listOf(budget))
+
+        assertFalse(plain.contains("<"))
+        assertTrue(plain.contains("Introduction."))
+        assertTrue(plain.contains("Chapitre | Montant"))
+    }
+}

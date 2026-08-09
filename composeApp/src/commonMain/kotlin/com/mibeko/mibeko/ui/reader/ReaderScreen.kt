@@ -173,11 +173,12 @@ fun ReaderScreen(articleId: String) {
 
         val currentArticle = article
 
-        // Repli hérité : un article ingéré avant la normalisation du corpus
-        // porte encore le HTML de tableau produit par MinerU. La segmentation
-        // le sépare du texte pour qu'aucune balise n'arrive à l'écran.
-        val segments = remember(currentArticle.id, currentArticle.content) {
-            articleSegments(currentArticle.content)
+        // Deux origines possibles pour un tableau : la structure synchronisée
+        // depuis l'API (cas normal), ou — pour un corpus téléchargé avant la
+        // normalisation — du HTML MinerU resté dans le texte. La segmentation
+        // absorbe les deux, et aucune balise n'arrive à l'écran.
+        val segments = remember(currentArticle.id, currentArticle.content, currentArticle.tables) {
+            articleSegments(currentArticle.content, currentArticle.tables)
         }
 
         Scaffold(

@@ -253,6 +253,24 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
     }
 }
 
+/**
+ * v10 → v11 :
+ * - `articles` gagne `tables_json` (nullable) : la structure des tableaux d'un
+ *   article, que l'API transporte désormais à côté du texte. Le texte, lui,
+ *   est linéarisé (« A | B | C » par rangée) depuis la normalisation du corpus
+ *   du 09/08/2026 — sans cette colonne, le lecteur afficherait ces lignes
+ *   telles quelles au lieu d'un tableau.
+ *
+ * Aucun backfill : la colonne se remplit à la prochaine synchronisation de
+ * chaque document. Un article déjà en base reste lisible entre-temps, le rendu
+ * retombant sur son texte.
+ */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `articles` ADD COLUMN `tables_json` TEXT DEFAULT NULL")
+    }
+}
+
 /** Migrations à enregistrer sur chaque plateforme lors de la construction de la base. */
 val ALL_MIGRATIONS = arrayOf(
     MIGRATION_1_2,
@@ -263,5 +281,6 @@ val ALL_MIGRATIONS = arrayOf(
     MIGRATION_6_7,
     MIGRATION_7_8,
     MIGRATION_8_9,
-    MIGRATION_9_10
+    MIGRATION_9_10,
+    MIGRATION_10_11
 )

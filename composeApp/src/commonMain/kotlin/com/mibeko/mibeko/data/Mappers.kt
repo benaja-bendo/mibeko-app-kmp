@@ -2,6 +2,10 @@ package com.mibeko.mibeko.data
 
 import com.mibeko.mibeko.data.local.entities.ArticleEntity
 import com.mibeko.mibeko.data.local.entities.DocumentEntity
+import com.mibeko.mibeko.util.ArticleTable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 
 fun DocumentEntity.toLawCodeSpec(): LawCodeSpec {
     return LawCodeSpec(
@@ -49,9 +53,40 @@ fun ArticleEntity.toArticleSpec(
         breadcrumb = breadcrumb,
         typeCode = typeCode, // Added
         isFavorite = is_favorite,
-        isDownloaded = isDocDownloaded || is_offline
+        isDownloaded = isDocDownloaded || is_offline,
+        tables = decodeArticleTables(tables_json)
     )
 }
+
+/**
+ * Relit les tableaux stockés en JSON dans `articles.tables_json`.
+ *
+ * Un JSON illisible (colonne écrite par une version antérieure, corpus
+ * partiellement migré) ne doit jamais faire échouer l'ouverture d'un article :
+ * on retombe sur aucune structure, et le lecteur affiche le texte — lisible,
+ * simplement sans colonnes.
+ */
+internal fun decodeArticleTables(json: String?): List<ArticleTable> {
+    if (json.isNullOrBlank()) return emptyList()
+
+    return try {
+        articleTablesJson.decodeFromString(ListSerializer(ArticleTable.serializer()), json)
+    } catch (_: SerializationException) {
+        emptyList()
+    } catch (_: IllegalArgumentException) {
+        emptyList()
+    }
+}
+
+/** Sérialise les tableaux pour la colonne `articles.tables_json` (null si aucun). */
+internal fun encodeArticleTables(tables: List<ArticleTable>): String? =
+    if (tables.isEmpty()) {
+        null
+    } else {
+        articleTablesJson.encodeToString(ListSerializer(ArticleTable.serializer()), tables)
+    }
+
+private val articleTablesJson = Json { ignoreUnknownKeys = true }
 
 /**
  * Maps remote API search result to ArticleSpec.

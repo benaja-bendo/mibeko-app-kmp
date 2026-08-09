@@ -1,5 +1,6 @@
 package com.mibeko.mibeko.data.remote
 
+import com.mibeko.mibeko.util.ArticleTable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -195,7 +196,9 @@ data class RemoteNode(
      * courts (arrêtés/décrets issus d'un JO) n'ont pas de structure, l'API
      * renvoie alors leurs articles directement à la racine de l'arbre.
      */
-    val content: String? = null
+    val content: String? = null,
+    /** Idem : tableaux du pseudo-nœud ARTICLE, quand il en porte. */
+    val tables: List<ArticleTable> = emptyList()
 )
 
 @Serializable
@@ -253,6 +256,8 @@ data class RemoteArticleBrief(
     val number: String,
     val order: Int,
     val content: String? = null,
+    /** Tableaux structurés de l'article (cf. `util/LegalTables.kt`). */
+    val tables: List<ArticleTable> = emptyList(),
     val validation_status: String = "validated"
 )
 
@@ -268,9 +273,15 @@ data class RemoteArticle(
     val number: String,
     val order: Int,
     val content: String? = null,
+    /** Feuille spéciale posée à l'ingestion : `preamble`, `signature`, `table`. */
+    val content_format: String? = null,
+    /** Tableaux structurés de l'article (cf. `util/LegalTables.kt`). */
+    val tables: List<ArticleTable> = emptyList(),
     val tags: List<String> = emptyList(),
     val updated_at: String
 )
+
+
 
 // =============================================================================
 // Search Models

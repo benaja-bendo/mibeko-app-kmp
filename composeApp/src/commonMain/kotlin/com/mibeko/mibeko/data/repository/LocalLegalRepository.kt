@@ -1,5 +1,6 @@
 package com.mibeko.mibeko.data.repository
 
+import com.mibeko.mibeko.data.encodeArticleTables
 import com.mibeko.mibeko.data.ArticleSpec
 import com.mibeko.mibeko.data.local.dao.MibekoDao
 import com.mibeko.mibeko.data.toArticleSpec
@@ -322,7 +323,8 @@ class LocalLegalRepository(
                     number = node.number ?: "",
                     content = node.content ?: "",
                     is_favorite = favoriteIds.contains(node.id),
-                    is_offline = offlineIds.contains(node.id)
+                    is_offline = offlineIds.contains(node.id),
+                    tables_json = encodeArticleTables(node.tables)
                 ))
             }
         }
@@ -343,7 +345,8 @@ class LocalLegalRepository(
                     number = articleBrief.number,
                     content = articleBrief.content ?: "",
                     is_favorite = favoriteIds.contains(articleBrief.id),
-                    is_offline = offlineIds.contains(articleBrief.id)
+                    is_offline = offlineIds.contains(articleBrief.id),
+                    tables_json = encodeArticleTables(articleBrief.tables)
                 ))
             }
         }
@@ -405,7 +408,8 @@ class LocalLegalRepository(
                 number = article.number,
                 content = article.content ?: "",
                 is_favorite = favoriteIds.contains(article.id),
-                is_offline = offlineIds.contains(article.id)
+                is_offline = offlineIds.contains(article.id),
+                tables_json = encodeArticleTables(article.tables)
             )
         }
 
@@ -573,7 +577,8 @@ class LocalLegalRepository(
                 number = article.number,
                 content = article.content,
                 is_favorite = article.isFavorite,
-                is_offline = true
+                is_offline = true,
+                tables_json = encodeArticleTables(article.tables)
             )
 
             mibekoDao.upsertNodes(listOf(node))
