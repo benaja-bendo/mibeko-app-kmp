@@ -7,6 +7,17 @@ import androidx.room.PrimaryKey
 data class DocumentEntity(
     @PrimaryKey val id: String,
     val title: String,
+    /**
+     * Objet de l'acte DÉRIVÉ de son corps, pour les textes que le Journal
+     * officiel publie en « actes en abrégé » : le titre s'y réduit au type, au
+     * numéro et à la date (« Décret n° 2025-240 du 20 juin 2025. »), et ne dit
+     * donc rien de ce que l'acte fait.
+     *
+     * À AFFICHER À CÔTÉ DE `title`, JAMAIS À SA PLACE : ce libellé est une
+     * paraphrase, pas l'intitulé officiel du texte. `null` pour l'immense
+     * majorité des documents, et pour tous ceux synchronisés avant la v12.
+     */
+    val descriptive_label: String? = null,
     val type_code: String,
     val last_updated: Long,
     val is_downloaded: Boolean = false,

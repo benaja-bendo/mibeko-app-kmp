@@ -16,7 +16,7 @@ import com.mibeko.mibeko.data.local.entities.*
         DossierArticleEntity::class,
         PendingDossierDeletionEntity::class
     ],
-    version = 11
+    version = 12
 )
 
 @ConstructedBy(AppDatabaseConstructor::class)

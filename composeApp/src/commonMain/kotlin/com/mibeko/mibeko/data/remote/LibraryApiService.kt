@@ -54,6 +54,12 @@ data class LibrarySearchItem(
     val content: String? = null,
     val document_id: String? = null,
     val document_title: String? = null,
+    /**
+     * Objet dérivé du corps du document parent, pour les « actes en abrégé »
+     * du JO dont le titre se réduit au type, au numéro et à la date.
+     * S'affiche à côté du titre, jamais à sa place. Champ ADDITIF.
+     */
+    val document_descriptive_label: String? = null,
     val document_type: String? = null,
     val node_title: String? = null,
     val breadcrumb: String? = null,
@@ -83,6 +89,8 @@ data class LibrarySearchResponse(
 data class SuggestDocument(
     val id: String,
     val title: String,
+    /** Objet dérivé du corps — affiché à côté du titre, jamais à sa place. */
+    val descriptive_label: String? = null,
     val type_code: String? = null,
     val type_name: String? = null
 )
@@ -93,6 +101,7 @@ data class SuggestArticle(
     val number: String,
     val document_id: String,
     val document_title: String,
+    val document_descriptive_label: String? = null,
     val type_code: String? = null
 )
 
@@ -103,6 +112,7 @@ data class SuggestPassage(
     val number: String,
     val document_id: String,
     val document_title: String,
+    val document_descriptive_label: String? = null,
     val snippet: String
 )
 

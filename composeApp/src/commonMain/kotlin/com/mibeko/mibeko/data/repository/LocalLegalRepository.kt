@@ -119,6 +119,7 @@ class LocalLegalRepository(
                 documents.add(DocumentEntity(
                     id = remoteDoc.id,
                     title = remoteDoc.title,
+                    descriptive_label = remoteDoc.libelle_descriptif,
                     type_code = remoteDoc.type?.code ?: "unknown",
                     last_updated = parseIsoDate(remoteDoc.updated_at),
                     is_downloaded = downloadedIds.contains(remoteDoc.id),
@@ -451,6 +452,7 @@ class LocalLegalRepository(
             val document = DocumentEntity(
                 id = remoteDoc.id,
                 title = remoteDoc.title,
+                descriptive_label = remoteDoc.libelle_descriptif,
                 type_code = remoteDoc.type?.code ?: "unknown",
                 last_updated = parseIsoDate(remoteDoc.updated_at),
                 is_downloaded = mibekoDao.getDownloadedDocumentIds().contains(remoteDoc.id),

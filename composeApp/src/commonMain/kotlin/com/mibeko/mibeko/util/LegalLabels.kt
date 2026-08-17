@@ -57,3 +57,38 @@ fun articleLeafLabel(number: String?, short: Boolean = false): String {
 
     return if (short) "Art. $value" else "Article $value"
 }
+
+/**
+ * Intitulé d'un document tel qu'affiché sur UNE seule ligne (liste, résultat de
+ * recherche, fil d'Ariane, libellé de partage).
+ *
+ * Le Journal officiel publie certaines décisions en « actes en abrégé » : son
+ * sommaire n'annonce que « Nomination. » et l'en-tête n'imprime aucun objet.
+ * L'intitulé du texte est alors littéralement « Décret n° 2025-240 du 20 juin
+ * 2025. » — fidèle à la source (vérifié le 16/08/2026 contre les markdowns
+ * MinerU), et parfaitement muet. Le libellé descriptif porte l'objet DÉRIVÉ du
+ * corps de l'acte pour compenser ce silence.
+ *
+ * RÈGLE À NE PAS DÉFAIRE : le libellé descriptif n'est PAS le titre officiel.
+ * Cette fonction les concatène, elle ne substitue jamais l'un à l'autre — un
+ * écran qui n'afficherait que le libellé présenterait comme intitulé officiel
+ * une paraphrase qui n'en est pas un.
+ *
+ * Jumeau : `mibeko-front/src/shared/lib/legalLabels.ts` (`documentLineLabel`).
+ */
+fun documentLineLabel(officialTitle: String?, descriptiveLabel: String?): String {
+    val title = officialTitle?.trim().orEmpty()
+    val label = descriptiveLabel?.trim().orEmpty()
+
+    if (title.isEmpty()) {
+        return label.ifEmpty { "Document" }
+    }
+
+    if (label.isEmpty()) {
+        return title
+    }
+
+    // Le point final de « … du 20 juin 2025. » ferait une coupure bancale
+    // devant le tiret : retiré de l'AFFICHAGE seulement, jamais de la donnée.
+    return "${title.trimEnd(' ', '.', ',', ';')} — $label"
+}

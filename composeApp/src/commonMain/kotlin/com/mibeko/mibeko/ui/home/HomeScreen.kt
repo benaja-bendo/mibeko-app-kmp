@@ -548,6 +548,19 @@ private fun HomeDocumentCard(document: RemoteDocument, onClick: () -> Unit) {
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                // Objet dérivé du corps de l'acte, SOUS le titre et jamais à sa
+                // place : sur un acte en abrégé, le titre ci-dessus ne dit que
+                // le type, le numéro et la date.
+                document.libelle_descriptif?.let { objet ->
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = objet,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 document.type?.name?.let { typeName ->
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(

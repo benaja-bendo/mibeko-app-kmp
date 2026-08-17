@@ -12,6 +12,7 @@ import com.mibeko.mibeko.data.repository.DossierRepository
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.repository.NotificationRepository
 import com.mibeko.mibeko.util.AnalyticsEvents
+import com.mibeko.mibeko.util.documentLineLabel
 import com.mibeko.mibeko.util.MibekoAnalytics
 import com.mibeko.mibeko.util.NotificationManager
 import com.mibeko.mibeko.util.formatSize
@@ -37,6 +38,11 @@ private const val REMOTE_CLEANUP_TIMEOUT_MS = 5_000L
  */
 data class DocumentDownloadState(
     val id: String,
+    /**
+     * Intitulé de la ligne : titre officiel, suivi de l'objet dérivé du corps
+     * quand le JO a publié l'acte en abrégé. Composé par `documentLineLabel` —
+     * le libellé ne remplace jamais le titre, il s'y ajoute.
+     */
     val title: String,
     val typeCode: String,
     val isDownloaded: Boolean = false,
@@ -399,7 +405,7 @@ class SettingsViewModel(
                 val downloadStates = lawCodes.map { code ->
                     DocumentDownloadState(
                         id = code.id,
-                        title = code.title,
+                        title = documentLineLabel(code.title, code.descriptiveLabel),
                         typeCode = code.icon, // icon stores type_code
                         isDownloaded = code.isDownloaded,
                         isDownloading = false

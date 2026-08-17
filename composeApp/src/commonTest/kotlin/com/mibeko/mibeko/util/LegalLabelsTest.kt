@@ -39,4 +39,28 @@ class LegalLabelsTest {
         assertEquals("", displayArticleNumber(null))
         assertEquals("Article ", articleLeafLabel(null))
     }
+
+    @Test
+    fun objetDeriveSAjouteAuTitreOfficiel() {
+        assertEquals(
+            "Décret n° 2025-240 du 20 juin 2025 — Nomination : président du Conseil supérieur",
+            documentLineLabel(
+                "Décret n° 2025-240 du 20 juin 2025.",
+                "Nomination : président du Conseil supérieur",
+            ),
+        )
+    }
+
+    @Test
+    fun titreSeulQuandAucunObjetNestConnu() {
+        assertEquals("Code du travail", documentLineLabel("Code du travail", null))
+        assertEquals("Code du travail", documentLineLabel("Code du travail", "   "))
+    }
+
+    @Test
+    fun titreAbsentNeFabriquePasDIntitule() {
+        assertEquals("Nomination", documentLineLabel(null, "Nomination"))
+        assertEquals("Document", documentLineLabel(null, null))
+        assertEquals("Document", documentLineLabel("", ""))
+    }
 }

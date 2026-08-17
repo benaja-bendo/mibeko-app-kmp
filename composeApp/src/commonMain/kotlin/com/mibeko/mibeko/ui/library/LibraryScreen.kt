@@ -30,6 +30,7 @@ import com.mibeko.mibeko.ui.components.MibekoErrorState
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.util.articlePlainText
+import com.mibeko.mibeko.util.documentLineLabel
 import com.mibeko.mibeko.util.formatRemoteDateForUi
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -293,14 +294,18 @@ private fun SuggestionsPanel(
                 SuggestionRow(
                     icon = Icons.AutoMirrored.Filled.MenuBook,
                     title = doc.title,
-                    subtitle = doc.type_name,
+                    // Sur un acte en abrégé, le titre ci-dessus ne dit que
+                    // « Décret n° … du … » : l'objet, dérivé du corps du texte,
+                    // est la seule information utile de la ligne.
+                    subtitle = doc.descriptive_label ?: doc.type_name,
                     onClick = { onOpenDocument(doc.id) }
                 )
             }
             suggestions.articles.take(3).forEach { article ->
                 SuggestionRow(
                     icon = Icons.Default.Article,
-                    title = "Art. ${article.number} — ${article.document_title}",
+                    title = "Art. ${article.number} — " +
+                        documentLineLabel(article.document_title, article.document_descriptive_label),
                     subtitle = null,
                     onClick = { onOpenArticle(article.id) }
                 )
@@ -309,7 +314,8 @@ private fun SuggestionsPanel(
                 SuggestionRow(
                     icon = Icons.Default.FormatQuote,
                     title = passage.snippet.replace("[[", "").replace("]]", ""),
-                    subtitle = "Art. ${passage.number} — ${passage.document_title}",
+                    subtitle = "Art. ${passage.number} — " +
+                        documentLineLabel(passage.document_title, passage.document_descriptive_label),
                     onClick = { onOpenArticle(passage.id) }
                 )
             }
@@ -889,7 +895,7 @@ private fun SearchResultCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = item.document_title ?: "Document",
+                text = documentLineLabel(item.document_title, item.document_descriptive_label),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,

@@ -4,6 +4,15 @@ import com.mibeko.mibeko.util.ArticleTable
 data class LawCodeSpec(
     val id: String,
     val title: String,
+    /**
+     * Objet de l'acte DÉRIVÉ de son corps, pour les textes publiés en « actes
+     * en abrégé » par le Journal officiel — leur titre se réduit alors au
+     * type, au numéro et à la date (« Décret n° 2025-240 du 20 juin 2025. »).
+     *
+     * À AFFICHER À CÔTÉ DE `title`, JAMAIS À SA PLACE : c'est une paraphrase
+     * tirée du texte, pas l'intitulé officiel. `null` la plupart du temps.
+     */
+    val descriptiveLabel: String? = null,
     val type: String, // Added for filtering
     val icon: String, // Simple identifier for icon selection
     val lastUpdated: Long,

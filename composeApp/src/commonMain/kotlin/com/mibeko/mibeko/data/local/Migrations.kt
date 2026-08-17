@@ -271,6 +271,28 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
     }
 }
 
+/**
+ * v11 → v12 :
+ * - `documents` gagne `descriptive_label` (nullable) : l'objet de l'acte,
+ *   DÉRIVÉ de son corps, que l'API expose désormais à côté du titre.
+ *
+ * Le Journal officiel publie certaines décisions en « actes en abrégé » : son
+ * sommaire n'annonce que « Nomination. » et l'en-tête n'imprime aucun objet.
+ * Le titre du texte est alors littéralement « Décret n° 2025-240 du 20 juin
+ * 2025. » — fidèle à la source, et parfaitement muet dans une liste. Ce champ
+ * s'affiche À CÔTÉ du titre, jamais à sa place : substituer l'un à l'autre
+ * présenterait comme intitulé officiel une paraphrase qui n'en est pas un.
+ *
+ * Aucun backfill : la colonne se remplit à la prochaine synchronisation du
+ * catalogue. Un document déjà en base reste lisible entre-temps — il affiche
+ * son titre seul, exactement comme avant cette version.
+ */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `documents` ADD COLUMN `descriptive_label` TEXT DEFAULT NULL")
+    }
+}
+
 /** Migrations à enregistrer sur chaque plateforme lors de la construction de la base. */
 val ALL_MIGRATIONS = arrayOf(
     MIGRATION_1_2,
@@ -282,5 +304,6 @@ val ALL_MIGRATIONS = arrayOf(
     MIGRATION_7_8,
     MIGRATION_8_9,
     MIGRATION_9_10,
-    MIGRATION_10_11
+    MIGRATION_10_11,
+    MIGRATION_11_12
 )

@@ -75,6 +75,13 @@ data class RemoteCatalogData(
 data class RemoteCatalogResource(
     val id: String,
     val title: String,
+    /**
+     * Objet de l'acte dérivé de son corps, pour les « actes en abrégé » du JO
+     * dont le titre se réduit au type, au numéro et à la date. Champ ADDITIF :
+     * absent des réponses d'une API antérieure au 16/08/2026, d'où le défaut.
+     * S'affiche à côté du titre, jamais à sa place.
+     */
+    val descriptive_label: String? = null,
     val type: String,
     /**
      * Empreinte de version du document : mêle son `updated_at`, celui de son
@@ -130,6 +137,14 @@ data class DocumentStats(
 data class RemoteDocument(
     val id: String,
     val title: String,
+    /**
+     * Objet de l'acte DÉRIVÉ de son corps (`legal_documents.libelle_descriptif`
+     * côté Laravel), pour les textes que le Journal officiel publie en « actes
+     * en abrégé » : le titre s'y réduit au type, au numéro et à la date.
+     * S'affiche à côté du titre, jamais à sa place. Champ ADDITIF, `null` sur
+     * une API antérieure au 16/08/2026 comme sur la plupart des documents.
+     */
+    val libelle_descriptif: String? = null,
     /**
      * Slug d'URL publique stable (site vitrine `/textes/{slug}`). Exposé par
      * `LegalDocumentResource` côté Laravel ; sert à générer les liens de partage
