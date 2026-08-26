@@ -6,6 +6,40 @@ publique. Chaque nouvelle mise à jour ajoute une section en haut du fichier.
 
 ---
 
+## 1.3.0 — 27 août 2026
+
+Version de lisibilité du corpus. Deux chantiers : les tableaux des textes
+officiels (annexes budgétaires, grilles de coordonnées, barèmes) et l'intitulé
+des décrets publiés « en abrégé » par le Journal officiel.
+
+### Nouveau
+
+- **Les tableaux des textes s'affichent enfin comme des tableaux** : en-têtes
+  distingués, montants alignés à droite, défilement horizontal pour les
+  tableaux larges. Ils s'affichaient auparavant en balises informatiques, une
+  ligne illisible de plusieurs milliers de caractères.
+- **Les tableaux et les préambules portent leur vrai nom** : « Tableau 1 »,
+  « Préambule », « Signature » au lieu d'« Article TABLEAU_1 ».
+- **Les décrets et arrêtés publiés « en abrégé » affichent leur objet** : le
+  Journal officiel publie certaines décisions sans objet dans leur titre
+  (« Décret n° 2025-240 du 20 juin 2025. »). L'app affiche désormais, à côté
+  du titre officiel — jamais à sa place —, l'objet dérivé du corps de l'acte.
+
+### Corrigé
+
+- **Le partage et la copie d'un article** n'envoient plus de balises
+  informatiques au destinataire : le tableau part sous forme lisible.
+
+### Sous le capot (fiabilité — pas pour la communication publique)
+
+- Base locale en version 12 : deux migrations additives sans backfill — la
+  structure des tableaux (v11) et l'objet dérivé des actes en abrégé (v12) —
+  aucune perte du corpus déjà téléchargé.
+- Retrait du client de connexion Firebase, sans appelant depuis la suppression
+  de l'endpoint côté serveur.
+
+---
+
 ## 1.2.0 — 7 août 2026
 
 Version de fiabilité. Le fil conducteur : **l'application ne doit jamais

@@ -1,62 +1,39 @@
 # Publier la version 1.3.0 — procédure
 
-> Préparée le 10 août 2026 · Fichier de travail, à supprimer une fois la version publiée.
+> Préparée le 10 août 2026 · **Mise à jour le 27 août 2026** (2 commits
+> supplémentaires découverts, dont une 2e migration) · Fichier de travail, à
+> supprimer une fois la version publiée.
 
 ## Ce qu'il y a dans cette version
 
-Trois commits depuis `v1.2.0` (7 août) :
+Cinq commits depuis `v1.2.0` (7 août) — les deux derniers n'étaient pas connus
+lors de la rédaction initiale de ce document :
 
 | Commit | Ce que ça change |
 | --- | --- |
 | `2a665ae` | Retrait du client de connexion Firebase — code mort, aucun appelant (contrepartie d'une suppression côté API) |
 | `041a96f` | Les tableaux du corpus s'affichent en vrai tableau au lieu de balises ; les feuilles techniques se libellent « Tableau 1 » au lieu d'« Article TABLEAU_1 » ; le partage et la copie ne contiennent plus de HTML |
 | `83e9536` | La structure des tableaux est synchronisée et stockée hors-ligne — **migration de base locale 10 → 11** |
+| `dc0a958` | Ce fichier lui-même (docs, sans effet applicatif) |
+| `c65d5d3` | Affiche l'objet des actes « en abrégé » du JO à côté du titre officiel — **migration de base locale 11 → 12** |
 
 ## Faut-il publier ?
 
-**Oui**, mais par le canal interne d'abord. Le contenu est petit et vérifié (105 tests Kotlin, iOS compile), et un des trois commits ne fait que supprimer du code mort.
+**Oui**, mais par le canal interne d'abord. Le contenu est petit et vérifié (105 tests Kotlin, iOS compile), et un des cinq commits ne fait que supprimer du code mort.
 
-**Le seul vrai risque est la migration de base locale 10 → 11.** Elle ajoute une colonne, exactement comme la migration 8 → 9 déjà publiée en v1.2.0 (`ALTER TABLE … ADD COLUMN … TEXT DEFAULT NULL`) — donc un motif éprouvé sur le parc réel. Mais deux choses méritent d'être sues :
+**Le vrai risque est la double migration de base locale 10 → 11 → 12.** Chacune ajoute des colonnes nullables, sans backfill, exactement comme la migration 8 → 9 déjà publiée en v1.2.0 (`ALTER TABLE … ADD COLUMN … TEXT DEFAULT NULL`) — un motif éprouvé sur le parc réel, appliqué ici deux fois en cascade. Mais trois choses méritent d'être sues :
 
-- **Aucun test de migration n'existe dans ce projet** (ni pour celle-ci, ni pour les dix précédentes). La vérification est donc manuelle, et c'est l'objet de l'étape 3.
+- **Aucun test de migration n'existe dans ce projet** (ni pour celles-ci, ni pour les dix précédentes). La vérification est donc manuelle, et c'est l'objet de l'étape 3.
 - **Une migration ratée à la montée fait planter l'ouverture de la base**, pas une perte silencieuse : `fallbackToDestructiveMigrationOnDowngrade` ne couvre que les descentes de version. C'est le bon comportement — un plantage se voit, un corpus effacé en silence ne se voit pas — mais il faut donc l'attraper avant la production.
+- **La cascade 10→11→12 doit s'exécuter en une fois** au premier lancement pour un appareil encore en v1.2.0 (donc en base v10) : c'est ce chemin précis qu'il faut vérifier, pas seulement 11→12 isolément.
 
-**Le contrôle qui compte** : installer la nouvelle version **par-dessus une v1.2.0 existante**, pas sur un téléphone vierge. Une installation neuve crée la base directement en version 11 et n'exerce jamais la migration — elle ne prouve rien.
+**Le contrôle qui compte** : installer la nouvelle version **par-dessus une v1.2.0 existante**, pas sur un téléphone vierge. Une installation neuve crée la base directement en version 12 et n'exerce jamais les migrations — elle ne prouve rien.
 
 ## Étape 1 — Écrire la section du CHANGELOG
 
-Obligatoire avant le tag (convention du dépôt). Proposition à ajuster, à insérer juste après la ligne `---` en tête de fichier :
-
-```markdown
-## 1.3.0 — 10 août 2026
-
-Version de lisibilité du corpus. Certains textes officiels contiennent des
-tableaux — annexes budgétaires, grilles de coordonnées, barèmes. L'application
-les affichait jusqu'ici sous forme de code informatique. Elle les affiche
-désormais comme des tableaux.
-
-### Nouveau
-
-- **Les tableaux des textes s'affichent enfin comme des tableaux** : en-têtes
-  distingués, montants alignés à droite, défilement horizontal pour les
-  tableaux larges. Ils s'affichaient auparavant en balises informatiques, une
-  ligne illisible de plusieurs milliers de caractères.
-- **Les tableaux et les préambules portent leur vrai nom** : « Tableau 1 »,
-  « Préambule », « Signature » au lieu d'« Article TABLEAU_1 ».
-
-### Corrigé
-
-- **Le partage et la copie d'un article** n'envoient plus de balises
-  informatiques au destinataire : le tableau part sous forme lisible.
-
-### Sous le capot (fiabilité — pas pour la communication publique)
-
-- Base locale en version 11 : la structure des tableaux est stockée hors-ligne,
-  ce qui permet de les afficher sans connexion. Migration par ajout de colonne,
-  sans perte du corpus déjà téléchargé.
-- Retrait du client de connexion Firebase, sans appelant depuis la suppression
-  de l'endpoint côté serveur.
-```
+**Fait** (27/08) : `CHANGELOG.md` contient désormais la section `## 1.3.0 — 27
+août 2026`, mise à jour pour couvrir les 5 commits (tableaux **et** libellés
+d'actes en abrégé, double migration 10→11→12). Reste à committer à l'étape 2.
 
 Sur le numéro : **1.3.0** parce que l'app sait faire quelque chose qu'elle ne savait pas faire. `1.2.1` se défendrait si vous considérez que c'est une correction d'affichage — c'est votre appel, mais le tag et le CHANGELOG doivent dire la même chose.
 
@@ -87,13 +64,14 @@ gh run watch -R benaja-bendo/mibeko-app-kmp
 **Sur un téléphone qui a déjà l'app en v1.2.0, avec du corpus téléchargé.** Ne pas désinstaller avant, ne pas tester sur un appareil vierge : c'est toute la question.
 
 1. Installer la 1.3.0 depuis le canal interne (Play Store, section « Test interne »).
-2. Ouvrir l'app. **Elle ne doit pas planter au démarrage** — c'est là que la migration s'exécute.
+2. Ouvrir l'app. **Elle ne doit pas planter au démarrage** — c'est là que la cascade de migrations 10→11→12 s'exécute.
 3. Ouvrir un texte déjà téléchargé et vérifier que **son contenu est toujours là**.
 4. Ouvrir le décret n° 59-183 (ou n'importe quel article « Tableau 1 ») : le tableau doit s'afficher en colonnes, avec défilement horizontal.
 5. Partager cet article par WhatsApp vers vous-même : le message ne doit contenir **aucune balise**.
-6. Lancer une recherche : le corpus doit répondre normalement.
+6. Ouvrir la Bibliothèque et trouver un décret publié « en abrégé » (titre du type « Décret n° … du … », sans objet) : l'objet dérivé doit s'afficher à côté du titre officiel, jamais à sa place. Si aucun n'est encore synchronisé localement, forcer une resynchronisation du catalogue.
+7. Lancer une recherche : le corpus doit répondre normalement.
 
-Si le point 2 ou 3 échoue, **ne pas publier en production** — dites-le moi, la migration se corrige et se republie sous un nouveau tag.
+Si le point 2, 3 ou 6 échoue, **ne pas publier en production** — dites-le moi, la migration se corrige et se republie sous un nouveau tag.
 
 ## Étape 4 — Production, en douceur
 
