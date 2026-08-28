@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
@@ -218,6 +220,12 @@ fun App() {
                                 .fillMaxWidth()
                                 .weight(1f)
                                 .padding(bottom = innerPadding.calculateBottomPadding())
+                                // Sans cette consommation, chaque Scaffold d'écran
+                                // recomptait l'encoche gestuelle que l'on vient de
+                                // soustraire : la marge basse était comptée deux fois.
+                                .consumeWindowInsets(
+                                    PaddingValues(bottom = innerPadding.calculateBottomPadding())
+                                )
                         ) {
                         composable<Screen.Splash> { SplashScreen() }
                         composable<Screen.Login> { backStackEntry ->

@@ -136,7 +136,10 @@ fun HomeScreen() {
         ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 80.dp)
+            // `80.dp` en dur approximait la hauteur de la barre du bas, que le
+            // NavHost soustrait déjà : sur un appareil dont la barre diffère, le
+            // dernier élément passait dessous ou flottait trop haut.
+            contentPadding = PaddingValues(bottom = padding.calculateBottomPadding() + 24.dp)
         ) {
             item {
                 HomeTopBar(
