@@ -47,7 +47,7 @@ class VersionGateTest {
     }
 
     @Test
-    fun `version courante illisible = a jour (jamais de blocage)`() {
+    fun `version courante illisible = a jour donc jamais de blocage`() {
         val state = VersionGate.evaluate("garbage", config(min = "2.0", latest = "2.1"), null)
         assertIs<UpdateState.UpToDate>(state)
     }
