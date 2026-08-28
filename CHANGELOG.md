@@ -6,6 +6,64 @@ publique. Chaque nouvelle mise à jour ajoute une section en haut du fichier.
 
 ---
 
+## 1.3.1 — 29 août 2026
+
+Version de correction. Elle reprend le fil de la 1.2.0 : l'application ne doit
+ni devenir inutilisable, ni affirmer quoi que ce soit qu'elle n'a pas vérifié.
+Un onglet devenu inaccessible, et quatre états d'interface qui disaient faux.
+
+### Corrigé
+
+- **L'onglet Accueil redevient accessible depuis la Bibliothèque** : en venant
+  de la Bibliothèque, un premier appui sur Accueil ne faisait rien, et le
+  second vidait l'écran — noir en thème sombre — en laissant la barre du bas
+  figée sur l'onglet quitté, sans autre issue que le bouton Retour du
+  téléphone. Le défaut était présent depuis la version 1.1.1.
+- **L'application ne reste plus bloquée hors-ligne** : elle jugeait une fois
+  pour toutes, au démarrage, si le réseau était joignable, et ne revenait
+  jamais sur ce verdict — même la connexion rétablie. Sur une connexion lente,
+  ou derrière un portail d'accès public, elle démarrait donc « hors-ligne » et
+  le restait toute la session ; sur une première installation, le corpus
+  n'était alors jamais téléchargé. Elle suit désormais l'état de la connexion
+  et recharge d'elle-même dès qu'elle revient.
+- **Une panne du serveur n'est plus annoncée comme une absence de réseau** :
+  la Bibliothèque affichait « Hors-ligne » devant n'importe quel échec, y
+  compris téléphone parfaitement connecté. Elle distingue maintenant les deux
+  cas, et propose de réessayer quand c'est le service qui n'a pas répondu.
+- **Le bouton « Réessayer » s'affiche enfin** : présent depuis la 1.2.0, il
+  était poussé hors de l'écran par le message qui l'accompagne. L'application
+  annonçait donc l'échec sans jamais offrir d'en sortir.
+- **L'accueil ne présente plus de grandes zones blanches** : quand les textes
+  mis en avant ne se chargeaient pas, leurs sections ne s'affichaient pas en
+  attente ni en erreur — elles disparaissaient, laissant un vide que rien
+  n'expliquait. La place est maintenant tenue : une attente pendant le
+  chargement, une explication ensuite.
+- **Marges du bas** : selon la hauteur de la barre de navigation de
+  l'appareil, le dernier élément d'une liste pouvait passer dessous ou flotter
+  trop haut.
+
+### Sous le capot (fiabilité — pas pour la communication publique)
+
+- Onze erreurs qui n'étaient écrites que dans la console d'un appareil — donc
+  perdues dès qu'un utilisateur les rencontrait — remontent désormais à
+  Crashlytics : partage d'un texte, chargement d'un Journal officiel,
+  enregistrement de la structure d'un document, liste des textes récemment
+  consultés.
+- Écritures de l'état d'écran rendues atomiques dans les dix ViewModels
+  concernés : deux mises à jour simultanées pouvaient se recouvrir, et l'une
+  disparaître sans bruit. Sans conséquence connue à ce jour, mais la propriété
+  n'était garantie par rien.
+- Toutes les entrées vers un onglet passent par un point unique. Deux chemins
+  menaient à la Bibliothèque en posant des options de navigation différentes,
+  ce qui désynchronisait la pile d'écrans mémorisée — c'est la seconde forme
+  que prenait le défaut de l'onglet Accueil.
+- Les encoches système ne sont plus comptées deux fois : le conteneur de
+  navigation les soustrayait déjà, chaque écran les recomptait ensuite.
+- iOS : le moniteur de connexion réseau n'était retenu par rien et pouvait
+  être libéré, cessant alors d'émettre en silence.
+
+---
+
 ## 1.3.0 — 27 août 2026
 
 Version de lisibilité du corpus. Deux chantiers : les tableaux des textes
