@@ -107,3 +107,28 @@ sealed class Screen {
 val LocalNavController = staticCompositionLocalOf<NavController> {
     error("No NavController provided")
 }
+
+/**
+ * Bascule vers un onglet de premier niveau (Accueil, Bibliothèque, Dossiers,
+ * Profil). Point d'entrée unique : la barre du bas ET les raccourcis internes
+ * (carte « Parcourir les textes » de l'accueil) doivent poser exactement les
+ * mêmes options, sinon `backStackMap` diverge et l'onglet visé devient
+ * injoignable.
+ *
+ * `inclusive` est volontairement absent. Avec `inclusive = true` sur l'onglet
+ * Accueil, `popUpTo` vidait la pile (Accueil compris) puis `restoreState`
+ * ne restaurait rien — l'état sauvegardé étant écarté par la sentinelle que
+ * le premier changement d'onglet a posée dans `backStackMap`. La pile
+ * retombait au seul nœud graphe, le NavHost n'avait plus rien à afficher et
+ * l'écran devenait noir, barre du bas figée sur l'onglet quitté.
+ */
+fun NavController.switchTopLevelTab(screen: Screen) {
+    navigate(screen) {
+        // saveState/restoreState : sans eux, changer d'onglet détruisait
+        // l'écran quitté (ViewModel, scroll, champs de recherche) au lieu de
+        // le mettre en pause.
+        popUpTo(Screen.Home) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}

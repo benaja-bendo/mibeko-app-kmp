@@ -41,6 +41,7 @@ import com.mibeko.mibeko.ui.components.MibekoErrorBanner
 import com.mibeko.mibeko.ui.components.NetworkStatusBanner
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
+import com.mibeko.mibeko.ui.navigation.switchTopLevelTab
 import com.mibeko.mibeko.util.AnalyticsEvents
 import com.mibeko.mibeko.util.MibekoAnalytics
 import com.mibeko.mibeko.util.formatIsoDate
@@ -182,10 +183,10 @@ fun HomeScreen() {
             // Accès secondaire : la recherche documentaire (sans IA) vit dans la Bibliothèque.
             item {
                 BrowseLibraryCard(onClick = {
-                    navController.navigate(Screen.Library) {
-                        popUpTo(Screen.Home)
-                        launchSingleTop = true
-                    }
+                    // Même chemin que l'onglet Bibliothèque : deux jeux
+                    // d'options différents pour une même destination
+                    // désynchronisaient la pile sauvegardée.
+                    navController.switchTopLevelTab(Screen.Library)
                 })
             }
 
