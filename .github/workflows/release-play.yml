@@ -69,6 +69,30 @@ jobs:
           echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "Version $VERSION_NAME (code $VERSION_CODE)"
 
+      # Règle du dépôt (CLAUDE.md) : « Chaque version livrée doit avoir sa
+      # section dans CHANGELOG.md AVANT le tag. » Personne ne la vérifiait —
+      # un tag poussé sans section partait sur le store en silence, et les
+      # notes de version des stores se rédigeaient après coup, de mémoire.
+      - name: Vérifier la section CHANGELOG
+        run: |
+          VERSION="${{ steps.version.outputs.name }}"
+          ESCAPED=$(printf '%s' "$VERSION" | sed 's/\./\\./g')
+          if ! grep -qE "^## ${ESCAPED}([[:space:]]|$)" CHANGELOG.md; then
+            echo "::error file=CHANGELOG.md::Aucune section « ## $VERSION — … » dans CHANGELOG.md."
+            echo "La règle du dépôt veut cette section AVANT le tag : elle sert de base"
+            echo "aux notes de version des stores. Ajoute-la, puis retague."
+            exit 1
+          fi
+          echo "Section CHANGELOG trouvée pour $VERSION."
+
+      # `build.yml` ne se déclenche que sur des branches : un `git push --tags`
+      # ne l'exécute pas. Sans cette étape, pousser un tag construisait et
+      # envoyait un AAB signé sur le Play Store sans qu'aucun test n'ait jamais
+      # tourné sur ce commit. Le coût est d'une minute, l'enjeu est une
+      # publication.
+      - name: Tests avant publication
+        run: ./gradlew :composeApp:testAndroidHostTest --stacktrace
+
       - name: Build signed AAB
         env:
           KEYSTORE_FILE: ../keystore.jks
@@ -106,8 +130,9 @@ jobs:
           status: completed
 
       # L'annonce de latest_version au backend (force-update mobile) N'EST PAS
-      # automatique ici : la prod part en rollout progressif (20 %, ligne 96),
-      # alors qu'annoncer la version pousserait la bannière à 100 % du parc
+      # automatique ici : la prod part en rollout progressif (20 %, étape
+      # « Upload to Google Play (production) » ci-dessus), alors qu'annoncer la
+      # version pousserait la bannière à 100 % du parc
       # immédiatement — 80 % des utilisateurs taperaient « Mettre à jour » sur
       # une version pas encore disponible pour eux. Déclencher manuellement le
       # workflow announce-mobile-version.yml une fois le rollout à 100 % dans
