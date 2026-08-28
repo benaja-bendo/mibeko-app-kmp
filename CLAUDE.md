@@ -12,8 +12,8 @@ Gratuit (site + mobile + compte gratuit) : corpus, recherche hybride, veille JO,
 1. L'app n'affirme **jamais** qu'un texte n'existe pas. Sur échec réseau/API : « Je n'ai pas pu vérifier » + Réessayer. Un état vide ne s'affiche que sur un `Success` avec liste réellement vide.
 2. Aucun libellé ne promet une action que le backend ne fait pas.
 3. Un seul nom pour l'IA : **« Assistant Mibeko »**, partout. État actuel (non conforme, à corriger — voir `docs/decisions.md`) : le backend s'appelle « Mibeko IA » et l'app utilise 6 dénominations différentes (ChatScreen, HomeScreen, OnboardingScreen, SearchResultsScreen…). Ne pas ajouter une 7e.
-4. Les erreurs ne sont jamais avalées (`printStackTrace` comme seule gestion est interdit — 18 occurrences existantes à résorber, pas à imiter) : passer par `UiResult` + `MibekoErrorState`.
-5. Pattern d'erreur standard (n'existe pas encore dans le code — chantier Phase 1 du plan) :
+4. Les erreurs ne sont jamais avalées : `printStackTrace` comme seule gestion est interdit — il n'en reste aucune occurrence (résorbées le 29/08/2026), ne pas en réintroduire. Passer par `UiResult` + `MibekoErrorState`, et remonter l'exception par `recordException(e, context = "Classe.fonction")`.
+5. Pattern d'erreur standard, **livré** dans `util/UiResult.kt` :
    ```kotlin
    sealed interface UiResult<out T> {
        data object Loading : UiResult<Nothing>
@@ -21,7 +21,7 @@ Gratuit (site + mobile + compte gratuit) : corpus, recherche hybride, veille JO,
        data class Error(val offline: Boolean, val retry: () -> Unit) : UiResult<Nothing>
    }
    ```
-   Avant de le créer : regarder `SearchViewModel` (mort, à supprimer, mais contient déjà ce pattern — branche `Error` qui affiche le message tout en gardant les résultats locaux de repli) et `LocalLegalRepository.SearchResult` (sealed existant, dans la couche data).
+   Déployé sur l'Accueil (`homeDataError`) et la Bibliothèque (`homeError`, `searchError`). Invariant : `Error` n'efface jamais les résultats de repli déjà affichés, et un état vide ne s'affiche que sur un `Success` réellement vide. Voir aussi `LocalLegalRepository.SearchResult` (sealed de la couche data).
 
 ## Build & tests
 Deux modules Gradle : **`:composeApp`** porte tout le code partagé (KMP, plugin `com.android.kotlin.multiplatform.library`, sans variantes de build) et **`:androidApp`** la seule coquille applicative Android (Activity, Application, service FCM, manifeste, ressources, signature, R8). Séparation imposée par AGP 9 — voir `docs/migration-agp10.md`. Le module iOS ne bouge pas : il consomme toujours `:composeApp`.
