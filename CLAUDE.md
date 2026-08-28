@@ -28,9 +28,12 @@ Deux modules Gradle : **`:composeApp`** porte tout le code partagé (KMP, plugin
 ```bash
 ./gradlew :androidApp:assembleDebug               # build Android debug
 ./gradlew :composeApp:testAndroidHostTest         # tests commonMain + Android
-./gradlew :composeApp:compileKotlinIosSimulatorArm64  # compile iOS — PAS lancé en CI aujourd'hui (dette connue)
+./gradlew :composeApp:linkDebugFrameworkIosArm64   # compile ET lie iOS (ce que fait la CI)
+./gradlew :composeApp:iosSimulatorArm64Test       # les tests partagés, exécutés par Kotlin/Native
 ```
-Release : voir `.github/workflows/release-play.yml` (déclenché par un tag `v*.*.*`, canal Play `internal` par défaut) et `distribute-ios.yml` (manuel uniquement, `workflow_dispatch` avec `marketing_version` explicite — jamais automatique). Chaque version livrée doit avoir sa section dans `CHANGELOG.md` **avant** le tag.
+CI (`build.yml`, sur `main` et `develop`) : compilation Android debug, tests JVM, AAB release non signé (exercice de R8), et — sur `main` uniquement, les runners macOS coûtant ~10× — compilation + édition de liens du framework iOS puis exécution des tests partagés sur Kotlin/Native. Les deux plateformes n'acceptent pas les mêmes noms de fonction : Native refuse parenthèses et virgules dans un identifiant entre accents graves.
+
+Release : voir `.github/workflows/release-play.yml` (déclenché par un tag `v*.*.*`, canal Play `internal` par défaut) et `distribute-ios.yml` (manuel uniquement, `workflow_dispatch` avec `marketing_version` explicite — jamais automatique). Chaque version livrée doit avoir sa section dans `CHANGELOG.md` **avant** le tag — `release-play.yml` le vérifie désormais et refuse de publier sinon, après avoir rejoué les tests (un tag ne déclenche pas `build.yml`, qui n'écoute que les branches).
 
 ## Analytics & observabilité (déjà branché — ne pas réinstaller un SDK)
 - **Mobile (Android + iOS)** : Firebase Analytics + Crashlytics, façade unique `MibekoAnalytics` (`util/MibekoAnalytics.kt`), interface `AnalyticsManager` en expect/actual. Invariants à préserver : jamais `setUserId`, jamais le texte d'une requête utilisateur, gating par consentement (préférence + `setAnalyticsCollectionEnabled`). iOS no-op uniquement si `GoogleService-Info.plist` absent du bundle (secret CI `IOS_GOOGLE_SERVICES_PLIST`).
