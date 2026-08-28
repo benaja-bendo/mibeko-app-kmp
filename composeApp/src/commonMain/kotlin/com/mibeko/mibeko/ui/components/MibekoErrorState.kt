@@ -78,7 +78,13 @@ fun MibekoErrorBanner(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // `weight(1f)` : sans lui, le message mesurait sa largeur idéale, prenait
+        // toute la ligne et poussait « Réessayer » hors de l'écran — la bannière
+        // annonçait donc l'échec sans jamais offrir d'en sortir.
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
                 imageVector = if (offline) Icons.Default.CloudOff else Icons.Default.ErrorOutline,
                 contentDescription = null,

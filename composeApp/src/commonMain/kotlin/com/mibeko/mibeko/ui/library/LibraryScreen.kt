@@ -398,6 +398,18 @@ private fun LibraryHomeContent(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
+        // Échec de `/library/home` alors que le réseau est là : on le dit, avec
+        // un Réessayer. Jamais un état vide sur un échec (règle produit n° 1).
+        state.homeError?.let { error ->
+            item {
+                MibekoErrorBanner(
+                    offline = error.offline,
+                    onRetry = error.retry,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+
         // Statistiques du fonds : ce que la bibliothèque interroge réellement.
         if (home != null) {
             item {
@@ -485,7 +497,7 @@ private fun LibraryHomeContent(
             }
         }
 
-        if (!state.isLoading && home == null && state.localCodes.isEmpty()) {
+        if (!state.isLoading && home == null && state.localCodes.isEmpty() && state.homeError == null) {
             item {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(48.dp),
@@ -499,7 +511,11 @@ private fun LibraryHomeContent(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Aucun contenu disponible hors-ligne.\nConnectez-vous pour explorer la base nationale.",
+                        text = if (state.isOffline) {
+                            "Aucun contenu disponible hors-ligne.\nConnectez-vous pour explorer la base nationale."
+                        } else {
+                            "Aucun texte à afficher pour le moment."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center

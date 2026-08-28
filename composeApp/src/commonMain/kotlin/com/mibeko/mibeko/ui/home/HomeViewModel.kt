@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -85,9 +86,34 @@ class HomeViewModel(
 
     init {
         loadInitialState()
+        observeConnectivity()
         initialSyncIfNeeded()
         loadHomeData()
         checkEmailVerification()
+    }
+
+    /**
+     * Suit l'état réseau en continu et **rattrape** ce qu'un démarrage hors-ligne
+     * a manqué.
+     *
+     * Sans cela, la connectivité n'était échantillonnée qu'une fois, ici même
+     * dans le `init` : une app lancée pendant que le réseau n'était pas encore
+     * joignable n'appelait plus jamais l'API et sautait la synchronisation
+     * initiale du corpus — pour toute la session, et sur une première
+     * installation le corpus n'était donc jamais téléchargé.
+     */
+    private fun observeConnectivity() {
+        viewModelScope.launch {
+            var wasOnline = networkChecker.isNetworkAvailable()
+            networkChecker.isOnline.collect { online ->
+                _uiState.update { it.copy(isNetworkAvailable = online) }
+                if (online && !wasOnline) {
+                    loadHomeData()
+                    initialSyncIfNeeded()
+                }
+                wasOnline = online
+            }
+        }
     }
 
     /**
@@ -265,6 +291,9 @@ class HomeViewModel(
      *    jour, qui ne re-télécharge que les textes réellement modifiés.
      */
     private fun initialSyncIfNeeded() {
+        // Une synchronisation déjà en vol ne doit pas être relancée par un
+        // rebond de connectivité.
+        if (_uiState.value.isSyncing) return
         viewModelScope.launch {
             val codes = repository.getLawCodes().first()
             val needsFullSync = codes.isEmpty() || userPreferences.isInitialSyncIncomplete()
@@ -298,17 +327,6 @@ class HomeViewModel(
                 )
             }
         }
-    }
-    
-    /**
-     * Refresh network status.
-     */
-    fun refreshNetworkStatus() {
-        val isOnline = networkChecker.isNetworkAvailable()
-        _uiState.value = _uiState.value.copy(
-            isNetworkAvailable = isOnline,
-            isLoggedIn = userPreferences.isLoggedIn()
-        )
     }
     
     private fun loadRecentItems() {

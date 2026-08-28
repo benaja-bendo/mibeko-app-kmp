@@ -20,12 +20,14 @@ import com.mibeko.mibeko.util.AnalyticsEvents
 import com.mibeko.mibeko.util.MibekoAnalytics
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import com.mibeko.mibeko.util.UiResult
+import com.mibeko.mibeko.util.recordException
 import com.mibeko.mibeko.util.parseRemoteDateToEpochMillis
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Périmètre juridique — aligné sur `legal_documents.legal_scope` (web). */
@@ -49,7 +51,13 @@ data class LibraryUiState(
     val home: LibraryHomeData? = null,
     /** Documents présents en base locale (repli hors-ligne + état téléchargé). */
     val localCodes: List<LawCodeSpec> = emptyList(),
+    /** Connectivité réellement absente — **pas** « le dernier appel a échoué ». */
     val isOffline: Boolean = false,
+    /**
+     * Non-null quand `/library/home` a échoué alors que le réseau était
+     * disponible. Jamais posé en pur hors-ligne, déjà dit par [isOffline].
+     */
+    val homeError: UiResult.Error? = null,
     // ── Recherche serveur (granularité article, comme le web) ────────────
     val searchQuery: String = "",
     val submittedQuery: String = "",
@@ -111,8 +119,28 @@ class LibraryViewModel(
 
     init {
         observeLocalDocuments()
+        observeConnectivity()
         loadHome()
         loadFilterOptions()
+    }
+
+    /**
+     * Suit l'état réseau et recharge à la reconnexion. Sans cela, une
+     * Bibliothèque ouverte pendant une coupure restait vide jusqu'à ce que
+     * l'utilisateur pense à tirer vers le bas.
+     */
+    private fun observeConnectivity() {
+        viewModelScope.launch {
+            var wasOnline = networkChecker.isNetworkAvailable()
+            networkChecker.isOnline.collect { online ->
+                _uiState.update { it.copy(isOffline = !online) }
+                if (online && !wasOnline) {
+                    loadHome()
+                    loadFilterOptions()
+                }
+                wasOnline = online
+            }
+        }
     }
 
     fun refresh() {
@@ -124,13 +152,32 @@ class LibraryViewModel(
 
     private fun loadHome() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.update { it.copy(isLoading = true, homeError = null) }
+
+            if (!networkChecker.isNetworkAvailable()) {
+                _uiState.update { it.copy(isOffline = true, isLoading = false) }
+                return@launch
+            }
+
             try {
                 val home = libraryApi.fetchHome()
-                _uiState.value = _uiState.value.copy(home = home, isOffline = false, isLoading = false)
+                _uiState.update {
+                    it.copy(home = home, isOffline = false, isLoading = false, homeError = null)
+                }
             } catch (e: Exception) {
-                // Pas de réseau (ou API indisponible) : l'accueil retombe sur la base locale.
-                _uiState.value = _uiState.value.copy(isOffline = true, isLoading = false)
+                // Règle produit n° 1 : ne jamais affirmer une absence non vérifiée.
+                // Un 500, une expiration de délai ou une réponse illisible ne sont
+                // PAS « hors-ligne » — l'annoncer ainsi était un mensonge d'interface,
+                // et l'exception disparaissait sans jamais remonter à Crashlytics.
+                recordException(e, context = "LibraryViewModel.loadHome")
+                val offline = !networkChecker.isNetworkAvailable()
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isOffline = offline,
+                        homeError = if (offline) null else UiResult.Error(offline = false, retry = ::loadHome)
+                    )
+                }
             }
         }
     }
