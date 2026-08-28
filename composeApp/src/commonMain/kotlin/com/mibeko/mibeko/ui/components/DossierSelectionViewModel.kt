@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class DossierWithSelection(
@@ -37,7 +38,7 @@ class DossierSelectionViewModel(
     fun loadDossiers(articleId: String) {
         currentArticleId = articleId
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 // Ensure Favorites dossier exists
                 dossierRepository.getOrCreateFavoritesDossier()
@@ -53,17 +54,17 @@ class DossierSelectionViewModel(
                         )
                     }
                 }.collect { dossiers ->
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         isLoading = false,
                         dossiers = dossiers,
                         error = null
-                    )
+                    ) }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     isLoading = false,
                     error = "Erreur lors du chargement des dossiers: ${e.message}"
-                )
+                ) }
             }
         }
     }
@@ -86,9 +87,9 @@ class DossierSelectionViewModel(
                 }
                 dossierRepository.syncNow()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     error = "Erreur lors de la modification: ${e.message}"
-                )
+                ) }
             }
         }
     }
@@ -107,9 +108,9 @@ class DossierSelectionViewModel(
                 dossierRepository.addArticleToDossier(dossierId, articleId)
                 dossierRepository.syncNow()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     error = "Erreur lors de la création du dossier: ${e.message}"
-                )
+                ) }
             }
         }
     }

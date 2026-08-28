@@ -21,6 +21,7 @@ import com.mibeko.mibeko.util.getAppVersionName
 import com.mibeko.mibeko.util.recordException
 import com.mibeko.mibeko.util.requestInAppReview
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 /** Entrée du sommaire : un article dans l'ordre du document. */
 data class ReaderTocEntry(
@@ -173,7 +174,7 @@ class ReaderViewModel(
 
     fun loadArticle(id: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 var articleResult = repository.getArticleById(id).firstOrNull()
 
@@ -187,7 +188,7 @@ class ReaderViewModel(
                     val docResult = repository.getLawCodeById(articleResult.codeId).firstOrNull()
                     analytics.logEvent(AnalyticsEvents.ARTICLE_READ)
                     maybeRequestReview()
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         isLoading = false,
                         article = articleResult,
                         documentTitle = docResult?.title,
@@ -198,7 +199,7 @@ class ReaderViewModel(
                             ?.takeIf { it > 0 }
                             ?.let { formatTimestampToDate(it) },
                         error = null
-                    )
+                    ) }
 
                     loadArticleSequence(articleResult.codeId)
 
@@ -209,17 +210,17 @@ class ReaderViewModel(
                         typeCode = docResult?.type ?: "Inconnu"
                     )
                 } else {
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         isLoading = false,
                         error = "Article indisponible. Vérifiez votre connexion internet puis réessayez."
-                    )
+                    ) }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     isLoading = false,
                     error = "Erreur de chargement: ${e.message}"
-                )
+                ) }
             }
         }
     }
@@ -249,7 +250,7 @@ class ReaderViewModel(
                         }
                 }
             sequenceDocumentId = documentId
-            _uiState.value = _uiState.value.copy(articleSequence = sequence)
+            _uiState.update { it.copy(articleSequence = sequence) }
         } catch (e: Exception) {
             // Pas bloquant : la lecture fonctionne sans navigation séquentielle.
         }

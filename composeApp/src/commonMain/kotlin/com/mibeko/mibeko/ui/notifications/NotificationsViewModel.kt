@@ -3,6 +3,7 @@ package com.mibeko.mibeko.ui.notifications
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Instant as DateTimeInstant
 import com.mibeko.mibeko.data.repository.NotificationRepository
@@ -58,7 +59,7 @@ class NotificationsViewModel(
      */
     fun loadNotifications() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             repository.getNotifications().collect { result ->
                 result.fold(
@@ -79,23 +80,23 @@ class NotificationsViewModel(
                             )
                         }
 
-                        _uiState.value = _uiState.value.copy(
+                        _uiState.update { it.copy(
                             notifications = models,
                             isLoading = false,
                             error = null
-                        )
+                        ) }
                     },
                     onFailure = {
                         // On ne touche pas à la liste existante : une panne au
                         // rafraîchissement ne doit pas effacer des notifications
                         // déjà affichées avec succès.
-                        _uiState.value = _uiState.value.copy(
+                        _uiState.update { it.copy(
                             isLoading = false,
                             error = UiResult.Error(
                                 offline = !networkChecker.isNetworkAvailable(),
                                 retry = ::loadNotifications
                             )
-                        )
+                        ) }
                     }
                 )
             }
@@ -108,7 +109,7 @@ class NotificationsViewModel(
             val updatedList = _uiState.value.notifications.map {
                 if (it.id == id) it.copy(isRead = true) else it
             }
-            _uiState.value = _uiState.value.copy(notifications = updatedList)
+            _uiState.update { it.copy(notifications = updatedList) }
         }
     }
 
@@ -116,7 +117,7 @@ class NotificationsViewModel(
         viewModelScope.launch {
             repository.markAllAsRead()
             val updatedList = _uiState.value.notifications.map { it.copy(isRead = true) }
-            _uiState.value = _uiState.value.copy(notifications = updatedList)
+            _uiState.update { it.copy(notifications = updatedList) }
         }
     }
 
@@ -124,11 +125,11 @@ class NotificationsViewModel(
         viewModelScope.launch {
             repository.deleteNotification(id)
             val updatedList = _uiState.value.notifications.filter { it.id != id }
-            _uiState.value = _uiState.value.copy(notifications = updatedList)
+            _uiState.update { it.copy(notifications = updatedList) }
         }
     }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 }

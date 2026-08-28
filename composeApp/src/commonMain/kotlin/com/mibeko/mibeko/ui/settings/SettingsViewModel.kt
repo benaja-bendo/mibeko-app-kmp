@@ -23,6 +23,7 @@ import com.mibeko.mibeko.util.getDeviceId
 import com.mibeko.mibeko.util.recordException
 import com.mibeko.mibeko.getPlatform
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonObject
@@ -119,13 +120,13 @@ class SettingsViewModel(
                 val response = authApiService.getProfile()
                 if (response.success && response.data != null) {
                     val user = response.data
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         userName = user.name,
                         userEmail = user.email,
                         phone = user.mobile_profile?.phone ?: "",
                         profession = user.mobile_profile?.profession ?: "",
                         company = user.mobile_profile?.company ?: ""
-                    )
+                    ) }
                 }
             } catch (e: Exception) {
                 // Dégradation silencieuse assumée : userName/userEmail restent
@@ -138,24 +139,24 @@ class SettingsViewModel(
 
     fun updateProfileField(field: String, value: String) {
         when (field) {
-            "name" -> _uiState.value = _uiState.value.copy(userName = value)
-            "phone" -> _uiState.value = _uiState.value.copy(phone = value)
-            "profession" -> _uiState.value = _uiState.value.copy(profession = value)
-            "company" -> _uiState.value = _uiState.value.copy(company = value)
+            "name" -> _uiState.update { it.copy(userName = value) }
+            "phone" -> _uiState.update { it.copy(phone = value) }
+            "profession" -> _uiState.update { it.copy(profession = value) }
+            "company" -> _uiState.update { it.copy(company = value) }
         }
     }
 
     fun updatePasswordField(field: String, value: String) {
         when (field) {
-            "currentPassword" -> _uiState.value = _uiState.value.copy(currentPassword = value)
-            "newPassword" -> _uiState.value = _uiState.value.copy(newPassword = value)
-            "confirmPassword" -> _uiState.value = _uiState.value.copy(confirmPassword = value)
+            "currentPassword" -> _uiState.update { it.copy(currentPassword = value) }
+            "newPassword" -> _uiState.update { it.copy(newPassword = value) }
+            "confirmPassword" -> _uiState.update { it.copy(confirmPassword = value) }
         }
     }
 
     fun saveProfile() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isUpdatingProfile = true, profileUpdateMessage = null)
+            _uiState.update { it.copy(isUpdatingProfile = true, profileUpdateMessage = null) }
             try {
                 val request = com.mibeko.mibeko.data.remote.ProfileUpdateRequest(
                     name = _uiState.value.userName,
@@ -165,33 +166,33 @@ class SettingsViewModel(
                 )
                 val response = authApiService.updateProfile(request)
                 if (response.success) {
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         isUpdatingProfile = false,
                         profileUpdateMessage = "Profil mis à jour avec succès"
-                    )
+                    ) }
                 } else {
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         isUpdatingProfile = false,
                         profileUpdateMessage = response.message ?: "Erreur lors de la mise à jour"
-                    )
+                    ) }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     isUpdatingProfile = false,
                     profileUpdateMessage = "Erreur de connexion"
-                )
+                ) }
             }
         }
     }
 
     fun updatePassword() {
         if (_uiState.value.newPassword != _uiState.value.confirmPassword) {
-            _uiState.value = _uiState.value.copy(passwordUpdateMessage = "Les mots de passe ne correspondent pas")
+            _uiState.update { it.copy(passwordUpdateMessage = "Les mots de passe ne correspondent pas") }
             return
         }
         
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isUpdatingPassword = true, passwordUpdateMessage = null)
+            _uiState.update { it.copy(isUpdatingPassword = true, passwordUpdateMessage = null) }
             try {
                 val request = com.mibeko.mibeko.data.remote.PasswordUpdateRequest(
                     current_password = _uiState.value.currentPassword,
@@ -200,34 +201,34 @@ class SettingsViewModel(
                 )
                 val response = authApiService.updatePassword(request)
                 if (response.success) {
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         isUpdatingPassword = false,
                         passwordUpdateMessage = "Mot de passe mis à jour avec succès",
                         currentPassword = "",
                         newPassword = "",
                         confirmPassword = ""
-                    )
+                    ) }
                 } else {
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         isUpdatingPassword = false,
                         passwordUpdateMessage = response.message ?: "Erreur lors de la mise à jour"
-                    )
+                    ) }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     isUpdatingPassword = false,
                     passwordUpdateMessage = "Erreur de connexion"
-                )
+                ) }
             }
         }
     }
 
     fun clearProfileUpdateMessage() {
-        _uiState.value = _uiState.value.copy(profileUpdateMessage = null)
+        _uiState.update { it.copy(profileUpdateMessage = null) }
     }
 
     fun clearPasswordUpdateMessage() {
-        _uiState.value = _uiState.value.copy(passwordUpdateMessage = null)
+        _uiState.update { it.copy(passwordUpdateMessage = null) }
     }
 
     /**
@@ -271,7 +272,7 @@ class SettingsViewModel(
      */
     fun refreshCorpus() {
         if (_uiState.value.isSyncing) return
-        _uiState.value = _uiState.value.copy(isSyncing = true, syncError = null)
+        _uiState.update { it.copy(isSyncing = true, syncError = null) }
         viewModelScope.launch {
             val message = when (val result = legalRepository.refreshCorpus(force = true)) {
                 is CorpusRefreshResult.UpToDate -> "Votre corpus est déjà à jour."
@@ -292,11 +293,11 @@ class SettingsViewModel(
                     if (result.partial) append(" Certains textes n'ont pas pu être récupérés.")
                 }
             }
-            _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(
                 isSyncing = false,
                 lastUpdateDate = formatTimestampToDate(userPreferencesRepository.getLastSyncTimestamp()),
                 profileUpdateMessage = message
-            )
+            ) }
         }
     }
 
@@ -308,7 +309,7 @@ class SettingsViewModel(
      */
     fun exportPersonalData() {
         if (_uiState.value.isExportingData) return
-        _uiState.value = _uiState.value.copy(isExportingData = true)
+        _uiState.update { it.copy(isExportingData = true) }
         viewModelScope.launch {
             try {
                 val bytes = authApiService.exportPersonalData()
@@ -317,16 +318,16 @@ class SettingsViewModel(
                     fileName = "mibeko-mes-donnees.json",
                     mimeType = "application/json"
                 )
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     isExportingData = false,
                     profileUpdateMessage = "Export prêt : choisissez où l'enregistrer."
-                )
+                ) }
             } catch (e: Exception) {
                 recordException(e, "export_personal_data")
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     isExportingData = false,
                     profileUpdateMessage = "L'export a échoué. Vérifiez votre connexion et réessayez."
-                )
+                ) }
             }
         }
     }
@@ -374,7 +375,7 @@ class SettingsViewModel(
         val notifications = userPreferencesRepository.isNotificationsEnabled()
         val lastSync = userPreferencesRepository.getLastSyncTimestamp()
         
-        _uiState.value = _uiState.value.copy(
+        _uiState.update { it.copy(
             isOfflineModeEnabled = offlineMode,
             currentTheme = theme,
             isNotificationsEnabled = notifications,
@@ -392,7 +393,7 @@ class SettingsViewModel(
             // réseau est là.
             userName = userPreferencesRepository.getUserName() ?: "",
             userEmail = userPreferencesRepository.getUserEmail() ?: ""
-        )
+        ) }
         
         // Load available documents
         loadDocuments()
@@ -400,7 +401,7 @@ class SettingsViewModel(
 
     private fun loadDocuments() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoadingDocuments = true)
+            _uiState.update { it.copy(isLoadingDocuments = true) }
             legalRepository.getLawCodes().collect { lawCodes ->
                 val downloadStates = lawCodes.map { code ->
                     DocumentDownloadState(
@@ -411,10 +412,10 @@ class SettingsViewModel(
                         isDownloading = false
                     )
                 }
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     documents = downloadStates,
                     isLoadingDocuments = false
-                )
+                ) }
             }
         }
     }
@@ -425,7 +426,7 @@ class SettingsViewModel(
      */
     fun setOfflineMode(enabled: Boolean) {
         userPreferencesRepository.setOfflineMode(enabled)
-        _uiState.value = _uiState.value.copy(isOfflineModeEnabled = enabled)
+        _uiState.update { it.copy(isOfflineModeEnabled = enabled) }
     }
 
     /**
@@ -433,7 +434,7 @@ class SettingsViewModel(
      */
     fun setTheme(theme: UserPreferencesRepository.AppTheme) {
         userPreferencesRepository.setAppTheme(theme)
-        _uiState.value = _uiState.value.copy(currentTheme = theme)
+        _uiState.update { it.copy(currentTheme = theme) }
     }
 
     /**
@@ -441,7 +442,7 @@ class SettingsViewModel(
      */
     fun setTextSize(size: UserPreferencesRepository.TextSize) {
         userPreferencesRepository.setTextSize(size)
-        _uiState.value = _uiState.value.copy(textSize = size)
+        _uiState.update { it.copy(textSize = size) }
     }
 
     /**
@@ -449,7 +450,7 @@ class SettingsViewModel(
      */
     fun setDyslexiaFontEnabled(enabled: Boolean) {
         userPreferencesRepository.setDyslexiaFontEnabled(enabled)
-        _uiState.value = _uiState.value.copy(isDyslexiaFontEnabled = enabled)
+        _uiState.update { it.copy(isDyslexiaFontEnabled = enabled) }
     }
 
 
@@ -459,7 +460,7 @@ class SettingsViewModel(
      */
     fun setLegalMonitoringEnabled(enabled: Boolean) {
         userPreferencesRepository.setLegalMonitoringEnabled(enabled)
-        _uiState.value = _uiState.value.copy(isLegalMonitoringEnabled = enabled)
+        _uiState.update { it.copy(isLegalMonitoringEnabled = enabled) }
         syncNotificationPreferences()
     }
 
@@ -468,7 +469,7 @@ class SettingsViewModel(
      */
     fun setDossierAlertsEnabled(enabled: Boolean) {
         userPreferencesRepository.setDossierAlertsEnabled(enabled)
-        _uiState.value = _uiState.value.copy(isDossierAlertsEnabled = enabled)
+        _uiState.update { it.copy(isDossierAlertsEnabled = enabled) }
         syncNotificationPreferences()
     }
 
@@ -534,7 +535,7 @@ class SettingsViewModel(
      */
     fun setTelemetryEnabled(enabled: Boolean) {
         analytics.setTelemetryEnabled(enabled)
-        _uiState.value = _uiState.value.copy(isTelemetryEnabled = enabled)
+        _uiState.update { it.copy(isTelemetryEnabled = enabled) }
     }
 
     /**
@@ -549,7 +550,7 @@ class SettingsViewModel(
                 )
                 if (granted) {
                     userPreferencesRepository.setNotificationsEnabled(true)
-                    _uiState.value = _uiState.value.copy(isNotificationsEnabled = true)
+                    _uiState.update { it.copy(isNotificationsEnabled = true) }
                     // L'accord donné dans l'app doit atteindre la matrice
                     // serveur, sinon aucun push ne partira jamais.
                     syncNotificationPreferences()
@@ -573,9 +574,9 @@ class SettingsViewModel(
                                 // APNs pas encore branché). Le réglage est bien
                                 // mémorisé, mais laisser croire que des alertes
                                 // vont arriver serait mensonger.
-                                _uiState.value = _uiState.value.copy(
+                                _uiState.update { it.copy(
                                     profileUpdateMessage = "Préférence enregistrée. Les alertes push arriveront sur iPhone dans une prochaine version."
-                                )
+                                ) }
                             }
                         }
                     }
@@ -583,7 +584,7 @@ class SettingsViewModel(
             }
         } else {
             userPreferencesRepository.setNotificationsEnabled(false)
-            _uiState.value = _uiState.value.copy(isNotificationsEnabled = false)
+            _uiState.update { it.copy(isNotificationsEnabled = false) }
             syncNotificationPreferences()
 
             // Unregister device on backend
@@ -599,7 +600,7 @@ class SettingsViewModel(
     fun refreshDiskUsage() {
         viewModelScope.launch {
             val size = getDatabaseSize()
-            _uiState.value = _uiState.value.copy(diskUsage = formatSize(size))
+            _uiState.update { it.copy(diskUsage = formatSize(size)) }
         }
     }
 
@@ -616,7 +617,7 @@ class SettingsViewModel(
 
 
     fun clearSyncError() {
-        _uiState.value = _uiState.value.copy(syncError = null)
+        _uiState.update { it.copy(syncError = null) }
     }
 
     /**
@@ -640,9 +641,9 @@ class SettingsViewModel(
                 updateDocumentState(documentId) {
                     it.copy(isDownloading = false, isDownloaded = false, downloadProgress = 0f)
                 }
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     syncError = "Le téléchargement du document a échoué. Vérifiez votre connexion."
-                )
+                ) }
             }
         }
     }
@@ -661,9 +662,9 @@ class SettingsViewModel(
                 }
                 refreshDiskUsage()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     syncError = "La suppression du document a échoué."
-                )
+                ) }
             }
         }
     }
@@ -676,6 +677,6 @@ class SettingsViewModel(
         val updatedDocs = currentDocs.map { 
             if (it.id == documentId) update(it) else it 
         }
-        _uiState.value = _uiState.value.copy(documents = updatedDocs)
+        _uiState.update { it.copy(documents = updatedDocs) }
     }
 }

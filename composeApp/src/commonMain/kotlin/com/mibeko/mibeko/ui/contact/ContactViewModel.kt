@@ -11,6 +11,7 @@ import io.ktor.client.plugins.ResponseException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ContactUiState(
@@ -41,19 +42,19 @@ class ContactViewModel(
     val uiState: StateFlow<ContactUiState> = _uiState.asStateFlow()
 
     fun onNameChange(value: String) {
-        _uiState.value = _uiState.value.copy(name = value)
+        _uiState.update { it.copy(name = value) }
     }
 
     fun onEmailChange(value: String) {
-        _uiState.value = _uiState.value.copy(email = value)
+        _uiState.update { it.copy(email = value) }
     }
 
     fun onMessageChange(value: String) {
-        _uiState.value = _uiState.value.copy(message = value)
+        _uiState.update { it.copy(message = value) }
     }
 
     fun clearSnackbar() {
-        _uiState.value = _uiState.value.copy(snackbar = null)
+        _uiState.update { it.copy(snackbar = null) }
     }
 
     fun submit() {
@@ -72,12 +73,12 @@ class ContactViewModel(
                 )
                 if (ok) {
                     analytics.logEvent(AnalyticsEvents.CONTACT_SUBMITTED)
-                    _uiState.value = _uiState.value.copy(isSending = false, isSent = true)
+                    _uiState.update { it.copy(isSending = false, isSent = true) }
                 } else {
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         isSending = false,
                         snackbar = "L'envoi a échoué. Vérifiez vos informations et réessayez."
-                    )
+                    ) }
                 }
             } catch (e: ResponseException) {
                 val label = if (e.response.status.value == 429) {
@@ -85,13 +86,13 @@ class ContactViewModel(
                 } else {
                     "L'envoi a échoué. Vérifiez vos informations et réessayez."
                 }
-                _uiState.value = _uiState.value.copy(isSending = false, snackbar = label)
+                _uiState.update { it.copy(isSending = false, snackbar = label) }
             } catch (e: Exception) {
                 recordException(e, "ContactViewModel.submit")
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     isSending = false,
                     snackbar = "Connexion impossible. Vérifiez votre accès internet."
-                )
+                ) }
             }
         }
     }

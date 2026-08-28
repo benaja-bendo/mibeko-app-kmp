@@ -130,7 +130,7 @@ class HomeViewModel(
                 // Bannière uniquement si le backend dit explicitement « non vérifié ».
                 val unverified = response.success && response.data?.email_verified == false
                 if (unverified) {
-                    _uiState.value = _uiState.value.copy(showEmailVerificationBanner = true)
+                    _uiState.update { it.copy(showEmailVerificationBanner = true) }
                 }
             } catch (e: Exception) {
                 // Dégradation silencieuse : aucune bannière, aucun crash.
@@ -148,10 +148,10 @@ class HomeViewModel(
         if (now < _uiState.value.verificationResendCooldownUntil) return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(
                 isResendingVerification = true,
                 verificationResendMessage = null
-            )
+            ) }
             val result = authApiService.resendEmailVerification()
             val message: String
             val cooldownUntil: Long
@@ -169,21 +169,21 @@ class HomeViewModel(
                     cooldownUntil = _uiState.value.verificationResendCooldownUntil
                 }
             }
-            _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(
                 isResendingVerification = false,
                 verificationResendMessage = message,
                 verificationResendCooldownUntil = cooldownUntil
-            )
+            ) }
         }
     }
 
     fun clearVerificationResendMessage() {
-        _uiState.value = _uiState.value.copy(verificationResendMessage = null)
+        _uiState.update { it.copy(verificationResendMessage = null) }
     }
     
     private fun loadHomeData() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, homeDataError = null)
+            _uiState.update { it.copy(isLoading = true, homeDataError = null) }
 
             var validPopular: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList()
             var validRecentlyAdded: List<com.mibeko.mibeko.data.remote.RemoteDocument> = emptyList()
@@ -244,7 +244,7 @@ class HomeViewModel(
                 }
             }
 
-            _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(
                 popularCodes = validPopular,
                 recentlyAdded = validRecentlyAdded,
                 officialJournals = journals,
@@ -257,7 +257,7 @@ class HomeViewModel(
                 } else {
                     null
                 }
-            )
+            ) }
         }
     }
 
@@ -270,11 +270,11 @@ class HomeViewModel(
     private fun loadInitialState() {
         // Check initial network state
         val isOnline = networkChecker.isNetworkAvailable()
-        _uiState.value = _uiState.value.copy(
+        _uiState.update { it.copy(
             isNetworkAvailable = isOnline,
             isLoggedIn = userPreferences.isLoggedIn(),
             isLoading = true
-        )
+        ) }
         
         loadRecentItems()
     }
@@ -301,7 +301,7 @@ class HomeViewModel(
             if (needsFullSync && networkChecker.isNetworkAvailable()) {
                 syncData()
             } else {
-                _uiState.value = _uiState.value.copy(isLoading = false)
+                _uiState.update { it.copy(isLoading = false) }
                 refreshCorpusIfStale()
             }
         }
@@ -337,14 +337,14 @@ class HomeViewModel(
 
     fun syncData() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSyncing = true, isLoading = true)
+            _uiState.update { it.copy(isSyncing = true, isLoading = true) }
             try {
                 repository.sync()
             } catch (e: Exception) {
                 recordException(e, context = "HomeViewModel.syncData")
                 _uiEvent.emit("La synchronisation a échoué. Réessayez plus tard.")
             } finally {
-                _uiState.value = _uiState.value.copy(isSyncing = false, isLoading = false)
+                _uiState.update { it.copy(isSyncing = false, isLoading = false) }
             }
         }
     }

@@ -8,6 +8,7 @@ import com.mibeko.mibeko.util.ContentSharer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class OfficialJournalUiState(
@@ -67,7 +68,7 @@ class OfficialJournalViewModel(
     fun loadJournals() {
         if (_uiState.value.journals.isNotEmpty()) return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val all = mutableListOf<RemoteOfficialJournal>()
                 var page = 1
@@ -75,7 +76,7 @@ class OfficialJournalViewModel(
                 do {
                     val response = repository.getOfficialJournals(page = page, perPage = 100)
                     if (!response.success) {
-                        _uiState.value = _uiState.value.copy(isLoading = false, error = response.message)
+                        _uiState.update { it.copy(isLoading = false, error = response.message) }
                         return@launch
                     }
                     all += response.data
@@ -83,40 +84,40 @@ class OfficialJournalViewModel(
                     page++
                 } while (page <= lastPage && page <= 5)
 
-                _uiState.value = _uiState.value.copy(isLoading = false, journals = all)
+                _uiState.update { it.copy(isLoading = false, journals = all) }
             } catch (e: Exception) {
                 e.printStackTrace()
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     isLoading = false,
                     error = "Erreur lors du chargement des journaux officiels."
-                )
+                ) }
             }
         }
     }
 
     fun onSearchQueryChange(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
+        _uiState.update { it.copy(searchQuery = query) }
     }
 
     fun onYearSelected(year: Int?) {
-        _uiState.value = _uiState.value.copy(selectedYear = year)
+        _uiState.update { it.copy(selectedYear = year) }
     }
 
     fun loadJournalDetail(id: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val journal = repository.getOfficialJournal(id)
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     isLoading = false,
                     currentJournal = journal
-                )
+                ) }
             } catch (e: Exception) {
                 e.printStackTrace()
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     isLoading = false,
                     error = "Erreur lors du chargement des détails."
-                )
+                ) }
             }
         }
         // Le catalogue alimente la navigation JO précédent / suivant, y compris
@@ -130,7 +131,7 @@ class OfficialJournalViewModel(
 
     fun sharePdf(id: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isDownloadingPdf = true, error = null)
+            _uiState.update { it.copy(isDownloadingPdf = true, error = null) }
             try {
                 val url = repository.getOfficialJournalPdfUrl(id)
                 val bytes = repository.downloadFile(url)
@@ -139,14 +140,14 @@ class OfficialJournalViewModel(
                 contentSharer.shareFile(bytes, fileName, "application/pdf")
             } catch (e: Exception) {
                 e.printStackTrace()
-                _uiState.value = _uiState.value.copy(error = "Erreur lors du partage du PDF: ${e.message}")
+                _uiState.update { it.copy(error = "Erreur lors du partage du PDF: ${e.message}") }
             } finally {
-                _uiState.value = _uiState.value.copy(isDownloadingPdf = false)
+                _uiState.update { it.copy(isDownloadingPdf = false) }
             }
         }
     }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 }

@@ -6,6 +6,7 @@ import com.mibeko.mibeko.data.ArticleSpec
 import com.mibeko.mibeko.data.LawCodeSpec
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class DownloadsUiState(
@@ -102,6 +103,6 @@ class DownloadsViewModel(
     }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 }

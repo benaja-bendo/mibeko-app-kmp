@@ -188,7 +188,7 @@ class LibraryViewModel(
                 val sorted = codes.sortedByDescending {
                     parseRemoteDateToEpochMillis(it.dateSignature) ?: it.lastUpdated
                 }
-                _uiState.value = _uiState.value.copy(localCodes = sorted)
+                _uiState.update { it.copy(localCodes = sorted) }
             }
         }
     }
@@ -197,7 +197,7 @@ class LibraryViewModel(
         viewModelScope.launch {
             try {
                 val types = repository.getDocumentTypes()
-                _uiState.value = _uiState.value.copy(documentTypes = types)
+                _uiState.update { it.copy(documentTypes = types) }
             } catch (e: Exception) {
                 // silencieux : les filtres types restent vides
             }
@@ -205,7 +205,7 @@ class LibraryViewModel(
         viewModelScope.launch {
             try {
                 val institutions = legalApi.fetchInstitutions().data ?: emptyList()
-                _uiState.value = _uiState.value.copy(institutions = institutions)
+                _uiState.update { it.copy(institutions = institutions) }
             } catch (e: Exception) {
                 // silencieux : le filtre institution reste vide
             }
@@ -215,29 +215,29 @@ class LibraryViewModel(
     // ── Saisie & autocomplétion ───────────────────────────────────────────────
 
     fun updateSearchQuery(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
+        _uiState.update { it.copy(searchQuery = query) }
 
         suggestJob?.cancel()
         if (query.trim().length < 2 || !networkChecker.isNetworkAvailable()) {
-            _uiState.value = _uiState.value.copy(suggestions = null)
+            _uiState.update { it.copy(suggestions = null) }
             return
         }
         suggestJob = viewModelScope.launch {
             delay(250) // debounce de frappe
             try {
                 val suggestions = libraryApi.suggest(query.trim())
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     suggestions = if (suggestions.isEmpty) null else suggestions
-                )
+                ) }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(suggestions = null)
+                _uiState.update { it.copy(suggestions = null) }
             }
         }
     }
 
     fun dismissSuggestions() {
         suggestJob?.cancel()
-        _uiState.value = _uiState.value.copy(suggestions = null)
+        _uiState.update { it.copy(suggestions = null) }
     }
 
     // ── Recherche ─────────────────────────────────────────────────────────────
@@ -246,20 +246,20 @@ class LibraryViewModel(
         val trimmed = query.trim()
         if (trimmed.length < 2) return
         dismissSuggestions()
-        _uiState.value = _uiState.value.copy(searchQuery = trimmed, submittedQuery = trimmed)
+        _uiState.update { it.copy(searchQuery = trimmed, submittedQuery = trimmed) }
         runSearch(page = 1)
     }
 
     fun clearSearch() {
         searchJob?.cancel()
         dismissSuggestions()
-        _uiState.value = _uiState.value.copy(
+        _uiState.update { it.copy(
             searchQuery = "",
             submittedQuery = "",
             results = emptyList(),
             pagination = null,
             searchError = null
-        )
+        ) }
     }
 
     fun loadNextPage() {
@@ -276,11 +276,11 @@ class LibraryViewModel(
 
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(
                 isSearching = !append,
                 isLoadingMore = append,
                 searchError = null
-            )
+            ) }
 
             if (networkChecker.isNetworkAvailable()) {
                 try {
@@ -292,13 +292,13 @@ class LibraryViewModel(
                         sort = state.sort.apiValue,
                         page = page
                     )
-                    _uiState.value = _uiState.value.copy(
-                        results = if (append) _uiState.value.results + response.data else response.data,
+                    _uiState.update { it.copy(
+                        results = if (append) it.results + response.data else response.data,
                         pagination = response.pagination,
                         resultsFromNetwork = true,
                         isSearching = false,
                         isLoadingMore = false
-                    )
+                    ) }
                     if (!append) logSearchPerformed(query, response.data.size, offline = false)
                     return@launch
                 } catch (e: Exception) {
@@ -316,14 +316,14 @@ class LibraryViewModel(
             when (val local = repository.searchHybrid(query = query)) {
                 is SearchResult.Success -> {
                     val items = local.articles.map { it.toLibrarySearchItem() }
-                    _uiState.value = _uiState.value.copy(
-                        results = if (append) _uiState.value.results + items else items,
+                    _uiState.update { it.copy(
+                        results = if (append) it.results + items else items,
                         pagination = null,
                         resultsFromNetwork = false,
                         isSearching = false,
                         isLoadingMore = false,
                         searchError = null
-                    )
+                    ) }
                     if (!append) logSearchPerformed(query, items.size, offline = true)
                 }
 
@@ -332,8 +332,8 @@ class LibraryViewModel(
                     // déjà calculés — un « aucun résultat » serait un faux
                     // négatif juridique (règle produit non négociable).
                     val items = local.fallbackArticles.map { it.toLibrarySearchItem() }
-                    _uiState.value = _uiState.value.copy(
-                        results = if (append) _uiState.value.results + items else items,
+                    _uiState.update { it.copy(
+                        results = if (append) it.results + items else items,
                         pagination = null,
                         resultsFromNetwork = false,
                         isSearching = false,
@@ -342,21 +342,21 @@ class LibraryViewModel(
                             offline = !networkChecker.isNetworkAvailable(),
                             retry = { runSearch(page = 1) }
                         )
-                    )
+                    ) }
                     if (!append) logSearchFailed(query)
                 }
 
                 SearchResult.Loading -> Unit // Variant jamais produit par searchHybrid.
             }
         } catch (e: Exception) {
-            _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(
                 isSearching = false,
                 isLoadingMore = false,
                 searchError = UiResult.Error(
                     offline = !networkChecker.isNetworkAvailable(),
                     retry = { runSearch(page = 1) }
                 )
-            )
+            ) }
             if (!append) logSearchFailed(query)
         }
     }
@@ -396,32 +396,32 @@ class LibraryViewModel(
     // ── Filtres (chaque changement relance la recherche en cours) ────────────
 
     fun updateScope(scope: LibraryScope) {
-        _uiState.value = _uiState.value.copy(scope = scope)
+        _uiState.update { it.copy(scope = scope) }
         if (_uiState.value.hasSearched) runSearch(page = 1)
     }
 
     fun updateTypeFilter(typeCode: String?) {
-        _uiState.value = _uiState.value.copy(selectedTypeCode = typeCode)
+        _uiState.update { it.copy(selectedTypeCode = typeCode) }
         if (_uiState.value.hasSearched) runSearch(page = 1)
     }
 
     fun updateInstitutionFilter(institutionId: String?) {
-        _uiState.value = _uiState.value.copy(selectedInstitutionId = institutionId)
+        _uiState.update { it.copy(selectedInstitutionId = institutionId) }
         if (_uiState.value.hasSearched) runSearch(page = 1)
     }
 
     fun updateSort(sort: LibrarySort) {
-        _uiState.value = _uiState.value.copy(sort = sort)
+        _uiState.update { it.copy(sort = sort) }
         if (_uiState.value.hasSearched) runSearch(page = 1)
     }
 
     fun resetFilters() {
-        _uiState.value = _uiState.value.copy(
+        _uiState.update { it.copy(
             scope = LibraryScope.ALL,
             selectedTypeCode = null,
             selectedInstitutionId = null,
             sort = LibrarySort.RELEVANCE
-        )
+        ) }
         if (_uiState.value.hasSearched) runSearch(page = 1)
     }
 
@@ -429,24 +429,24 @@ class LibraryViewModel(
 
     fun downloadDocument(documentId: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                downloadingIds = _uiState.value.downloadingIds + documentId
-            )
+            _uiState.update { it.copy(
+                downloadingIds = it.downloadingIds + documentId
+            ) }
             try {
                 repository.downloadDocument(documentId)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     error = "Erreur lors du téléchargement : ${e.message}"
-                )
+                ) }
             } finally {
-                _uiState.value = _uiState.value.copy(
-                    downloadingIds = _uiState.value.downloadingIds - documentId
-                )
+                _uiState.update { it.copy(
+                    downloadingIds = it.downloadingIds - documentId
+                ) }
             }
         }
     }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 }

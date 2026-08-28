@@ -15,6 +15,7 @@ import com.mibeko.mibeko.data.LawCodeSpec
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 
 /**
  * État UI pour l'écran de détail d'un document.
@@ -59,7 +60,7 @@ class DocumentDetailViewModel(
      * Si le document n'est pas présent localement, tente de le récupérer via l'API.
      */
     fun loadStructure(documentId: String) {
-        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+        _uiState.update { it.copy(isLoading = true, error = null) }
         analytics.logEvent(com.mibeko.mibeko.util.AnalyticsEvents.DOCUMENT_OPENED)
 
         viewModelScope.launch {
@@ -79,15 +80,15 @@ class DocumentDetailViewModel(
                     e.printStackTrace()
                     // Only show error if we have no data at all
                     if (_uiState.value.structure.isEmpty()) {
-                        _uiState.value = _uiState.value.copy(
+                        _uiState.update { it.copy(
                             error = "Impossible de charger le document. Vérifiez votre connexion.",
                             isLoading = false
-                        )
+                        ) }
                     }
                 } finally {
                     // Final check to stop loading if it hasn't stopped yet
                     if (_uiState.value.isLoading) {
-                        _uiState.value = _uiState.value.copy(isLoading = false)
+                        _uiState.update { it.copy(isLoading = false) }
                     }
                 }
             }
@@ -109,12 +110,12 @@ class DocumentDetailViewModel(
                     filterStructure(localStructure, _uiState.value.searchQuery)
                 }
 
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     structure = localStructure,
                     filteredStructure = filtered,
                     document = doc,
-                    isLoading = if (localStructure.isNotEmpty()) false else _uiState.value.isLoading
-                )
+                    isLoading = if (localStructure.isNotEmpty()) false else it.isLoading
+                ) }
             }
         }
     }
@@ -123,13 +124,13 @@ class DocumentDetailViewModel(
      * Filtre la structure du document selon une requête.
      */
     fun onSearchQueryChange(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
+        _uiState.update { it.copy(searchQuery = query) }
         val filtered = if (query.isEmpty()) {
             _uiState.value.structure
         } else {
             filterStructure(_uiState.value.structure, query)
         }
-        _uiState.value = _uiState.value.copy(filteredStructure = filtered)
+        _uiState.update { it.copy(filteredStructure = filtered) }
     }
 
     private fun filterStructure(
@@ -171,7 +172,7 @@ class DocumentDetailViewModel(
         val doc = _uiState.value.document ?: return
         val url = com.mibeko.mibeko.util.PublicLinks.document(doc.slug)
         contentSharer.copyToClipboard(url)
-        _uiState.value = _uiState.value.copy(message = "✓ Lien copié dans le presse-papiers")
+        _uiState.update { it.copy(message = "✓ Lien copié dans le presse-papiers") }
     }
 
     fun shareDocumentAsPdf() {
@@ -179,15 +180,15 @@ class DocumentDetailViewModel(
         val url = repository.getDocumentExportUrl(doc.id)
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSharingPdf = true)
+            _uiState.update { it.copy(isSharingPdf = true) }
             try {
                 val bytes = repository.downloadFile(url)
                 val fileName = "${doc.title.replace(" ", "_")}.pdf"
                 contentSharer.shareFile(bytes, fileName, "application/pdf")
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = "Erreur lors du partage PDF: ${e.message}")
+                _uiState.update { it.copy(error = "Erreur lors du partage PDF: ${e.message}") }
             } finally {
-                _uiState.value = _uiState.value.copy(isSharingPdf = false)
+                _uiState.update { it.copy(isSharingPdf = false) }
             }
         }
     }
@@ -199,7 +200,7 @@ class DocumentDetailViewModel(
         val doc = _uiState.value.document ?: return
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isDownloading = true)
+                _uiState.update { it.copy(isDownloading = true) }
                 _isDownloading.value = true
                 if (doc.isDownloaded) {
                     repository.removeDownload(doc.id)
@@ -210,15 +211,15 @@ class DocumentDetailViewModel(
                         // le badge « Hors-ligne » ne doit pas s'allumer pour
                         // autant — dire pourquoi plutôt que de laisser le
                         // bouton ne rien faire visiblement.
-                        _uiState.value = _uiState.value.copy(
+                        _uiState.update { it.copy(
                             error = "Ce document (PDF non structuré) ne peut pas être mis à disposition hors-ligne."
-                        )
+                        ) }
                     }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = "Erreur lors du téléchargement : ${e.message}")
+                _uiState.update { it.copy(error = "Erreur lors du téléchargement : ${e.message}") }
             } finally {
-                _uiState.value = _uiState.value.copy(isDownloading = false)
+                _uiState.update { it.copy(isDownloading = false) }
                 _isDownloading.value = false
             }
         }
@@ -237,9 +238,9 @@ class DocumentDetailViewModel(
                     type = type,
                     description = description
                 )
-                _uiState.value = _uiState.value.copy(message = "Signalement envoyé avec succès. Merci pour votre contribution.")
+                _uiState.update { it.copy(message = "Signalement envoyé avec succès. Merci pour votre contribution.") }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = "Erreur lors de l'envoi du signalement : ${e.message}")
+                _uiState.update { it.copy(error = "Erreur lors de l'envoi du signalement : ${e.message}") }
             }
         }
     }
@@ -248,13 +249,13 @@ class DocumentDetailViewModel(
      * Efface l'erreur actuelle.
      */
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 
     /**
      * Efface le message d'information actuel.
      */
     fun clearMessage() {
-        _uiState.value = _uiState.value.copy(message = null)
+        _uiState.update { it.copy(message = null) }
     }
 }
