@@ -39,7 +39,7 @@ class AndroidContentSharer(private val context: Context) : ContentSharer {
             context.startActivity(chooser)
             
         } catch (e: Exception) {
-            e.printStackTrace()
+            recordException(e, context = "AndroidContentSharer.shareFile")
             Toast.makeText(context, "Erreur de partage: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
@@ -68,7 +68,7 @@ class AndroidContentSharer(private val context: Context) : ContentSharer {
                 file
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            recordException(e, context = "AndroidContentSharer.saveFileAndGetUri")
             Toast.makeText(context, "Erreur de préparation du fichier: ${e.message}", Toast.LENGTH_SHORT).show()
             null
         }
@@ -81,7 +81,7 @@ class AndroidContentSharer(private val context: Context) : ContentSharer {
             clipboard.setPrimaryClip(clip)
             Toast.makeText(context, "Copié dans le presse-papiers", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            e.printStackTrace()
+            recordException(e, context = "AndroidContentSharer.copyToClipboard")
             Toast.makeText(context, "Erreur: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }

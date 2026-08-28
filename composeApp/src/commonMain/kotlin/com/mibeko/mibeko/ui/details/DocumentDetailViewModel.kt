@@ -1,5 +1,6 @@
 package com.mibeko.mibeko.ui.details
 
+import com.mibeko.mibeko.util.recordException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.local.entities.ArticleEntity
@@ -77,7 +78,7 @@ class DocumentDetailViewModel(
                         repository.fetchAndStoreDocumentStructure(documentId)
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    recordException(e, context = "DocumentDetailViewModel.loadStructure")
                     // Only show error if we have no data at all
                     if (_uiState.value.structure.isEmpty()) {
                         _uiState.update { it.copy(

@@ -84,7 +84,7 @@ class AndroidNotificationManager(private val context: Context) : NotificationMan
                 })
             } catch (e: Exception) {
                 // Fallback en cas d'erreur (ex: google services manquant)
-                e.printStackTrace()
+                recordException(e, context = "AndroidNotificationManager.getPushToken")
                 onTokenResult(null)
             }
         } else {

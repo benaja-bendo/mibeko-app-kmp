@@ -1,5 +1,6 @@
 package com.mibeko.mibeko.ui.officialjournal
 
+import com.mibeko.mibeko.util.recordException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.remote.RemoteOfficialJournal
@@ -86,7 +87,7 @@ class OfficialJournalViewModel(
 
                 _uiState.update { it.copy(isLoading = false, journals = all) }
             } catch (e: Exception) {
-                e.printStackTrace()
+                recordException(e, context = "OfficialJournalViewModel.loadJournals")
                 _uiState.update { it.copy(
                     isLoading = false,
                     error = "Erreur lors du chargement des journaux officiels."
@@ -113,7 +114,7 @@ class OfficialJournalViewModel(
                     currentJournal = journal
                 ) }
             } catch (e: Exception) {
-                e.printStackTrace()
+                recordException(e, context = "OfficialJournalViewModel.loadJournalDetail")
                 _uiState.update { it.copy(
                     isLoading = false,
                     error = "Erreur lors du chargement des détails."
@@ -139,7 +140,7 @@ class OfficialJournalViewModel(
                 val fileName = "Journal_Officiel_${journal?.publication_date ?: id}.pdf".replace(" ", "_")
                 contentSharer.shareFile(bytes, fileName, "application/pdf")
             } catch (e: Exception) {
-                e.printStackTrace()
+                recordException(e, context = "OfficialJournalViewModel.sharePdf")
                 _uiState.update { it.copy(error = "Erreur lors du partage du PDF: ${e.message}") }
             } finally {
                 _uiState.update { it.copy(isDownloadingPdf = false) }

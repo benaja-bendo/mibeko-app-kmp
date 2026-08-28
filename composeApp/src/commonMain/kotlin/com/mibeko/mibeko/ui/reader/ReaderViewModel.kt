@@ -216,7 +216,7 @@ class ReaderViewModel(
                     ) }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                recordException(e, context = "ReaderViewModel.loadArticle")
                 _uiState.update { it.copy(
                     isLoading = false,
                     error = "Erreur de chargement: ${e.message}"

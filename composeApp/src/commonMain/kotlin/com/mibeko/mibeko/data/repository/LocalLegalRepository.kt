@@ -502,7 +502,7 @@ class LocalLegalRepository(
                 keptNodeIds = allNodes.map { it.id }
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            recordException(e, context = "LocalLegalRepository.fetchAndStoreDocumentStructure")
             throw e
         }
     }

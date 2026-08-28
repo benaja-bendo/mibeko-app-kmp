@@ -1,5 +1,6 @@
 package com.mibeko.mibeko.data.preferences
 
+import com.mibeko.mibeko.util.recordException
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,7 +44,7 @@ class RecentlyViewedManager(private val settings: Settings = Settings()) {
             settings.putString(KEY_RECENTLY_VIEWED, serialized)
             _recentItems.value = items
         } catch (e: Exception) {
-            e.printStackTrace()
+            recordException(e, context = "RecentlyViewedManager.saveItems")
         }
     }
 
