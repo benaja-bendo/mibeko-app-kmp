@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Notifications
@@ -29,10 +31,14 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import com.mibeko.mibeko.data.remote.RemoteDocument
@@ -65,6 +71,13 @@ fun HomeScreen() {
 
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Le corps documentaire de l'accueil a-t-il quelque chose à montrer ?
+    // Détermine qui, de la bannière du haut ou du bloc à la place du contenu,
+    // porte le message d'échec — jamais les deux, ils diraient la même chose.
+    val hasDocumentContent = uiState.popularCodes.isNotEmpty() ||
+        uiState.recentlyAdded.isNotEmpty() ||
+        uiState.officialJournals.isNotEmpty()
 
     // Masquage local de la bannière « e-mail non vérifié » pour la session.
     var emailBannerDismissed by remember { mutableStateOf(false) }
@@ -168,9 +181,11 @@ fun HomeScreen() {
                 )
             }
 
-            // Échec du chargement de l'accueil alors que le réseau était là (le cas
-            // pur hors-ligne est déjà couvert par NetworkStatusBanner ci-dessus).
-            uiState.homeDataError?.let { error ->
+            // Échec du chargement alors que le réseau était là. N'apparaît que si
+            // des textes sont malgré tout affichés : ils sont alors potentiellement
+            // périmés, ce que la bannière signale. Sans contenu, c'est le bloc
+            // posé à la place des sections qui porte le message.
+            uiState.homeDataError?.takeIf { hasDocumentContent }?.let { error ->
                 item {
                     MibekoErrorBanner(
                         offline = error.offline,
@@ -188,6 +203,24 @@ fun HomeScreen() {
                     // désynchronisaient la pile sauvegardée.
                     navController.switchTopLevelTab(Screen.Library)
                 })
+            }
+
+            // Corps documentaire vide : ces sections étant toutes conditionnées par
+            // `isNotEmpty()`, un chargement en cours ou échoué les faisait
+            // simplement disparaître — l'accueil se réduisait alors au hero et à
+            // une carte, séparés par un grand blanc que rien n'expliquait. On
+            // occupe la place, soit par des squelettes, soit par un état dit.
+            if (!hasDocumentContent) {
+                item {
+                    if (uiState.isLoading) {
+                        HomeDocumentSkeleton()
+                    } else {
+                        HomeContentUnavailable(
+                            offline = !uiState.isNetworkAvailable,
+                            onRetry = { viewModel.refresh() }
+                        )
+                    }
+                }
             }
 
             // Accueil documentaire : les données sont chargées depuis longtemps mais
@@ -492,6 +525,84 @@ private fun BrowseLibraryCard(onClick: () -> Unit) {
 }
 
 /** Section documentaire horizontale : « Codes populaires » / « Récemment ajoutés ». */
+@Composable
+private fun HomeDocumentSkeleton() {
+    Column {
+        repeat(2) { section ->
+            SkeletonBlock(
+                width = if (section == 0) 172.dp else 148.dp,
+                height = 26.dp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
+                repeat(3) {
+                    SkeletonBlock(width = 160.dp, height = 108.dp, radius = 16.dp)
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+    }
+}
+
+/** Aplat neutre tenant la place d'un contenu encore inconnu. */
+@Composable
+private fun SkeletonBlock(
+    width: Dp,
+    height: Dp,
+    modifier: Modifier = Modifier,
+    radius: Dp = 6.dp
+) {
+    Box(
+        modifier = modifier
+            .size(width = width, height = height)
+            .clip(RoundedCornerShape(radius))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+    )
+}
+
+/**
+ * Corps documentaire indisponible. Ne dit jamais que le corpus est vide — il
+ * dit ce qui s'est passé (règle produit n° 1) et propose de réessayer.
+ */
+@Composable
+private fun HomeContentUnavailable(offline: Boolean, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = if (offline) Icons.Default.CloudOff else Icons.Default.ErrorOutline,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(32.dp)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = if (offline) {
+                "Les textes en avant ne sont pas disponibles hors-ligne."
+            } else {
+                "Je n'ai pas pu charger les textes en avant."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "La bibliothèque reste accessible.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        if (!offline) {
+            TextButton(onClick = onRetry) { Text("Réessayer") }
+        }
+    }
+}
+
 @Composable
 private fun HomeDocumentSection(
     title: String,
