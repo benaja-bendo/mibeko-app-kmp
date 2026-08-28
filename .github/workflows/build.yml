@@ -6,6 +6,15 @@ on:
   pull_request:
     branches: [ "main", "develop" ]
 
+# Deux poussées rapprochées sur une même branche lançaient deux fois le job
+# macOS, dont ce fichier rappelle lui-même qu'il coûte environ dix fois un
+# runner Linux. Sur une pull request, seule la dernière version compte : on
+# annule la précédente. Sur `main` on laisse finir, pour ne pas laisser un
+# commit sans verdict.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -87,14 +96,24 @@ jobs:
   # linkDebugFrameworkIosArm64 attrape erreurs de compile ET de link, sans
   # signature ni secrets Apple. Restreint à main (runners macOS ~10x le prix
   # des runners Linux).
+  #
+  # `commonTest` n'était en revanche jamais compilé pour Native : il ne
+  # tournait que sur la JVM. Les deux plateformes n'acceptent pas les mêmes
+  # noms de fonction — Kotlin/Native refuse parenthèses et virgules dans un
+  # identifiant entre accents graves — et un test partagé pouvait donc être
+  # incompilable côté iOS sans que rien ne le dise. C'était le cas.
   build-ios:
     if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v5
 
-    # Xcode figé comme dans distribute-ios.yml : Kotlin/Native est sensible à
-    # la version, un bump de l'image macos-latest casserait ce job seul.
+    # Kotlin/Native est sensible à la version d'Xcode. `latest-stable` ne fige
+    # rien : il suit l'image du runner. Ce qui est garanti ici, c'est que ce
+    # job et `distribute-ios.yml` bougent *ensemble* — une régression liée à
+    # Xcode se voit donc en CI avant de se voir à la soumission. Épingler une
+    # version précise serait plus sûr, mais casse net le jour où l'image du
+    # runner cesse de l'embarquer : à arbitrer si le cas se présente.
     - name: Set up Xcode
       uses: maxim-lobanov/setup-xcode@v1
       with:
@@ -107,11 +126,18 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    # La toolchain Kotlin/Native (plusieurs Go) dépend de la version de Kotlin
+    # et des options `kotlin.native.*` — de rien d'autre. L'ancienne clé se
+    # trompait dans les deux sens : elle ignorait `libs.versions.toml`, où vit
+    # la version de Kotlin, donc une montée de version réutilisait une
+    # toolchain périmée ; et elle englobait tous les `*.gradle.kts`, donc
+    # l'ajout d'une dépendance sans rapport réécrivait un cache de plusieurs
+    # Go, poussant les autres hors du quota du dépôt.
     - name: Cache Kotlin Native (Konan)
       uses: actions/cache@v4
       with:
         path: ~/.konan
-        key: ${{ runner.os }}-konan-${{ hashFiles('**/*.gradle.kts', '**/gradle.properties') }}
+        key: ${{ runner.os }}-konan-${{ hashFiles('gradle/libs.versions.toml', 'gradle.properties') }}
         restore-keys: |
           ${{ runner.os }}-konan-
 
@@ -120,3 +146,9 @@ jobs:
 
     - name: Compile and link iOS framework
       run: ./gradlew :composeApp:linkDebugFrameworkIosArm64 --stacktrace
+
+    # Les mêmes tests que `testAndroidHostTest`, mais exécutés par le
+    # compilateur Native sur le simulateur : c'est le seul moyen de savoir que
+    # le code partagé se comporte pareil des deux côtés. 108 tests, ~45 s.
+    - name: Run shared tests on Kotlin/Native
+      run: ./gradlew :composeApp:iosSimulatorArm64Test --stacktrace
