@@ -65,7 +65,7 @@ class RecentlyViewedManager(private val settings: Settings = Settings()) {
         
         // Keep only max items
         if (currentItems.size > MAX_ITEMS) {
-            currentItems.removeLast()
+            currentItems.removeAt(currentItems.lastIndex)
         }
         
         saveItems(currentItems)
