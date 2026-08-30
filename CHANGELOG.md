@@ -6,6 +6,23 @@ publique. Chaque nouvelle mise à jour ajoute une section en haut du fichier.
 
 ---
 
+## 1.3.2 — 30 août 2026
+
+Version de fiabilité, sans changement visible : un correctif préventif détecté
+par Google Play avant toute publication.
+
+### Sous le capot (fiabilité — pas pour la communication publique)
+
+- L'historique des textes récemment consultés utilisait `removeLast()` sur sa
+  liste interne — une extension Kotlin qui entre en conflit avec une méthode
+  Java ajoutée par Android 15 (API 35, `SequencedCollection`) et qui aurait
+  provoqué un plantage sur les appareils encore en Android 14 ou antérieur.
+  Remplacée par `removeAt(lastIndex)`, strictement équivalente. Détecté par les
+  vérifications automatiques de Google Play avant l'envoi en examen de la
+  1.3.1, jamais exposé aux utilisateurs.
+
+---
+
 ## 1.3.1 — 29 août 2026
 
 Version de correction. Elle reprend le fil de la 1.2.0 : l'application ne doit
