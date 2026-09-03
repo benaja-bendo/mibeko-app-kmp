@@ -13,6 +13,7 @@ import com.mibeko.mibeko.util.AnalyticsEvents
 import com.mibeko.mibeko.util.MibekoAnalytics
 import io.ktor.client.plugins.ResponseException
 import io.ktor.client.plugins.sse.SSEClientException
+import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -24,6 +25,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Nature d'un échec d'envoi, dérivée du transport — jamais du texte serveur.
@@ -35,20 +37,62 @@ enum class ChatErrorKind { QUOTA, NETWORK, GENERIC }
 data class ChatInlineError(
     val kind: ChatErrorKind,
     val retryAfterSeconds: Int? = null,
+    val scope: String? = null,
     val canRetry: Boolean = false
 )
 
 /**
  * Classification pure d'un échec de transport (testable sans Ktor) :
  * 429 → quota, aucune réponse reçue → réseau, autre statut → générique.
+ * `scope` (`minute`/`day`/`month`, mibeko-dashboard#62) vient du corps JSON
+ * du 429, lu séparément par l'appelant — voir [parseRateLimitScope].
  */
-fun classifyChatFailure(statusCode: Int?, retryAfterHeader: String?): ChatInlineError {
+fun classifyChatFailure(statusCode: Int?, retryAfterHeader: String?, scope: String? = null): ChatInlineError {
     val kind = when (statusCode) {
         429 -> ChatErrorKind.QUOTA
         null -> ChatErrorKind.NETWORK
         else -> ChatErrorKind.GENERIC
     }
-    return ChatInlineError(kind, retryAfterHeader?.toIntOrNull())
+    return ChatInlineError(kind, retryAfterHeader?.toIntOrNull(), scope)
+}
+
+/**
+ * Extrait le `scope` du corps JSON d'un 429 `AI_RATE_LIMITED`. Pur et
+ * testable sans Ktor : l'appelant lit le corps de la réponse en amont.
+ * Retourne null si absent ou illisible — le libellé générique reste le repli.
+ */
+fun parseRateLimitScope(body: String?): String? {
+    if (body == null) return null
+    return runCatching {
+        Json { ignoreUnknownKeys = true }.decodeFromString<JsonObject>(body)["scope"]?.jsonPrimitive?.content
+    }.getOrNull()
+}
+
+/**
+ * Libellé d'un 429 IA, dérivé du `scope` — jamais du texte serveur (même
+ * choix que pour [AiStreamEvent.Error], cf. AiApiService.kt). `day` et
+ * `month` n'utilisent PAS `retryAfterSeconds` en minutes : sur un plafond
+ * mensuel, Retry-After peut valoir ~30 jours et produirait un texte
+ * illisible du type « Réessayez dans 43200 min. ».
+ */
+fun quotaErrorMessage(error: ChatInlineError): String = when (error.scope) {
+    "day" -> "Plafond journalier de requêtes IA atteint. Réessayez demain."
+    "month" -> {
+        val days = error.retryAfterSeconds?.let { (it + 86_399) / 86_400 }
+        if (days != null && days > 0) {
+            "Plafond mensuel de requêtes IA atteint. Réessayez dans $days jour${if (days > 1) "s" else ""}."
+        } else {
+            "Plafond mensuel de requêtes IA atteint. Réessayez le mois prochain."
+        }
+    }
+    else -> {
+        val minutes = error.retryAfterSeconds?.let { (it + 59) / 60 }
+        if (minutes != null && minutes > 0) {
+            "Limite temporaire de requêtes atteinte. Réessayez dans $minutes min."
+        } else {
+            "Limite temporaire de requêtes atteinte. Réessayez dans quelques minutes."
+        }
+    }
 }
 
 sealed class ChatState {
@@ -313,9 +357,11 @@ class ChatViewModel(
      * Traduit un échec de transport en état d'erreur affichable. Le status et
      * le Retry-After sont lus sur la réponse portée par l'exception Ktor
      * (SSEClientException pour le stream, ResponseException sinon) ; sans
-     * réponse, c'est une panne réseau.
+     * réponse, c'est une panne réseau. Le corps est lu en best-effort pour le
+     * `scope` du 429 (mibeko-dashboard#62) : une lecture qui échoue ne doit
+     * jamais empêcher l'affichage du message de repli.
      */
-    private fun buildFailureState(
+    private suspend fun buildFailureState(
         e: Exception,
         prompt: String,
         aiMessageId: String
@@ -325,9 +371,11 @@ class ChatViewModel(
             is ResponseException -> e.response
             else -> null
         }
+        val scope = response?.let { runCatching { it.bodyAsText() }.getOrNull() }?.let(::parseRateLimitScope)
         val baseError = classifyChatFailure(
             statusCode = response?.status?.value,
-            retryAfterHeader = response?.headers?.get("Retry-After")
+            retryAfterHeader = response?.headers?.get("Retry-After"),
+            scope = scope
         )
 
         // Rien n'a été reçu : on retire la bulle IA vide et on propose de

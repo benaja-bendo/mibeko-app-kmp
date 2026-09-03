@@ -633,14 +633,7 @@ private fun ChatErrorBanner(
     onRetry: () -> Unit
 ) {
     val text = when (error.kind) {
-        ChatErrorKind.QUOTA -> {
-            val minutes = error.retryAfterSeconds?.let { (it + 59) / 60 }
-            if (minutes != null && minutes > 0) {
-                "Limite temporaire de requêtes atteinte. Réessayez dans $minutes min."
-            } else {
-                "Limite temporaire de requêtes atteinte. Réessayez dans quelques minutes."
-            }
-        }
+        ChatErrorKind.QUOTA -> quotaErrorMessage(error)
         ChatErrorKind.NETWORK -> "Connexion impossible. Vérifiez votre accès internet."
         ChatErrorKind.GENERIC -> "L'assistant a rencontré une erreur."
     }

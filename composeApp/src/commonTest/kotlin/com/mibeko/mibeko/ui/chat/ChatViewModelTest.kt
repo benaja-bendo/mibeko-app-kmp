@@ -84,6 +84,58 @@ class ChatViewModelTest {
         assertNull(classifyChatFailure(429, "mercredi").retryAfterSeconds)
     }
 
+    // --- parseRateLimitScope : lecture du corps JSON du 429 ---
+
+    @Test
+    fun `scope minute est lu depuis le corps`() {
+        assertEquals("minute", parseRateLimitScope("""{"code":"AI_RATE_LIMITED","scope":"minute"}"""))
+    }
+
+    @Test
+    fun `scope absent du corps est null`() {
+        assertNull(parseRateLimitScope("""{"code":"AI_RATE_LIMITED"}"""))
+    }
+
+    @Test
+    fun `corps illisible ne casse pas la lecture du scope`() {
+        assertNull(parseRateLimitScope("pas du json"))
+        assertNull(parseRateLimitScope(null))
+    }
+
+    // --- quotaErrorMessage : libellé local par scope (mibeko-dashboard#62) ---
+
+    @Test
+    fun `scope minute garde le libelle en minutes`() {
+        val error = classifyChatFailure(429, "120", scope = "minute")
+        assertEquals("Limite temporaire de requêtes atteinte. Réessayez dans 2 min.", quotaErrorMessage(error))
+    }
+
+    @Test
+    fun `scope jour ne calcule jamais de minutes`() {
+        // Retry-After ~24h : un calcul en minutes donnerait "1440 min", illisible.
+        val error = classifyChatFailure(429, "86400", scope = "day")
+        assertEquals("Plafond journalier de requêtes IA atteint. Réessayez demain.", quotaErrorMessage(error))
+    }
+
+    @Test
+    fun `scope mois convertit Retry-After en jours plutot qu en minutes`() {
+        // Retry-After ~30 jours : un calcul en minutes donnerait "43200 min", illisible.
+        val error = classifyChatFailure(429, "2592000", scope = "month")
+        assertEquals("Plafond mensuel de requêtes IA atteint. Réessayez dans 30 jours.", quotaErrorMessage(error))
+    }
+
+    @Test
+    fun `scope mois sans Retry-After retombe sur un libelle vague`() {
+        val error = classifyChatFailure(429, null, scope = "month")
+        assertEquals("Plafond mensuel de requêtes IA atteint. Réessayez le mois prochain.", quotaErrorMessage(error))
+    }
+
+    @Test
+    fun `scope inconnu retombe sur le libelle generique en minutes`() {
+        val error = classifyChatFailure(429, null, scope = null)
+        assertEquals("Limite temporaire de requêtes atteinte. Réessayez dans quelques minutes.", quotaErrorMessage(error))
+    }
+
     // --- Échec d'envoi : bannière + retry ---
 
     @Test
