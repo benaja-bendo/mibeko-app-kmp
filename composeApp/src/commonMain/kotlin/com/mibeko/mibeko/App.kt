@@ -91,7 +91,22 @@ fun App() {
         // Deep links transmis par la couche native (iOS : onOpenURL).
         DisposableEffect(navController) {
             ExternalUriHandler.listener = { uri ->
-                runCatching { navController.navigate(NavUri(uri)) }
+                runCatching {
+                    // Démarrage à froid : l'URI arrive pendant que Splash est
+                    // encore l'entrée courante (son délai d'amorçage n'est pas
+                    // écoulé). Sans l'évincer au profit de l'Accueil, Splash
+                    // restait fantôme sous l'écran ouvert : un retour arrière
+                    // le faisait réapparaître, relançait son LaunchedEffect
+                    // (qui redémarre à chaque recomposition) et redirigeait de
+                    // force vers l'Accueil — la navigation arrière semblait
+                    // bloquée.
+                    if (navController.currentDestination?.route == Screen.Splash::class.qualifiedName) {
+                        navController.navigate(Screen.Home) {
+                            popUpTo(Screen.Splash) { inclusive = true }
+                        }
+                    }
+                    navController.navigate(NavUri(uri))
+                }
             }
             onDispose { ExternalUriHandler.listener = null }
         }
