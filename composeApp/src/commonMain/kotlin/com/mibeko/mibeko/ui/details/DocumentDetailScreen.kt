@@ -332,9 +332,9 @@ fun DocumentDetailScreen(documentId: String) {
                             }
                         }
 
-                        val sortedNodes = uiState.filteredStructure.keys.sortedBy { it.sort_order }
-                        
-                        if (sortedNodes.isEmpty() && uiState.searchQuery.isNotEmpty()) {
+                        val hasArticles = uiState.displayItems.any { it is DocumentDetailItem.ArticleRow }
+
+                        if (!hasArticles && uiState.searchQuery.isNotEmpty()) {
                             item {
                                 Box(
                                     modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -348,20 +348,25 @@ fun DocumentDetailScreen(documentId: String) {
                                 }
                             }
                         }
-                        
-                        sortedNodes.forEach { node ->
-                            // Le nœud racine synthétique (actes courts sans
-                            // structure) n'a pas de titre : pas d'en-tête.
-                            if (node.title.isNotBlank()) {
-                                item {
+
+                        // Indentation par profondeur : Livre > Titre > Chapitre > Section
+                        // (mibeko-app-kmp#8 — la hiérarchie était stockée mais jamais rendue).
+                        uiState.displayItems.forEach { displayItem ->
+                            when (displayItem) {
+                                is DocumentDetailItem.Section -> item {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .background(MaterialTheme.colorScheme.background)
-                                            .padding(horizontal = 24.dp, vertical = 16.dp)
+                                            .padding(
+                                                start = 24.dp + (displayItem.depth * 16).dp,
+                                                end = 24.dp,
+                                                top = 16.dp,
+                                                bottom = 16.dp
+                                            )
                                     ) {
                                         Text(
-                                            text = node.title,
+                                            text = displayItem.node.title,
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary,
@@ -369,12 +374,14 @@ fun DocumentDetailScreen(documentId: String) {
                                         )
                                     }
                                 }
-                            }
-                            
-                            val articles = uiState.filteredStructure[node]?.sortedBy { it.number.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 } ?: emptyList()
-                            items(articles) { article ->
-                                ArticleItem(article, MaterialTheme.colorScheme.onSurface) {
-                                    navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(article.id))
+                                is DocumentDetailItem.ArticleRow -> item {
+                                    ArticleItem(
+                                        displayItem.article,
+                                        MaterialTheme.colorScheme.onSurface,
+                                        indent = (displayItem.depth * 16).dp
+                                    ) {
+                                        navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Reader(displayItem.article.id))
+                                    }
                                 }
                             }
                         }
@@ -454,7 +461,7 @@ fun DocumentDetailScreen(documentId: String) {
  * Élément de liste affichant un article dans la table des matières.
  */
 @Composable
-fun ArticleItem(article: ArticleEntity, textColor: Color, onClick: () -> Unit) {
+fun ArticleItem(article: ArticleEntity, textColor: Color, indent: androidx.compose.ui.unit.Dp = 0.dp, onClick: () -> Unit) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -462,7 +469,7 @@ fun ArticleItem(article: ArticleEntity, textColor: Color, onClick: () -> Unit) {
         color = Color.Transparent
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+            modifier = Modifier.padding(start = 24.dp + indent, top = 16.dp, end = 24.dp, bottom = 16.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

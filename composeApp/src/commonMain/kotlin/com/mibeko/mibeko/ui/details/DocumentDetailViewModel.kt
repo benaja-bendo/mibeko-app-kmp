@@ -21,6 +21,51 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 
 /**
+ * Ligne affichable de l'écran de détail : soit l'en-tête d'un nœud de la
+ * hiérarchie (Livre/Titre/Chapitre/Section), soit un article, chacun porteur
+ * de sa profondeur pour l'indentation (mibeko-app-kmp#8).
+ */
+sealed interface DocumentDetailItem {
+    data class Section(val node: NodeEntity, val depth: Int) : DocumentDetailItem
+    data class ArticleRow(val article: ArticleEntity, val depth: Int) : DocumentDetailItem
+}
+
+/**
+ * Reconstruit l'arbre Livre/Titre/Chapitre/Section à partir de `parent_id`
+ * et l'aplatit en ordre de lecture (parcours en profondeur, tri par
+ * `sort_order` à chaque niveau — un tri global sur `sort_order` mélangerait
+ * des nœuds de branches différentes, ce champ n'étant unique qu'entre
+ * frères). Fonction pure, testable sans DB ni Compose.
+ */
+fun buildDocumentTree(structure: Map<NodeEntity, List<ArticleEntity>>): List<DocumentDetailItem> {
+    val nodeById = structure.keys.associateBy { it.id }
+    val childrenByParent = structure.keys.groupBy { it.parent_id }
+    val result = mutableListOf<DocumentDetailItem>()
+
+    fun visit(node: NodeEntity, depth: Int) {
+        if (node.title.isNotBlank()) {
+            result += DocumentDetailItem.Section(node, depth)
+        }
+        (structure[node] ?: emptyList())
+            .sortedBy { it.number.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 }
+            .forEach { result += DocumentDetailItem.ArticleRow(it, depth) }
+        childrenByParent[node.id].orEmpty()
+            .sortedBy { it.sort_order }
+            .forEach { visit(it, depth + 1) }
+    }
+
+    structure.keys
+        // Racine : pas de parent, ou parent absent du jeu de nœuds reçu
+        // (défensif — un fragment de structure ne devrait pas arriver, mais
+        // ne doit pas non plus faire disparaître le nœud silencieusement).
+        .filter { it.parent_id == null || nodeById[it.parent_id] == null }
+        .sortedBy { it.sort_order }
+        .forEach { visit(it, 0) }
+
+    return result
+}
+
+/**
  * État UI pour l'écran de détail d'un document.
  */
 data class DocumentDetailUiState(
@@ -32,6 +77,7 @@ data class DocumentDetailUiState(
     val document: LawCodeSpec? = null,
     val structure: Map<NodeEntity, List<ArticleEntity>> = emptyMap(),
     val filteredStructure: Map<NodeEntity, List<ArticleEntity>> = emptyMap(),
+    val displayItems: List<DocumentDetailItem> = emptyList(),
     val searchQuery: String = "",
     val isDownloading: Boolean = false,
     // Partage PDF distinct du téléchargement hors-ligne : chaque bouton de la
@@ -116,6 +162,7 @@ class DocumentDetailViewModel(
                 _uiState.update { it.copy(
                     structure = localStructure,
                     filteredStructure = filtered,
+                    displayItems = buildDocumentTree(filtered),
                     document = doc,
                     isLoading = if (localStructure.isNotEmpty()) false else it.isLoading
                 ) }
@@ -133,7 +180,7 @@ class DocumentDetailViewModel(
         } else {
             filterStructure(_uiState.value.structure, query)
         }
-        _uiState.update { it.copy(filteredStructure = filtered) }
+        _uiState.update { it.copy(filteredStructure = filtered, displayItems = buildDocumentTree(filtered)) }
     }
 
     private fun filterStructure(

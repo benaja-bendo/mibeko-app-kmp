@@ -248,10 +248,15 @@ interface MibekoDao {
         upsertArticleTags(articleTags)
     }
 
+    // LEFT JOIN (pas JOIN) : un JOIN interne exclut les nœuds intermédiaires
+    // (Livre/Titre/Chapitre) qui ne portent aucun article en propre — seuls
+    // leurs enfants en portent. Sans le LEFT JOIN, ces nœuds disparaissent
+    // silencieusement de la Map alors que `parent_id` les relie bien entre
+    // eux (mibeko-app-kmp#8).
     @Transaction
     @Query("""
-        SELECT * FROM nodes 
-        JOIN articles ON nodes.id = articles.node_id 
+        SELECT * FROM nodes
+        LEFT JOIN articles ON nodes.id = articles.node_id
         WHERE nodes.document_id = :documentId
     """)
     fun getStructure(documentId: String): Flow<Map<NodeEntity, List<ArticleEntity>>>
