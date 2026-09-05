@@ -39,6 +39,7 @@ import androidx.compose.ui.text.TextStyle
 import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.util.articlePlainText
+import com.mibeko.mibeko.util.UiResult
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.animation.core.*
 
@@ -56,6 +57,7 @@ fun ChatScreen(
     val navController = LocalNavController.current
     val viewModel: ChatViewModel = koinViewModel()
     val chatState by viewModel.chatState.collectAsState()
+    val entitlements by viewModel.entitlements.collectAsState()
     val mode by viewModel.mode.collectAsState()
     val pinnedReferences by viewModel.pinnedReferences.collectAsState()
     val referencePicker by viewModel.referencePicker.collectAsState()
@@ -142,6 +144,21 @@ fun ChatScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Quota visible AVANT épuisement (mibeko-app-kmp#29) — jamais un
+            // rôle local, uniquement les entitlements serveur. Rien ne
+            // s'affiche hors succès : ni chargement, ni offline, pour ne pas
+            // laisser croire à un chiffre qu'on n'a pas réellement.
+            (entitlements as? UiResult.Success)?.data?.let { data ->
+                Text(
+                    text = assistantQuotaSummary(data),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+
             when (val state = chatState) {
                 is ChatState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {

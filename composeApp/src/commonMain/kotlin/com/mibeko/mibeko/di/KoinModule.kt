@@ -202,7 +202,7 @@ val commonModule = module {
     viewModel { DossierSelectionViewModel(get(), get()) }
     viewModel { ArticleSelectionViewModel(get(), get(), get()) }
     viewModel { params -> DossierDetailViewModel(params.get(), get(), get()) }
-    viewModel { ChatViewModel(get(), get()) }
+    viewModel { ChatViewModel(get(), get(), get()) }
     viewModel { ConversationHistoryViewModel(get()) }
     viewModel { com.mibeko.mibeko.ui.contact.ContactViewModel(get(), get(), get()) }
 }
