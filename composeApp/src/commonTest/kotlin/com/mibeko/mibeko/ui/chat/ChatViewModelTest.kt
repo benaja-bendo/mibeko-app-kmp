@@ -6,6 +6,10 @@ import com.mibeko.mibeko.data.remote.AiChatReference
 import com.mibeko.mibeko.data.remote.AiMode
 import com.mibeko.mibeko.data.remote.AiStreamEvent
 import com.mibeko.mibeko.data.remote.AssistantReference
+import com.mibeko.mibeko.data.remote.RemoteAssistantQuota
+import com.mibeko.mibeko.data.remote.RemoteEntitlementFeatures
+import com.mibeko.mibeko.data.remote.RemoteEntitlementQuotas
+import com.mibeko.mibeko.data.remote.RemoteEntitlements
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -43,6 +47,14 @@ private class FakeAiChatApi(
         return streamFactory()
     }
 }
+
+private fun fakeEntitlements(used: Int, limit: Int, credits: Int? = null): RemoteEntitlements =
+    RemoteEntitlements(
+        plan = "libre",
+        features = RemoteEntitlementFeatures(assistant = true, library = true, export = false),
+        quotas = RemoteEntitlementQuotas(assistant = RemoteAssistantQuota(used = used, limit = limit)),
+        credits = credits
+    )
 
 class ChatViewModelTest {
 
@@ -82,6 +94,50 @@ class ChatViewModelTest {
     @Test
     fun `Retry-After illisible est ignore`() {
         assertNull(classifyChatFailure(429, "mercredi").retryAfterSeconds)
+    }
+
+    // --- assistantQuotaSummary : quota affiche AVANT epuisement (mibeko-app-kmp#29) ---
+
+    @Test
+    fun `quota restant affiche le nombre de questions`() {
+        val entitlements = fakeEntitlements(used = 3, limit = 5)
+        assertEquals("2 questions restantes", assistantQuotaSummary(entitlements))
+    }
+
+    @Test
+    fun `une seule question restante reste au singulier`() {
+        val entitlements = fakeEntitlements(used = 4, limit = 5)
+        assertEquals("1 question restante", assistantQuotaSummary(entitlements))
+    }
+
+    @Test
+    fun `quota epuise affiche Quota atteint`() {
+        val entitlements = fakeEntitlements(used = 5, limit = 5)
+        assertEquals("Quota atteint", assistantQuotaSummary(entitlements))
+    }
+
+    @Test
+    fun `quota depasse ne devient jamais negatif`() {
+        val entitlements = fakeEntitlements(used = 9, limit = 5)
+        assertEquals("Quota atteint", assistantQuotaSummary(entitlements))
+    }
+
+    @Test
+    fun `des credits disponibles sont ajoutes au resume`() {
+        val entitlements = fakeEntitlements(used = 5, limit = 5, credits = 10)
+        assertEquals("Quota atteint · 10 crédits", assistantQuotaSummary(entitlements))
+    }
+
+    @Test
+    fun `des credits a zero ne sont pas affiches`() {
+        val entitlements = fakeEntitlements(used = 0, limit = 5, credits = 0)
+        assertEquals("5 questions restantes", assistantQuotaSummary(entitlements))
+    }
+
+    @Test
+    fun `des credits nuls ne sont pas affiches`() {
+        val entitlements = fakeEntitlements(used = 0, limit = 5, credits = null)
+        assertEquals("5 questions restantes", assistantQuotaSummary(entitlements))
     }
 
     // --- parseRateLimitScope : lecture du corps JSON du 429 ---

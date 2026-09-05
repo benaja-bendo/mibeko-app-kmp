@@ -8,9 +8,13 @@ import com.mibeko.mibeko.data.remote.AiChatReference
 import com.mibeko.mibeko.data.remote.AiMode
 import com.mibeko.mibeko.data.remote.AiStreamEvent
 import com.mibeko.mibeko.data.remote.AssistantReference
+import com.mibeko.mibeko.data.remote.AuthApiService
+import com.mibeko.mibeko.data.remote.RemoteEntitlements
 import com.mibeko.mibeko.getCurrentTimeMillis
 import com.mibeko.mibeko.util.AnalyticsEvents
 import com.mibeko.mibeko.util.MibekoAnalytics
+import com.mibeko.mibeko.util.UiResult
+import com.mibeko.mibeko.util.recordException
 import io.ktor.client.plugins.ResponseException
 import io.ktor.client.plugins.sse.SSEClientException
 import io.ktor.client.statement.bodyAsText
@@ -54,6 +58,27 @@ fun classifyChatFailure(statusCode: Int?, retryAfterHeader: String?, scope: Stri
         else -> ChatErrorKind.GENERIC
     }
     return ChatInlineError(kind, retryAfterHeader?.toIntOrNull(), scope)
+}
+
+/**
+ * Résumé du quota affiché AVANT épuisement — mibeko-app-kmp#29. Pur et
+ * testable sans Ktor, comme [classifyChatFailure]. Un solde de crédits
+ * n'est qu'une information : jamais un lien ni un parcours d'achat.
+ */
+fun assistantQuotaSummary(entitlements: RemoteEntitlements): String {
+    val quota = entitlements.quotas.assistant
+    val remaining = (quota.limit - quota.used).coerceAtLeast(0)
+    val base = if (remaining > 0) {
+        "$remaining question${if (remaining > 1) "s" else ""} restante${if (remaining > 1) "s" else ""}"
+    } else {
+        "Quota atteint"
+    }
+    val credits = entitlements.credits
+    return if (credits != null && credits > 0) {
+        "$base · $credits crédit${if (credits > 1) "s" else ""}"
+    } else {
+        base
+    }
 }
 
 /**
@@ -117,11 +142,39 @@ data class ReferencePickerState(
 
 class ChatViewModel(
     private val aiApiService: AiChatApi,
-    private val analytics: MibekoAnalytics? = null
+    private val analytics: MibekoAnalytics? = null,
+    private val authApiService: AuthApiService? = null
 ) : ViewModel() {
 
     private val _chatState = MutableStateFlow<ChatState>(ChatState.Idle)
     val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
+
+    // mibeko-app-kmp#29 : quota affiché AVANT épuisement, jamais deviné d'un
+    // rôle local — seule source : GET /v1/me/entitlements.
+    private val _entitlements = MutableStateFlow<UiResult<RemoteEntitlements>>(UiResult.Loading)
+    val entitlements: StateFlow<UiResult<RemoteEntitlements>> = _entitlements.asStateFlow()
+
+    init {
+        loadEntitlements()
+    }
+
+    fun loadEntitlements() {
+        val service = authApiService ?: return
+        viewModelScope.launch {
+            _entitlements.value = UiResult.Loading
+            try {
+                val data = service.getEntitlements().data
+                _entitlements.value = if (data != null) {
+                    UiResult.Success(data)
+                } else {
+                    UiResult.Error(offline = false, retry = ::loadEntitlements)
+                }
+            } catch (e: Exception) {
+                recordException(e, context = "ChatViewModel.loadEntitlements")
+                _entitlements.value = UiResult.Error(offline = true, retry = ::loadEntitlements)
+            }
+        }
+    }
 
     private val _mode = MutableStateFlow(AiMode.CONCISE)
     val mode: StateFlow<AiMode> = _mode.asStateFlow()

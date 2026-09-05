@@ -117,6 +117,45 @@ data class ProfileResponse(
     val errors: Map<String, List<String>>? = null
 )
 
+/**
+ * Droit d'usage (plan, quota, solde) — mibeko-app-kmp#29 : point unique de
+ * vérité (`GET /v1/me/entitlements`, mibeko-dashboard#63), identique à ce que
+ * consomme le web. Ne jamais dériver un plan ou un quota d'un rôle local.
+ */
+@Serializable
+data class RemoteEntitlements(
+    val plan: String,
+    val features: RemoteEntitlementFeatures,
+    val quotas: RemoteEntitlementQuotas,
+    val credits: Int? = null
+)
+
+@Serializable
+data class RemoteEntitlementFeatures(
+    val assistant: Boolean,
+    val library: Boolean,
+    val export: Boolean
+)
+
+@Serializable
+data class RemoteEntitlementQuotas(
+    val assistant: RemoteAssistantQuota
+)
+
+@Serializable
+data class RemoteAssistantQuota(
+    val used: Int,
+    val limit: Int,
+    val resets_at: String? = null
+)
+
+@Serializable
+data class EntitlementsResponse(
+    val success: Boolean = false,
+    val message: String? = null,
+    val data: RemoteEntitlements? = null
+)
+
 class AuthApiService(
     private val client: HttpClient,
     private val baseUrl: String
@@ -147,6 +186,14 @@ class AuthApiService(
 
     suspend fun getProfile(): ProfileResponse = safeApiCall {
         client.get("$baseUrl/v1/profile")
+    }
+
+    /**
+     * Droit d'usage courant — mibeko-app-kmp#29. Même endpoint que le web,
+     * jamais de plan ou de quota redéduit localement.
+     */
+    suspend fun getEntitlements(): EntitlementsResponse = safeApiCall {
+        client.get("$baseUrl/v1/me/entitlements")
     }
 
     /**
