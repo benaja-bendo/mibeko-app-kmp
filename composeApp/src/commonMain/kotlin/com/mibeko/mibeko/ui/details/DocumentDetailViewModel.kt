@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.local.entities.ArticleEntity
 import com.mibeko.mibeko.data.local.entities.NodeEntity
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
+import com.mibeko.mibeko.util.isExportEntitlementDenied
+import io.ktor.client.plugins.ClientRequestException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -186,7 +188,17 @@ class DocumentDetailViewModel(
                 val bytes = repository.downloadFile(url)
                 val fileName = "${doc.title.replace(" ", "_")}.pdf"
                 contentSharer.shareFile(bytes, fileName, "application/pdf")
+            } catch (e: ClientRequestException) {
+                if (isExportEntitlementDenied(e.response.status.value)) {
+                    // mibeko-dashboard#86 : refus attendu (compte non-Pro),
+                    // pas une panne — pas de recordException pour ce cas.
+                    _uiState.update { it.copy(error = "Le PDF Mibeko est réservé aux comptes Mibeko Pro.") }
+                } else {
+                    recordException(e, context = "DocumentDetailViewModel.shareDocumentAsPdf")
+                    _uiState.update { it.copy(error = "Erreur lors du partage PDF: ${e.message}") }
+                }
             } catch (e: Exception) {
+                recordException(e, context = "DocumentDetailViewModel.shareDocumentAsPdf")
                 _uiState.update { it.copy(error = "Erreur lors du partage PDF: ${e.message}") }
             } finally {
                 _uiState.update { it.copy(isSharingPdf = false) }

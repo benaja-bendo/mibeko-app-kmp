@@ -18,8 +18,10 @@ import com.mibeko.mibeko.util.articleLeafLabel
 import com.mibeko.mibeko.util.articlePlainText
 import com.mibeko.mibeko.util.formatTimestampToDate
 import com.mibeko.mibeko.util.getAppVersionName
+import com.mibeko.mibeko.util.isExportEntitlementDenied
 import com.mibeko.mibeko.util.recordException
 import com.mibeko.mibeko.util.requestInAppReview
+import io.ktor.client.plugins.ClientRequestException
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
@@ -338,6 +340,15 @@ class ReaderViewModel(
                 val fileName = "Article_${currentArticle.number}.pdf"
                 contentSharer.shareFile(bytes, fileName, "application/pdf")
                 analytics.logEvent(AnalyticsEvents.READER_SHARE, mapOf("format" to "pdf"))
+            } catch (e: ClientRequestException) {
+                if (isExportEntitlementDenied(e.response.status.value)) {
+                    // mibeko-dashboard#86 : refus attendu (compte non-Pro),
+                    // pas une panne — pas de recordException pour ce cas.
+                    _snackbarMessage.value = "Le PDF Mibeko est réservé aux comptes Mibeko Pro."
+                } else {
+                    recordException(e, context = "ReaderViewModel.shareAsPdf")
+                    _snackbarMessage.value = "Erreur lors du partage PDF : ${e.message}"
+                }
             } catch (e: Exception) {
                 recordException(e, context = "ReaderViewModel.shareAsPdf")
                 _snackbarMessage.value = "Erreur lors du partage PDF : ${e.message}"
