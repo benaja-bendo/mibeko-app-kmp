@@ -32,6 +32,31 @@ data class ReaderTocEntry(
     val nodeTitle: String
 )
 
+/**
+ * Ligne affichable du sommaire : soit l'en-tête d'une section, soit un
+ * article. Sert à la fois au rendu et au calcul de l'index de défilement
+ * initial (mibeko-app-kmp#9 — le sommaire s'ouvrait toujours en haut, même
+ * à l'article 187/700).
+ */
+sealed interface TocRow {
+    data class Header(val nodeTitle: String, val firstEntryId: String) : TocRow
+    data class ArticleRow(val entry: ReaderTocEntry) : TocRow
+}
+
+/** Fonction pure, testable sans Compose : aplatit la séquence en lignes de sommaire. */
+fun buildTocRows(entries: List<ReaderTocEntry>): List<TocRow> {
+    val rows = mutableListOf<TocRow>()
+    var lastNode: String? = null
+    entries.forEach { entry ->
+        if (entry.nodeTitle != lastNode) {
+            lastNode = entry.nodeTitle
+            rows += TocRow.Header(entry.nodeTitle, entry.id)
+        }
+        rows += TocRow.ArticleRow(entry)
+    }
+    return rows
+}
+
 data class ReaderUiState(
     val isLoading: Boolean = true,
     val article: ArticleSpec? = null,
@@ -320,9 +345,14 @@ class ReaderViewModel(
 
     fun copyArticleText() {
         val currentArticle = _uiState.value.article ?: return
+        // Citation complète (mibeko-app-kmp#9) : sans le titre du texte, coller
+        // « Article 34 » ne dit pas de quel code il s'agit — même défaut que
+        // shareAsText avant correction.
+        val documentTitle = _uiState.value.documentTitle ?: "Document"
         val text = buildString {
-            append(articleLeafLabel(currentArticle.number))
-            append("\n\n")
+            appendLine(articleLeafLabel(currentArticle.number))
+            appendLine(documentTitle)
+            appendLine()
             append(articlePlainText(currentArticle.content, currentArticle.tables))
         }
         contentSharer.copyToClipboard(text)

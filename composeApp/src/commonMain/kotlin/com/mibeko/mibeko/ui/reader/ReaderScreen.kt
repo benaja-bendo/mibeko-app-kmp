@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -364,16 +365,20 @@ fun ReaderScreen(articleId: String) {
                                 .padding(horizontal = 24.dp, vertical = 8.dp)
                         ) {
                             when (segment) {
-                                is ContentSegment.Text -> Text(
-                                    text = readableText(segment.text),
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontSize = fontSizeValue,
-                                        lineHeight = lineSpacingValue,
-                                        letterSpacing = if (isDyslexiaFontEnabled) 0.8.sp else 0.3.sp,
-                                        fontWeight = if (isDyslexiaFontEnabled) FontWeight.Medium else FontWeight.Normal
-                                    ),
-                                    color = textColor
-                                )
+                                // SelectionContainer : citer un article suppose de
+                                // pouvoir en sélectionner le texte (mibeko-app-kmp#9).
+                                is ContentSegment.Text -> SelectionContainer {
+                                    Text(
+                                        text = readableText(segment.text),
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontSize = fontSizeValue,
+                                            lineHeight = lineSpacingValue,
+                                            letterSpacing = if (isDyslexiaFontEnabled) 0.8.sp else 0.3.sp,
+                                            fontWeight = if (isDyslexiaFontEnabled) FontWeight.Medium else FontWeight.Normal
+                                        ),
+                                        color = textColor
+                                    )
+                                }
 
                                 is ContentSegment.Table -> LegalTableBlock(
                                     table = segment.table,
@@ -640,6 +645,16 @@ private fun ReaderTocSheet(
     currentArticleId: String?,
     onSelect: (String) -> Unit
 ) {
+    val rows = remember(entries) { buildTocRows(entries) }
+    // Ouvrir sur l'article courant plutôt qu'en haut (mibeko-app-kmp#9) :
+    // à l'article 187/700, il fallait sinon défiler depuis le début.
+    val currentIndex = remember(rows, currentArticleId) {
+        rows.indexOfFirst { it is TocRow.ArticleRow && it.entry.id == currentArticleId }
+    }
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = currentIndex.coerceAtLeast(0)
+    )
+
     Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
         Text(
             text = "Sommaire",
@@ -648,49 +663,54 @@ private fun ReaderTocSheet(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
         )
 
-        LazyColumn(modifier = Modifier.heightIn(max = 480.dp)) {
-            var lastNode: String? = null
-            entries.forEach { entry ->
-                if (entry.nodeTitle != lastNode) {
-                    lastNode = entry.nodeTitle
-                    item(key = "node_${entry.nodeTitle}_${entry.id}") {
-                        Text(
-                            text = entry.nodeTitle,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-                        )
+        LazyColumn(state = listState, modifier = Modifier.heightIn(max = 480.dp)) {
+            items(
+                rows,
+                key = { row ->
+                    when (row) {
+                        is TocRow.Header -> "node_${row.nodeTitle}_${row.firstEntryId}"
+                        is TocRow.ArticleRow -> row.entry.id
                     }
                 }
-                item(key = entry.id) {
-                    val isCurrent = entry.id == currentArticleId
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(entry.id) }
-                            .background(
-                                if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-                                else Color.Transparent
+            ) { row ->
+                when (row) {
+                    is TocRow.Header -> Text(
+                        text = row.nodeTitle,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                    )
+                    is TocRow.ArticleRow -> {
+                        val entry = row.entry
+                        val isCurrent = entry.id == currentArticleId
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(entry.id) }
+                                .background(
+                                    if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                                    else Color.Transparent
+                                )
+                                .padding(horizontal = 32.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = articleLeafLabel(entry.number),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isCurrent) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
                             )
-                            .padding(horizontal = 32.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = articleLeafLabel(entry.number),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isCurrent) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface
-                        )
-                        if (isCurrent) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                Icons.Filled.Check,
-                                contentDescription = "Article affiché",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
+                            if (isCurrent) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(
+                                    Icons.Filled.Check,
+                                    contentDescription = "Article affiché",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
