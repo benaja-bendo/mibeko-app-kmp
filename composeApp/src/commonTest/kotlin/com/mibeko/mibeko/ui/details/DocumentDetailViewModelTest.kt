@@ -52,7 +52,7 @@ class DocumentDetailViewModelTest {
     }
 
     @Test
-    fun `le tri respecte le parent, pas un sort_order global qui se recoupe entre branches`() {
+    fun `le tri respecte le parent plutot qu'un sort_order global qui se recoupe entre branches`() {
         // chap1 et chap2 partagent le même sort_order (0) sous des titres
         // différents : un tri global sur sort_order ne garantirait pas
         // l'ordre Titre1->Chapitre1 avant Titre2->Chapitre2.
@@ -90,7 +90,7 @@ class DocumentDetailViewModelTest {
     }
 
     @Test
-    fun `un noeud parent absent du jeu de donnees est traite comme racine (defensif)`() {
+    fun `un noeud dont le parent est absent du jeu de donnees est traite comme racine`() {
         val orphanTitre = node("titre-orphelin", "livre-jamais-recu", "Titre orphelin", 0)
         val structure = mapOf(
             orphanTitre to listOf(article("a1", "titre-orphelin", "1"))
