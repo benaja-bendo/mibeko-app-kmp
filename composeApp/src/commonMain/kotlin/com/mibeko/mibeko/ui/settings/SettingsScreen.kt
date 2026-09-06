@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.ui.auth.ProfileType
 import com.mibeko.mibeko.ui.components.OfficialSourcesSheet
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -102,12 +103,26 @@ fun SettingsScreen() {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = uiState.profession,
-                        onValueChange = { viewModel.updateProfileField("profession", it) },
-                        label = { Text("Profession") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    // mibeko-dashboard#98 : liste fermée, un texte libre ici
+                    // finissait en échec silencieux d'enregistrement dès que
+                    // le serveur a commencé à refuser toute autre valeur
+                    // (contrainte CHECK en base).
+                    Text("Profession", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                    ProfileType.entries.forEach { type ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.updateProfileField("profession", type.label) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = uiState.profession == type.label,
+                                onClick = { viewModel.updateProfileField("profession", type.label) }
+                            )
+                            Text(text = type.label, modifier = Modifier.padding(start = 8.dp))
+                        }
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = uiState.company,

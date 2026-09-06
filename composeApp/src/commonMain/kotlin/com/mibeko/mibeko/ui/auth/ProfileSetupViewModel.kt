@@ -21,13 +21,26 @@ sealed class ProfileSetupState {
 /**
  * Remplace l'ancien formulaire B2B (téléphone + profession + entreprise, tous
  * requis, sans bouton Passer) : un choix simple qui sert avant tout à mesurer
- * qui utilise réellement Mibeko. Réutilise le champ `profession` existant
- * (aucune migration backend) — modifiable ensuite dans Réglages si l'utilisateur
- * veut préciser (« Avocat », etc.).
+ * qui utilise réellement Mibeko. Réutilise le champ `profession` existant.
+ *
+ * Liste fermée depuis mibeko-dashboard#98 (une contrainte CHECK en base
+ * refuse désormais toute autre valeur) : ces quatre libellés sont l'unique
+ * source de vérité côté mobile, réutilisée telle quelle par le sélecteur
+ * des Réglages (`ui/settings/SettingsScreen.kt`) — jamais redéclarée en dur
+ * une seconde fois, c'est exactement cette duplication qui avait laissé
+ * passer des orthographes libres (« Avocat », « poète »…) jusqu'au serveur.
+ * Seuls CITIZEN et PROFESSIONAL sont proposés ici, à l'onboarding : c'est
+ * volontairement un choix grossier, affiné ensuite dans Réglages si besoin.
  */
 enum class ProfileType(val label: String) {
     CITIZEN("Citoyen"),
-    PROFESSIONAL("Professionnel du droit")
+    STUDENT("Étudiant"),
+    PROFESSIONAL("Professionnel du droit"),
+    OTHER("Autre");
+
+    companion object {
+        fun fromLabel(label: String): ProfileType? = entries.find { it.label == label }
+    }
 }
 
 class ProfileSetupViewModel(
