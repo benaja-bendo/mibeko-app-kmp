@@ -5,8 +5,8 @@ App mobile Mibeko (Android/iOS, Kotlin Multiplatform + Compose Multiplatform, `a
 
 ## Positionnement (décidé — ne pas rediscuter dans le code)
 **La loi est gratuite. L'outil de travail est payant.**
-Gratuit (site + mobile + compte gratuit) : corpus, recherche hybride, veille JO, assistant IA de base (avec quota), favoris/collections. Payant (`app.mibeko.fr`) : dossiers avec échéances, générateur de documents, exports, historique IA illimité.
-⚠️ Ce périmètre n'est pas encore verrouillé côté serveur (aucune route dossiers/assistant/export ne vérifie de rôle) — ne pas construire de nouvelle fonctionnalité mobile en supposant un gating serveur qui n'existe pas encore.
+Gratuit (site + mobile + compte gratuit) : corpus, recherche hybride, veille JO, assistant IA de base (avec quota), favoris/collections, dossiers avec échéances et pièces (ouverts à tout compte authentifié depuis mibeko-front#24, 07/09/2026). Payant (`app.mibeko.fr`) : export de dossier, générateur de documents, historique IA illimité.
+Le gating serveur existe (`EntitlementsResolver`, `GET /v1/me/entitlements`, `EnsureExportEntitled` sur l'export) — mais le mobile ne consomme aujourd'hui que le quota assistant (`ChatViewModel.assistantQuotaSummary`) ; il ne consomme ni les dossiers riches (kmp#40/#41) ni un gating proactif de l'export (aujourd'hui réactif, sur un 403).
 
 ## Règles produit non négociables
 1. L'app n'affirme **jamais** qu'un texte n'existe pas. Sur échec réseau/API : « Je n'ai pas pu vérifier » + Réessayer. Un état vide ne s'affiche que sur un `Success` avec liste réellement vide.
