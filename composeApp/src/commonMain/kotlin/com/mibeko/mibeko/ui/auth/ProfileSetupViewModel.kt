@@ -56,11 +56,14 @@ class ProfileSetupViewModel(
         viewModelScope.launch {
             _setupState.value = ProfileSetupState.Loading
             try {
+                // phone/company omis (null) plutôt qu'envoyés vides : le serveur applique
+                // un PATCH partiel (clé absente = inchangé) — mibeko-dashboard#135. Envoyer
+                // "" écrasait un téléphone/une organisation déjà saisis sur le web.
                 val request = ProfileUpdateRequest(
                     name = null,
-                    phone = "",
+                    phone = null,
                     profession = type.label,
-                    company = ""
+                    company = null
                 )
                 val response = authApiService.updateProfile(request)
 

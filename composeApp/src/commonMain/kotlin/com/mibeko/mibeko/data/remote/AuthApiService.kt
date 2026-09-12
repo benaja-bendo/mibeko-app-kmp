@@ -97,9 +97,13 @@ data class RemoteMobileProfile(
 @Serializable
 data class ProfileUpdateRequest(
     val name: String? = null,
-    val phone: String,
+    // phone/company nullables avec défaut null (comme name) — mibeko-dashboard#135 :
+    // un champ non fourni doit être OMIS du JSON (encodeDefaults = false), pas envoyé
+    // vide, sinon toute écriture partielle écrase les valeurs déjà saisies sur l'autre
+    // client (constaté sur ProfileSetupViewModel, qui envoyait phone=""/company="").
+    val phone: String? = null,
     val profession: String,
-    val company: String
+    val company: String? = null
 )
 
 @Serializable
