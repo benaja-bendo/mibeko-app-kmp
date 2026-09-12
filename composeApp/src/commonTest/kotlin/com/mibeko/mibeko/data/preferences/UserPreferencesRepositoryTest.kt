@@ -5,6 +5,8 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /**
  * Unit tests for UserPreferencesRepository.
@@ -66,5 +68,33 @@ class UserPreferencesRepositoryTest {
 
         // Then: should return false
         assertFalse(repository.hasCompletedOnboarding(), "All preferences should be cleared")
+    }
+
+    @Test
+    fun onboardingCache_isIsolatedBetweenAccounts() {
+        repository.setUserInfo("A", "a@example.test", "user-a")
+        repository.setAccountOnboardingCache("cache-a")
+        repository.setAccountOnboardingQueue("queue-a")
+
+        repository.setUserInfo("B", "b@example.test", "user-b")
+        assertNull(repository.getAccountOnboardingCache())
+        assertNull(repository.getAccountOnboardingQueue())
+        repository.setAccountOnboardingCache("cache-b")
+
+        repository.setUserInfo("A", "a@example.test", "user-a")
+        assertEquals("cache-a", repository.getAccountOnboardingCache())
+        assertEquals("queue-a", repository.getAccountOnboardingQueue())
+    }
+
+    @Test
+    fun logout_removesCurrentIdentityWithoutTreatingDeviceSlidesAsAccountProgress() {
+        repository.setOnboardingCompleted()
+        repository.setUserInfo("A", "a@example.test", "user-a")
+
+        repository.logout()
+
+        assertNull(repository.getUserId())
+        assertNull(repository.getUserEmail())
+        assertTrue(repository.hasCompletedOnboarding())
     }
 }

@@ -55,6 +55,7 @@ class UserPreferencesRepository(private val settings: Settings) {
         internal const val KEY_AUTH_TOKEN = "auth_token"
         internal const val KEY_USER_EMAIL = "user_email"
         internal const val KEY_USER_NAME = "user_name"
+        internal const val KEY_USER_ID = "user_id"
         internal const val KEY_PROFILE_SETUP_COMPLETED = "profile_setup_completed"
         internal const val KEY_DOSSIER_SYNC_ACCOUNT = "dossier_sync_account"
         internal const val KEY_DOSSIER_LAST_SYNC = "dossier_last_sync"
@@ -407,9 +408,10 @@ class UserPreferencesRepository(private val settings: Settings) {
     /**
      * Sets the user info.
      */
-    fun setUserInfo(name: String, email: String) {
+    fun setUserInfo(name: String, email: String, id: String? = null) {
         settings.putString(KEY_USER_NAME, name)
         settings.putString(KEY_USER_EMAIL, email)
+        if (id != null) settings.putString(KEY_USER_ID, id)
     }
 
     /**
@@ -426,6 +428,40 @@ class UserPreferencesRepository(private val settings: Settings) {
         return settings.getStringOrNull(KEY_USER_EMAIL)
     }
 
+    fun getUserId(): String? = settings.getStringOrNull(KEY_USER_ID)
+
+    /**
+     * Stockage isolé par compte pour le parcours commun. Le booléen historique
+     * `onboarding_completed` reste volontairement propre à l'appareil : avoir
+     * vu les anciennes diapositives ne prouve rien sur le profil du compte.
+     */
+    fun getAccountOnboardingCache(): String? = accountScopedKey("cache")
+        ?.let(settings::getStringOrNull)
+
+    fun setAccountOnboardingCache(value: String?) {
+        accountScopedKey("cache")?.let { key ->
+            if (value == null) settings.remove(key) else settings.putString(key, value)
+        }
+    }
+
+    fun getAccountOnboardingQueue(): String? = accountScopedKey("queue")
+        ?.let(settings::getStringOrNull)
+
+    fun setAccountOnboardingQueue(value: String?) {
+        accountScopedKey("queue")?.let { key ->
+            if (value == null) settings.remove(key) else settings.putString(key, value)
+        }
+    }
+
+    private fun accountScopedKey(kind: String): String? {
+        val account = getUserId() ?: getUserEmail()?.lowercase() ?: return null
+        // Les UUID serveur sont utilisés dès qu'ils sont connus. Le repli email
+        // sert uniquement aux anciennes sessions et reste isolé dans le même
+        // stockage sécurisé que l'adresse déjà persistée.
+        val safeAccount = account.map { if (it.isLetterOrDigit()) it else '_' }.joinToString("")
+        return "account_onboarding_${kind}_$safeAccount"
+    }
+
     /**
      * Checks if the user is logged in.
      */
@@ -440,6 +476,7 @@ class UserPreferencesRepository(private val settings: Settings) {
         settings.remove(KEY_AUTH_TOKEN)
         settings.remove(KEY_USER_NAME)
         settings.remove(KEY_USER_EMAIL)
+        settings.remove(KEY_USER_ID)
         settings.remove(KEY_PROFILE_SETUP_COMPLETED)
         _isLoggedIn.value = false
     }

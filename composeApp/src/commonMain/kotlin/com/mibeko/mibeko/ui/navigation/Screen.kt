@@ -45,6 +45,15 @@ sealed class Screen {
 
     @Serializable
     data object Onboarding : Screen()
+
+    /** Parcours partagé par compte ; distinct des anciennes diapositives locales. */
+    @Serializable
+    data class AccountOnboarding(
+        val replay: Boolean = false,
+        val returnToSettings: Boolean = false,
+        val redirectChatPrompt: String? = null,
+        val redirectToHistory: Boolean = false
+    ) : Screen()
     
     @Serializable
     data class DocumentDetail(val documentId: String) : Screen()

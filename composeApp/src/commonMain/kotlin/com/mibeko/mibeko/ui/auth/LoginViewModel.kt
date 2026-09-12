@@ -9,6 +9,7 @@ import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.remote.LoginRequest
 import com.mibeko.mibeko.data.remote.TwoFactorRequiredException
+import com.mibeko.mibeko.data.remote.extendedProfile
 import com.mibeko.mibeko.data.repository.PushTokenRegistrar
 import com.mibeko.mibeko.util.AnalyticsEvents
 import com.mibeko.mibeko.util.MibekoAnalytics
@@ -90,10 +91,10 @@ class LoginViewModel(
                     // seul champ : ne plus exiger téléphone/entreprise, sinon
                     // l'écran se redéclenche à chaque connexion pour qui n'a que
                     // renseigné son type.
-                    val profileComplete = !response.data.user?.mobile_profile?.profession.isNullOrBlank()
+                    val profileComplete = !response.data.user?.extendedProfile?.profession.isNullOrBlank()
                     userPreferences.setProfileSetupCompleted(profileComplete)
                     if (response.data.user != null) {
-                        userPreferences.setUserInfo(response.data.user.name, response.data.user.email)
+                        userPreferences.setUserInfo(response.data.user.name, response.data.user.email, response.data.user.id)
                     } else {
                         userPreferences.setUserInfo(email, email) // Fallback
                     }

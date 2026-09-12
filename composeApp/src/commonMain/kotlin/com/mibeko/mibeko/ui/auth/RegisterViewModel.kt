@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.remote.RegisterRequest
+import com.mibeko.mibeko.data.remote.extendedProfile
 import com.mibeko.mibeko.data.repository.PushTokenRegistrar
 import com.mibeko.mibeko.util.AnalyticsEvents
 import com.mibeko.mibeko.util.MibekoAnalytics
@@ -105,10 +106,10 @@ class RegisterViewModel(
                     // Le choix Citoyen/Professionnel (ProfileSetupScreen) pose ce
                     // seul champ : ne plus exiger téléphone/entreprise, sinon
                     // l'écran se redéclencherait à chaque connexion.
-                    val profileComplete = !response.data.user?.mobile_profile?.profession.isNullOrBlank()
+                    val profileComplete = !response.data.user?.extendedProfile?.profession.isNullOrBlank()
                     userPreferences.setProfileSetupCompleted(profileComplete)
                     if (response.data.user != null) {
-                        userPreferences.setUserInfo(response.data.user.name, response.data.user.email)
+                        userPreferences.setUserInfo(response.data.user.name, response.data.user.email, response.data.user.id)
                     } else {
                         userPreferences.setUserInfo(name, email) // Fallback
                     }

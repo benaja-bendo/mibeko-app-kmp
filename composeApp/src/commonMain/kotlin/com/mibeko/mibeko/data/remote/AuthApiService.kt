@@ -83,15 +83,23 @@ data class RemoteUser(
     val email_verified_at: String? = null,
     // L'API normalise les rôles en tableau de chaînes (AuthController::formatUser).
     val roles: List<String> = emptyList(),
-    val mobile_profile: RemoteMobileProfile? = null
+    val mobile_profile: RemoteMobileProfile? = null,
+    /** GET /v1/profile (contrat courant) ; mobile_profile reste pour login/register anciens. */
+    val profile: RemoteMobileProfile? = null
 )
+
+val RemoteUser.extendedProfile: RemoteMobileProfile?
+    get() = profile ?: mobile_profile
 
 @Serializable
 data class RemoteMobileProfile(
     val id: Int? = null,
     val phone: String? = null,
     val profession: String? = null,
-    val company: String? = null
+    val usage_context: String? = null,
+    val job_title: String? = null,
+    val company: String? = null,
+    val interests: List<String> = emptyList()
 )
 
 @Serializable
@@ -102,8 +110,11 @@ data class ProfileUpdateRequest(
     // vide, sinon toute écriture partielle écrase les valeurs déjà saisies sur l'autre
     // client (constaté sur ProfileSetupViewModel, qui envoyait phone=""/company="").
     val phone: String? = null,
-    val profession: String,
-    val company: String? = null
+    val profession: String? = null,
+    val usage_context: String? = null,
+    val job_title: String? = null,
+    val company: String? = null,
+    val interests: List<String>? = null
 )
 
 @Serializable

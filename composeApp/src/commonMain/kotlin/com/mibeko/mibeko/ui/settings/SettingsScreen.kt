@@ -28,7 +28,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
-import com.mibeko.mibeko.ui.auth.ProfileType
 import com.mibeko.mibeko.ui.components.OfficialSourcesSheet
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -103,26 +102,34 @@ fun SettingsScreen() {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    // mibeko-dashboard#98 : liste fermée, un texte libre ici
-                    // finissait en échec silencieux d'enregistrement dès que
-                    // le serveur a commencé à refuser toute autre valeur
-                    // (contrainte CHECK en base).
-                    Text("Profession", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
-                    ProfileType.entries.forEach { type ->
+                    Text("Cadre d'usage", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+                    listOf(
+                        "personal" to "Besoins personnels",
+                        "studies" to "Études",
+                        "professional" to "Activité professionnelle",
+                        "other" to "Autre"
+                    ).forEach { (code, label) ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { viewModel.updateProfileField("profession", type.label) }
+                                .clickable { viewModel.updateProfileField("usageContext", code) }
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
-                                selected = uiState.profession == type.label,
-                                onClick = { viewModel.updateProfileField("profession", type.label) }
+                                selected = uiState.usageContext == code,
+                                onClick = { viewModel.updateProfileField("usageContext", code) }
                             )
-                            Text(text = type.label, modifier = Modifier.padding(start = 8.dp))
+                            Text(text = label, modifier = Modifier.padding(start = 8.dp))
                         }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = uiState.jobTitle,
+                        onValueChange = { viewModel.updateProfileField("jobTitle", it) },
+                        label = { Text("Métier (facultatif)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = uiState.company,
@@ -130,6 +137,19 @@ fun SettingsScreen() {
                         label = { Text("Entreprise / Institution") },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    if (uiState.availableThemes.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Centres d'intérêt", fontWeight = FontWeight.Bold)
+                        uiState.availableThemes.forEach { theme ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { viewModel.toggleInterest(theme.slug) },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(checked = theme.slug in uiState.interests, onCheckedChange = null)
+                                Text(theme.name, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -656,6 +676,22 @@ fun SettingsScreen() {
                         iconTint = MaterialTheme.colorScheme.primary,
                         iconBackground = MaterialTheme.colorScheme.primaryContainer,
                         onClick = { showProfileDialog = true }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                    SettingsItem(
+                        title = "Revoir le guide de découverte",
+                        subtitle = "Rejouer le parcours sans effacer vos préférences",
+                        icon = Icons.Filled.Explore,
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        iconBackground = MaterialTheme.colorScheme.primaryContainer,
+                        onClick = {
+                            navController.navigate(
+                                com.mibeko.mibeko.ui.navigation.Screen.AccountOnboarding(
+                                    replay = true,
+                                    returnToSettings = true
+                                )
+                            )
+                        }
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 68.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                     SettingsItem(

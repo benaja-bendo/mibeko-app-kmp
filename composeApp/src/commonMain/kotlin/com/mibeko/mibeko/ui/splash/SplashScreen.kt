@@ -67,7 +67,12 @@ fun SplashScreen() {
                     popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Splash) { inclusive = true }
                 }
             } else {
-                navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Home) {
+                val destination = if (userPreferences.isLoggedIn()) {
+                    com.mibeko.mibeko.ui.navigation.Screen.AccountOnboarding()
+                } else {
+                    com.mibeko.mibeko.ui.navigation.Screen.Home
+                }
+                navController.navigate(destination) {
                     popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Splash) { inclusive = true }
                 }
             }
@@ -123,4 +128,3 @@ fun SplashScreen() {
             }
         }
     }
-

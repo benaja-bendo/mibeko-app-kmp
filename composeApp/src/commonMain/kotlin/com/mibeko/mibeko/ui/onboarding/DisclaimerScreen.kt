@@ -30,8 +30,12 @@ fun DisclaimerScreen() {
 
         fun onAccept() {
             userPreferences.setDisclaimerAccepted()
-            // After disclaimer, we always go to Home as Onboarding is either done or skipped (checked in Splash)
-            navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Home) {
+            val destination = if (userPreferences.isLoggedIn()) {
+                com.mibeko.mibeko.ui.navigation.Screen.AccountOnboarding()
+            } else {
+                com.mibeko.mibeko.ui.navigation.Screen.Home
+            }
+            navController.navigate(destination) {
                 popUpTo(com.mibeko.mibeko.ui.navigation.Screen.Disclaimer) { inclusive = true }
             }
         }
@@ -159,4 +163,3 @@ fun DisclaimerScreen() {
             }
         }
     }
-

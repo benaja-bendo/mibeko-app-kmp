@@ -26,6 +26,7 @@ internal object LegacySettingsMigration {
         UserPreferencesRepository.KEY_AUTH_TOKEN,
         UserPreferencesRepository.KEY_USER_EMAIL,
         UserPreferencesRepository.KEY_USER_NAME,
+        UserPreferencesRepository.KEY_USER_ID,
         UserPreferencesRepository.KEY_APP_THEME,
         UserPreferencesRepository.KEY_TEXT_SIZE,
         UserPreferencesRepository.KEY_READER_THEME,

@@ -14,9 +14,11 @@ import com.mibeko.mibeko.data.remote.AiApiService
 import com.mibeko.mibeko.data.remote.DossierApiService
 import com.mibeko.mibeko.data.remote.LegalApiService
 import com.mibeko.mibeko.data.remote.LibraryApiService
+import com.mibeko.mibeko.data.remote.OnboardingApiService
 import com.mibeko.mibeko.data.repository.DossierRepository
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.repository.NotificationRepository
+import com.mibeko.mibeko.data.repository.OnboardingRepository
 import com.mibeko.mibeko.data.repository.PushTokenRegistrar
 import com.mibeko.mibeko.ui.auth.ForgotPasswordViewModel
 import com.mibeko.mibeko.ui.auth.LoginViewModel
@@ -29,6 +31,7 @@ import com.mibeko.mibeko.ui.resolver.TexteResolverViewModel
 import com.mibeko.mibeko.ui.library.LibraryViewModel
 import com.mibeko.mibeko.ui.downloads.DownloadsViewModel
 import com.mibeko.mibeko.ui.notifications.NotificationsViewModel
+import com.mibeko.mibeko.ui.onboarding.AccountOnboardingViewModel
 import com.mibeko.mibeko.ui.dossier.ArticleSelectionViewModel
 import com.mibeko.mibeko.ui.dossier.DossierDetailViewModel
 import com.mibeko.mibeko.ui.dossier.DossierViewModel
@@ -162,6 +165,7 @@ val commonModule = module {
     single { LegalApiService(get(), get<AppConfig>().baseUrl) }
     single { LibraryApiService(get(), get<AppConfig>().baseUrl) }
     single { AuthApiService(get(), get<AppConfig>().baseUrl) }
+    single { OnboardingApiService(get(), get<AppConfig>().baseUrl) }
     single { AiApiService(get(), get<AppConfig>().baseUrl) }
     single<com.mibeko.mibeko.data.remote.AiChatApi> { get<AiApiService>() }
     single { DossierApiService(get(), get<AppConfig>().baseUrl) }
@@ -183,6 +187,7 @@ val commonModule = module {
     single { DossierRepository(get(), get(), get(), get(), get()) }
     single { NotificationRepository(get(), get<AppConfig>().baseUrl) }
     single { PushTokenRegistrar(get(), get()) }
+    single { OnboardingRepository(get(), get(), get(), get()) }
 
     viewModel { LoginViewModel(get(), get(), get(), get()) }
     viewModel { RegisterViewModel(get(), get(), get(), get()) }
@@ -193,7 +198,7 @@ val commonModule = module {
     viewModel { ReaderViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { DocumentDetailViewModel(get(), get(), get()) }
     viewModel { TexteResolverViewModel(get(), get(), get()) }
-    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { OfficialJournalViewModel(get(), get()) }
     viewModel { LibraryViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { DownloadsViewModel(get()) }
@@ -204,6 +209,6 @@ val commonModule = module {
     viewModel { params -> DossierDetailViewModel(params.get(), get(), get()) }
     viewModel { ChatViewModel(get(), get(), get()) }
     viewModel { ConversationHistoryViewModel(get()) }
+    viewModel { AccountOnboardingViewModel(get(), get(), get()) }
     viewModel { com.mibeko.mibeko.ui.contact.ContactViewModel(get(), get(), get()) }
 }
-

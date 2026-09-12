@@ -55,6 +55,7 @@ import com.mibeko.mibeko.ui.officialjournal.OfficialJournalDetailScreen
 import com.mibeko.mibeko.ui.officialjournal.OfficialJournalListScreen
 import com.mibeko.mibeko.ui.onboarding.DisclaimerScreen
 import com.mibeko.mibeko.ui.onboarding.OnboardingScreen
+import com.mibeko.mibeko.ui.onboarding.AccountOnboardingScreen
 import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.resolver.TexteResolverScreen
 import com.mibeko.mibeko.ui.settings.SettingsScreen
@@ -261,6 +262,29 @@ fun App() {
                         }
                         composable<Screen.Disclaimer> { DisclaimerScreen() }
                         composable<Screen.Onboarding> { OnboardingScreen() }
+                        composable<Screen.AccountOnboarding> { backStackEntry ->
+                            val route = backStackEntry.toRoute<Screen.AccountOnboarding>()
+                            AccountOnboardingScreen(
+                                replay = route.replay,
+                                onFinished = {
+                                    val destination = when {
+                                        route.returnToSettings -> Screen.Settings
+                                        route.redirectChatPrompt != null -> Screen.Chat(initialPrompt = route.redirectChatPrompt)
+                                        route.redirectToHistory -> Screen.ConversationHistory
+                                        else -> Screen.Home
+                                    }
+                                    navController.navigate(destination) {
+                                        popUpTo<Screen.AccountOnboarding> { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onOpenLibrary = {
+                                    navController.navigate(Screen.Library) {
+                                        popUpTo<Screen.AccountOnboarding> { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
                         composable<Screen.Home> { HomeScreen() }
                         composable<Screen.Settings> { SettingsScreen() }
                         composable<Screen.Dossiers> { DossierScreen() }

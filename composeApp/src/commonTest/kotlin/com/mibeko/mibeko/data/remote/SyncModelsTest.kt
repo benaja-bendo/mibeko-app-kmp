@@ -12,6 +12,16 @@ class SyncModelsTest {
     private val jsonParser = Json { ignoreUnknownKeys = true }
 
     @Test
+    fun profileResponse_parsesCurrentExtendedProfileShape() {
+        val response = jsonParser.decodeFromString<ProfileResponse>(
+            """{"success":true,"data":{"id":"u1","name":"Ada","email":"ada@example.test","profile":{"profession":"Étudiant","usage_context":"studies","job_title":null,"company":null,"phone":null,"interests":["travail"]}}}"""
+        )
+
+        assertEquals("studies", response.data?.extendedProfile?.usage_context)
+        assertEquals(listOf("travail"), response.data?.extendedProfile?.interests)
+    }
+
+    @Test
     fun testOfficialJournalParsing() {
         val jsonString = """
             {

@@ -48,7 +48,7 @@ data class OnboardingPage(
 private val pages = listOf(
     OnboardingPage(
         icon = Icons.Filled.AutoAwesome,
-        title = "Votre Assistant IA Juridique",
+        title = "Votre Assistant Mibeko",
         description = "Obtenez des réponses précises et sourcées. Notre IA analyse la législation pour vous accompagner dans vos démarches."
     ),
     OnboardingPage(
@@ -58,8 +58,8 @@ private val pages = listOf(
     ),
     OnboardingPage(
         icon = Icons.Filled.FolderSpecial,
-        title = "Espace de Travail Pro",
-        description = "Créez vos dossiers thématiques, sauvegardez vos textes favoris et organisez vos recherches en toute simplicité."
+        title = "Organisez vos recherches",
+        description = "Créez vos dossiers thématiques, sauvegardez vos textes favoris et retrouvez facilement ce qui compte pour vous."
     )
 )
 
@@ -73,9 +73,12 @@ fun OnboardingScreen() {
         val pagerState = rememberPagerState(pageCount = { pages.size })
         val isLastPage = pagerState.currentPage == pages.lastIndex
 
-        fun completeOnboarding() {
+        fun completeOnboarding(skipped: Boolean) {
             userPreferences.setOnboardingCompleted()
-            analytics.logEvent(com.mibeko.mibeko.util.AnalyticsEvents.ONBOARDING_COMPLETED)
+            analytics.logEvent(
+                com.mibeko.mibeko.util.AnalyticsEvents.MOBILE_INTRO_DISMISSED,
+                mapOf("action" to if (skipped) "skipped" else "completed")
+            )
             
             // Navigate to Disclaimer if not accepted, otherwise Home
             if (!userPreferences.hasAcceptedDisclaimer()) {
@@ -110,7 +113,7 @@ fun OnboardingScreen() {
                         enter = fadeIn(),
                         exit = fadeOut()
                     ) {
-                        TextButton(onClick = { completeOnboarding() }) {
+                        TextButton(onClick = { completeOnboarding(skipped = true) }) {
                             Text(
                                 text = "Passer",
                                 color = MaterialTheme.colorScheme.primary,
@@ -154,7 +157,7 @@ fun OnboardingScreen() {
                     Button(
                         onClick = {
                             if (isLastPage) {
-                                completeOnboarding()
+                                completeOnboarding(skipped = false)
                             } else {
                                 scope.launch {
                                     pagerState.animateScrollToPage(pagerState.currentPage + 1)

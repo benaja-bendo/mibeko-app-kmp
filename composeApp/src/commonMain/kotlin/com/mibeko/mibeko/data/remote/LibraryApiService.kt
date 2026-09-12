@@ -46,6 +46,16 @@ data class LibraryHomeResponse(
     val data: LibraryHomeData? = null
 )
 
+@Serializable
+data class LibraryTheme(
+    val id: String,
+    val name: String,
+    val slug: String,
+    val icon: String? = null,
+    val description: String? = null,
+    val documents_count: Int = 0
+)
+
 /** Un résultat de recherche (granularité article, comme sur le web). */
 @Serializable
 data class LibrarySearchItem(
@@ -139,6 +149,11 @@ class LibraryApiService(
     suspend fun fetchHome(): LibraryHomeData {
         return client.get("$baseUrl/v1/library/home").body<LibraryHomeResponse>().data
             ?: LibraryHomeData()
+    }
+
+    suspend fun fetchThemes(): List<LibraryTheme> {
+        return client.get("$baseUrl/v1/library/themes")
+            .body<ApiResponse<List<LibraryTheme>>>().data.orEmpty()
     }
 
     suspend fun search(

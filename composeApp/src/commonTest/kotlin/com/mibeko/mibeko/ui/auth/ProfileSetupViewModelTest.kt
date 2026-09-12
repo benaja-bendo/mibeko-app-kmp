@@ -61,7 +61,7 @@ class ProfileSetupViewModelTest {
     }
 
     @Test
-    fun `selectProfileType omet phone et company, seul profession est envoye`() = runBlocking {
+    fun `selectProfileType omet phone et company et envoie seulement profession`() = runBlocking {
         var capturedBody: String? = null
         val mockEngine = MockEngine { request: HttpRequestData ->
             capturedBody = when (val content = request.body) {

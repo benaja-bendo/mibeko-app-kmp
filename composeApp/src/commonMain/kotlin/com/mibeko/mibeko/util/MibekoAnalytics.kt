@@ -43,7 +43,8 @@ class MibekoAnalytics(
 
 /** Noms des événements produit (funnel v1.1). */
 object AnalyticsEvents {
-    const val ONBOARDING_COMPLETED = "onboarding_completed"
+    /** Anciennes diapositives locales, distinctes du parcours compte mesuré par Laravel. */
+    const val MOBILE_INTRO_DISMISSED = "mobile_intro_dismissed"
     const val SEARCH_PERFORMED = "search_performed"
     const val SEARCH_FAILED = "search_failed"
     const val DOCUMENT_OPENED = "document_opened"

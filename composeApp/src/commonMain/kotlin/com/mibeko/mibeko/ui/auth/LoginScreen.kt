@@ -43,19 +43,13 @@ fun LoginScreen(
 
     LaunchedEffect(loginState) {
         if (loginState is LoginState.Success) {
-            val requiresProfileSetup = (loginState as LoginState.Success).requiresProfileSetup
-            // Le mur de connexion transporte la question de l'invité (ou son
-            // intention de voir l'historique) jusqu'ici — un nouveau compte
-            // passe d'abord par ProfileSetup, qui la reçoit à son tour.
-            val destination = when {
-                requiresProfileSetup -> Screen.ProfileSetup(
-                    redirectChatPrompt = redirectChatPrompt,
-                    redirectToHistory = redirectToHistory
-                )
-                redirectChatPrompt != null -> Screen.Chat(initialPrompt = redirectChatPrompt)
-                redirectToHistory -> Screen.ConversationHistory
-                else -> Screen.Home
-            }
+            // Toujours consulter l'état serveur : un parcours déjà terminé sur
+            // le web est ignoré sans écran, un parcours partiel reprend au bon
+            // endroit et le booléen historique de l'appareil n'intervient pas.
+            val destination = Screen.AccountOnboarding(
+                redirectChatPrompt = redirectChatPrompt,
+                redirectToHistory = redirectToHistory
+            )
             navController.navigate(destination) {
                 popUpTo(Screen.Login()) { inclusive = true }
             }

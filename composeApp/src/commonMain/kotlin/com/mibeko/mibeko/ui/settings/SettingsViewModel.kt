@@ -7,6 +7,9 @@ import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.remote.NotificationTypes
 import com.mibeko.mibeko.data.remote.ProfileUpdateRequest
+import com.mibeko.mibeko.data.remote.LibraryApiService
+import com.mibeko.mibeko.data.remote.LibraryTheme
+import com.mibeko.mibeko.data.remote.extendedProfile
 import com.mibeko.mibeko.data.repository.CorpusRefreshResult
 import com.mibeko.mibeko.data.repository.DossierRepository
 import com.mibeko.mibeko.data.repository.LocalLegalRepository
@@ -76,7 +79,10 @@ data class SettingsUiState(
     val userName: String = "",
     val userEmail: String = "",
     val phone: String = "",
-    val profession: String = "",
+    val usageContext: String = "",
+    val jobTitle: String = "",
+    val interests: List<String> = emptyList(),
+    val availableThemes: List<LibraryTheme> = emptyList(),
     val company: String = "",
     val isUpdatingProfile: Boolean = false,
     val profileUpdateMessage: String? = null,
@@ -102,7 +108,8 @@ class SettingsViewModel(
     private val authApiService: AuthApiService,
     private val dossierRepository: DossierRepository,
     private val analytics: MibekoAnalytics,
-    private val contentSharer: com.mibeko.mibeko.util.ContentSharer
+    private val contentSharer: com.mibeko.mibeko.util.ContentSharer,
+    private val libraryApiService: LibraryApiService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -123,9 +130,11 @@ class SettingsViewModel(
                     _uiState.update { it.copy(
                         userName = user.name,
                         userEmail = user.email,
-                        phone = user.mobile_profile?.phone ?: "",
-                        profession = user.mobile_profile?.profession ?: "",
-                        company = user.mobile_profile?.company ?: ""
+                        phone = user.extendedProfile?.phone ?: "",
+                        usageContext = user.extendedProfile?.usage_context ?: "",
+                        jobTitle = user.extendedProfile?.job_title ?: "",
+                        interests = user.extendedProfile?.interests.orEmpty(),
+                        company = user.extendedProfile?.company ?: ""
                     ) }
                 }
             } catch (e: Exception) {
@@ -135,14 +144,28 @@ class SettingsViewModel(
                 recordException(e, context = "SettingsViewModel.fetchProfile")
             }
         }
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(availableThemes = libraryApiService.fetchThemes()) }
+            } catch (e: Exception) {
+                recordException(e, context = "SettingsViewModel.fetchThemes")
+            }
+        }
     }
 
     fun updateProfileField(field: String, value: String) {
         when (field) {
             "name" -> _uiState.update { it.copy(userName = value) }
             "phone" -> _uiState.update { it.copy(phone = value) }
-            "profession" -> _uiState.update { it.copy(profession = value) }
+            "usageContext" -> _uiState.update { it.copy(usageContext = value) }
+            "jobTitle" -> _uiState.update { it.copy(jobTitle = value) }
             "company" -> _uiState.update { it.copy(company = value) }
+        }
+    }
+
+    fun toggleInterest(slug: String) {
+        _uiState.update { state ->
+            state.copy(interests = if (slug in state.interests) state.interests - slug else state.interests + slug)
         }
     }
 
@@ -161,8 +184,11 @@ class SettingsViewModel(
                 val request = com.mibeko.mibeko.data.remote.ProfileUpdateRequest(
                     name = _uiState.value.userName,
                     phone = _uiState.value.phone,
-                    profession = _uiState.value.profession,
-                    company = _uiState.value.company
+                    profession = null,
+                    usage_context = _uiState.value.usageContext.ifBlank { null },
+                    job_title = _uiState.value.jobTitle.ifBlank { null },
+                    company = _uiState.value.company,
+                    interests = _uiState.value.interests
                 )
                 val response = authApiService.updateProfile(request)
                 if (response.success) {
