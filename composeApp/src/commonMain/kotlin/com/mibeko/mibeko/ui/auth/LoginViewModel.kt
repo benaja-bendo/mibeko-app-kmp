@@ -24,7 +24,7 @@ sealed class LoginState {
 
     /** Le compte est protégé : afficher l'étape de saisie du code TOTP. */
     data class TwoFactorRequired(val error: String? = null) : LoginState()
-    data class Success(val requiresProfileSetup: Boolean) : LoginState()
+    data class Success(val requiresProfileSetup: Boolean, val requiresEmailVerification: Boolean) : LoginState()
     data class Error(val message: String) : LoginState()
 }
 
@@ -98,10 +98,18 @@ class LoginViewModel(
                     } else {
                         userPreferences.setUserInfo(email, email) // Fallback
                     }
+                    val emailVerified = response.data.user?.let {
+                        it.email_verified == true || it.email_verified_at != null
+                    } == true
+                    val emailVerificationRequired = response.data.user?.email_verification_required ?: true
+                    userPreferences.setEmailVerificationState(emailVerificationRequired, emailVerified)
                     // Un token push a pu être renouvelé hors session : l'envoyer maintenant.
                     pushTokenRegistrar.flushPendingToken()
                     analytics.logEvent(AnalyticsEvents.LOGIN_COMPLETED, mapOf("method" to "email"))
-                    _loginState.value = LoginState.Success(requiresProfileSetup = !profileComplete)
+                    _loginState.value = LoginState.Success(
+                        requiresProfileSetup = !profileComplete,
+                        requiresEmailVerification = emailVerificationRequired && !emailVerified
+                    )
                 } else {
                     val errorMessage = response.errors?.values?.firstOrNull()?.firstOrNull()
                         ?: response.message

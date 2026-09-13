@@ -23,6 +23,7 @@ import com.mibeko.mibeko.data.repository.PushTokenRegistrar
 import com.mibeko.mibeko.ui.auth.ForgotPasswordViewModel
 import com.mibeko.mibeko.ui.auth.LoginViewModel
 import com.mibeko.mibeko.ui.auth.RegisterViewModel
+import com.mibeko.mibeko.ui.auth.EmailVerificationViewModel
 import com.mibeko.mibeko.ui.auth.ProfileSetupViewModel
 import com.mibeko.mibeko.ui.home.HomeViewModel
 import com.mibeko.mibeko.ui.reader.ReaderViewModel
@@ -191,6 +192,7 @@ val commonModule = module {
 
     viewModel { LoginViewModel(get(), get(), get(), get()) }
     viewModel { RegisterViewModel(get(), get(), get(), get()) }
+    viewModel { EmailVerificationViewModel(get(), get()) }
     viewModel { ForgotPasswordViewModel(get()) }
     viewModel { ProfileSetupViewModel(get(), get(), get()) }
 

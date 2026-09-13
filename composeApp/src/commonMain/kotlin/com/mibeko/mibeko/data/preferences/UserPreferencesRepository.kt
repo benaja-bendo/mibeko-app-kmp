@@ -56,6 +56,8 @@ class UserPreferencesRepository(private val settings: Settings) {
         internal const val KEY_USER_EMAIL = "user_email"
         internal const val KEY_USER_NAME = "user_name"
         internal const val KEY_USER_ID = "user_id"
+        internal const val KEY_EMAIL_VERIFIED = "email_verified"
+        internal const val KEY_EMAIL_VERIFICATION_REQUIRED = "email_verification_required"
         internal const val KEY_PROFILE_SETUP_COMPLETED = "profile_setup_completed"
         internal const val KEY_DOSSIER_SYNC_ACCOUNT = "dossier_sync_account"
         internal const val KEY_DOSSIER_LAST_SYNC = "dossier_last_sync"
@@ -87,11 +89,11 @@ class UserPreferencesRepository(private val settings: Settings) {
      * Gets the current app theme preference.
      */
     fun getAppTheme(): AppTheme {
-        val themeName = settings.getString(KEY_APP_THEME, AppTheme.SYSTEM.name)
+        val themeName = settings.getString(KEY_APP_THEME, AppTheme.LIGHT.name)
         return try {
             AppTheme.valueOf(themeName)
         } catch (e: Exception) {
-            AppTheme.SYSTEM
+            AppTheme.LIGHT
         }
     }
 
@@ -430,6 +432,20 @@ class UserPreferencesRepository(private val settings: Settings) {
 
     fun getUserId(): String? = settings.getStringOrNull(KEY_USER_ID)
 
+    fun isEmailVerified(): Boolean = settings.getBoolean(KEY_EMAIL_VERIFIED, false)
+
+    fun setEmailVerified(verified: Boolean) {
+        settings.putBoolean(KEY_EMAIL_VERIFIED, verified)
+    }
+
+    fun isEmailVerificationRequired(): Boolean =
+        settings.getBoolean(KEY_EMAIL_VERIFICATION_REQUIRED, true)
+
+    fun setEmailVerificationState(required: Boolean, verified: Boolean) {
+        settings.putBoolean(KEY_EMAIL_VERIFICATION_REQUIRED, required)
+        settings.putBoolean(KEY_EMAIL_VERIFIED, verified)
+    }
+
     /**
      * Stockage isolé par compte pour le parcours commun. Le booléen historique
      * `onboarding_completed` reste volontairement propre à l'appareil : avoir
@@ -477,6 +493,8 @@ class UserPreferencesRepository(private val settings: Settings) {
         settings.remove(KEY_USER_NAME)
         settings.remove(KEY_USER_EMAIL)
         settings.remove(KEY_USER_ID)
+        settings.remove(KEY_EMAIL_VERIFIED)
+        settings.remove(KEY_EMAIL_VERIFICATION_REQUIRED)
         settings.remove(KEY_PROFILE_SETUP_COMPLETED)
         _isLoggedIn.value = false
     }

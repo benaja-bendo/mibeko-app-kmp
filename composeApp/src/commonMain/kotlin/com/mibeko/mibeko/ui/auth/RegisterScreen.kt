@@ -40,7 +40,12 @@ fun RegisterScreen() {
 
     LaunchedEffect(registerState) {
         if (registerState is RegisterState.Success) {
-            val destination = Screen.AccountOnboarding()
+            val success = registerState as RegisterState.Success
+            val destination = if (success.requiresEmailVerification) {
+                Screen.EmailVerification()
+            } else {
+                Screen.AccountOnboarding()
+            }
             navController.navigate(destination) {
                 popUpTo(Screen.Register) { inclusive = true }
             }

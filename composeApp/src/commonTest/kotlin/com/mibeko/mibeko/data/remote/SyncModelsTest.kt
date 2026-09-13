@@ -232,6 +232,7 @@ class SyncModelsTest {
                 "email": "jean@example.cg",
                 "email_verified": false,
                 "email_verified_at": null,
+                "email_verification_required": true,
                 "roles": ["citizen"]
             }
         """.trimIndent()
@@ -239,12 +240,13 @@ class SyncModelsTest {
         val user = jsonParser.decodeFromString<RemoteUser>(jsonString)
         assertEquals(false, user.email_verified)
         assertNull(user.email_verified_at)
+        assertEquals(true, user.email_verification_required)
     }
 
     @Test
     fun testUserWithoutVerificationFieldsDegrades() {
-        // Réponse login/register (formatUser) : pas de champ email_verified →
-        // null (dégradation silencieuse, aucune bannière côté UI).
+        // Ancienne réponse login/register : les nouveaux champs restent
+        // optionnels pendant un déploiement progressif.
         val jsonString = """
             {
                 "id": "u-1",
@@ -256,5 +258,6 @@ class SyncModelsTest {
 
         val user = jsonParser.decodeFromString<RemoteUser>(jsonString)
         assertNull(user.email_verified)
+        assertNull(user.email_verification_required)
     }
 }

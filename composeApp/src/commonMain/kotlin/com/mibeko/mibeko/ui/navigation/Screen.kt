@@ -27,6 +27,12 @@ sealed class Screen {
     @Serializable
     data object ForgotPassword : Screen()
 
+    @Serializable
+    data class EmailVerification(
+        val redirectChatPrompt: String? = null,
+        val redirectToHistory: Boolean = false
+    ) : Screen()
+
     /** Voir [Login] : mêmes champs, propagés depuis Login pour un tout nouveau compte. */
     @Serializable
     data class ProfileSetup(

@@ -43,13 +43,21 @@ fun LoginScreen(
 
     LaunchedEffect(loginState) {
         if (loginState is LoginState.Success) {
+            val success = loginState as LoginState.Success
             // Toujours consulter l'état serveur : un parcours déjà terminé sur
             // le web est ignoré sans écran, un parcours partiel reprend au bon
             // endroit et le booléen historique de l'appareil n'intervient pas.
-            val destination = Screen.AccountOnboarding(
-                redirectChatPrompt = redirectChatPrompt,
-                redirectToHistory = redirectToHistory
-            )
+            val destination = if (success.requiresEmailVerification) {
+                Screen.EmailVerification(
+                    redirectChatPrompt = redirectChatPrompt,
+                    redirectToHistory = redirectToHistory
+                )
+            } else {
+                Screen.AccountOnboarding(
+                    redirectChatPrompt = redirectChatPrompt,
+                    redirectToHistory = redirectToHistory
+                )
+            }
             navController.navigate(destination) {
                 popUpTo(Screen.Login()) { inclusive = true }
             }

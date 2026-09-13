@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 sealed class RegisterState {
     object Idle : RegisterState()
     object Loading : RegisterState()
-    data class Success(val requiresProfileSetup: Boolean) : RegisterState()
+    data class Success(val requiresProfileSetup: Boolean, val requiresEmailVerification: Boolean) : RegisterState()
     data class Error(val message: String) : RegisterState()
 }
 
@@ -113,10 +113,18 @@ class RegisterViewModel(
                     } else {
                         userPreferences.setUserInfo(name, email) // Fallback
                     }
+                    val emailVerified = response.data.user?.let {
+                        it.email_verified == true || it.email_verified_at != null
+                    } == true
+                    val emailVerificationRequired = response.data.user?.email_verification_required ?: true
+                    userPreferences.setEmailVerificationState(emailVerificationRequired, emailVerified)
                     // Un token push a pu être renouvelé hors session : l'envoyer maintenant.
                     pushTokenRegistrar.flushPendingToken()
                     analytics.logEvent(AnalyticsEvents.LOGIN_COMPLETED, mapOf("method" to "register"))
-                    _registerState.value = RegisterState.Success(requiresProfileSetup = !profileComplete)
+                    _registerState.value = RegisterState.Success(
+                        requiresProfileSetup = !profileComplete,
+                        requiresEmailVerification = emailVerificationRequired && !emailVerified
+                    )
                 } else {
                     // Extract the first error message if available
                     val errorMessage = response.errors?.values?.firstOrNull()?.firstOrNull()

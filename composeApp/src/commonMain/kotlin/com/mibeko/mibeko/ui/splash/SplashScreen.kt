@@ -68,7 +68,11 @@ fun SplashScreen() {
                 }
             } else {
                 val destination = if (userPreferences.isLoggedIn()) {
-                    com.mibeko.mibeko.ui.navigation.Screen.AccountOnboarding()
+                    if (userPreferences.isEmailVerificationRequired() && !userPreferences.isEmailVerified()) {
+                        com.mibeko.mibeko.ui.navigation.Screen.EmailVerification()
+                    } else {
+                        com.mibeko.mibeko.ui.navigation.Screen.AccountOnboarding()
+                    }
                 } else {
                     com.mibeko.mibeko.ui.navigation.Screen.Home
                 }

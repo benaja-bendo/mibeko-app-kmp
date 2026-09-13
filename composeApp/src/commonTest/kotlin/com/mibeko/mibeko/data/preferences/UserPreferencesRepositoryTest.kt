@@ -14,6 +14,29 @@ import kotlin.test.assertNull
  */
 class UserPreferencesRepositoryTest {
 
+    @Test
+    fun `le theme initial est clair meme si le systeme est sombre`() {
+        val repository = UserPreferencesRepository(MapSettings())
+
+        assertEquals(UserPreferencesRepository.AppTheme.LIGHT, repository.getAppTheme())
+        assertEquals(UserPreferencesRepository.AppTheme.LIGHT, repository.theme.value)
+    }
+
+    @Test
+    fun `la verification email est fausse par defaut et effacee a la deconnexion`() {
+        val repository = UserPreferencesRepository(MapSettings())
+
+        assertFalse(repository.isEmailVerified())
+        assertTrue(repository.isEmailVerificationRequired())
+        repository.setEmailVerificationState(required = false, verified = true)
+        assertTrue(repository.isEmailVerified())
+        assertFalse(repository.isEmailVerificationRequired())
+
+        repository.logout()
+        assertFalse(repository.isEmailVerified())
+        assertTrue(repository.isEmailVerificationRequired())
+    }
+
     private lateinit var settings: MapSettings
     private lateinit var repository: UserPreferencesRepository
 

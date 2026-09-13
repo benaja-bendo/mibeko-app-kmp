@@ -75,12 +75,12 @@ data class RemoteUser(
     val id: String,
     val name: String,
     val email: String,
-    // Vérification d'e-mail — exposée par `UserProfileResource` (GET /v1/profile).
-    // `email_verified` : booléen ; `email_verified_at` : ISO8601 ou null.
-    // Absents des réponses login/register (formatUser) : d'où les valeurs par
-    // défaut, qui provoquent une dégradation silencieuse côté UI.
+    // Vérification d'e-mail — exposée par le profil et les réponses d'auth.
+    // Les valeurs par défaut maintiennent la compatibilité avec une API plus
+    // ancienne pendant un déploiement progressif.
     val email_verified: Boolean? = null,
     val email_verified_at: String? = null,
+    val email_verification_required: Boolean? = null,
     // L'API normalise les rôles en tableau de chaînes (AuthController::formatUser).
     val roles: List<String> = emptyList(),
     val mobile_profile: RemoteMobileProfile? = null,

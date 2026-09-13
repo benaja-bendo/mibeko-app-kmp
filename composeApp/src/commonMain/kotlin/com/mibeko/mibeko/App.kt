@@ -35,6 +35,7 @@ import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.remote.LegalApiService
 import com.mibeko.mibeko.data.repository.PushTokenRegistrar
 import com.mibeko.mibeko.ui.auth.ForgotPasswordScreen
+import com.mibeko.mibeko.ui.auth.EmailVerificationScreen
 import com.mibeko.mibeko.ui.auth.LoginScreen
 import com.mibeko.mibeko.ui.auth.ProfileSetupScreen
 import com.mibeko.mibeko.ui.auth.RegisterScreen
@@ -253,6 +254,26 @@ fun App() {
                         }
                         composable<Screen.Register> { RegisterScreen() }
                         composable<Screen.ForgotPassword> { ForgotPasswordScreen() }
+                        composable<Screen.EmailVerification> { backStackEntry ->
+                            val route = backStackEntry.toRoute<Screen.EmailVerification>()
+                            EmailVerificationScreen(
+                                onVerified = {
+                                    navController.navigate(
+                                        Screen.AccountOnboarding(
+                                            redirectChatPrompt = route.redirectChatPrompt,
+                                            redirectToHistory = route.redirectToHistory
+                                        )
+                                    ) {
+                                        popUpTo<Screen.EmailVerification> { inclusive = true }
+                                    }
+                                },
+                                onLoggedOut = {
+                                    navController.navigate(Screen.Login()) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
                         composable<Screen.ProfileSetup> { backStackEntry ->
                             val route = backStackEntry.toRoute<Screen.ProfileSetup>()
                             ProfileSetupScreen(
