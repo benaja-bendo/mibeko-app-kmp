@@ -10,6 +10,8 @@ import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -35,6 +37,9 @@ class OnboardingApiServiceTest {
 
         assertTrue(data.available)
         assertEquals("in_progress", data.enrollment?.status)
+        assertEquals("Bienvenue depuis l'administration", data.journey?.steps?.first()?.config?.get("title")?.jsonPrimitive?.content)
+        assertEquals("Commencer le parcours", data.journey?.steps?.first()?.config?.get("cta")?.jsonPrimitive?.content)
+        assertEquals("Retrouver un texte OHADA", data.journey?.steps?.first()?.config?.get("examples")?.jsonArray?.first()?.jsonPrimitive?.content)
         assertEquals("personal", data.journey?.steps?.get(1)?.progress?.value?.toString()?.trim('"'))
         assertFalse(data.journey?.steps?.first()?.progress?.resolved ?: true)
         val url = requireNotNull(request).url.toString()
@@ -54,7 +59,12 @@ class OnboardingApiServiceTest {
                   "steps": [
                     {
                       "key": "welcome", "type": "welcome", "scope": "common",
-                      "config": {"title_key":"onboarding.welcome.title"},
+                      "config": {
+                        "title":"Bienvenue depuis l'administration",
+                        "body":"Un contenu publié sans nouvelle version mobile.",
+                        "cta":"Commencer le parcours",
+                        "examples":["Retrouver un texte OHADA"]
+                      },
                       "conditions": [], "supported": true,
                       "progress": {"viewed_at":null,"skipped_at":null,"completed_at":null,"value":null}
                     },
