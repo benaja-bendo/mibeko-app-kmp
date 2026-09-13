@@ -291,6 +291,19 @@ interface MibekoDao {
     """)
     fun searchArticles(query: String): Flow<List<ArticleSearchResult>>
 
+    /** Recherche FTS limitée aux documents téléchargés dans leur intégralité. */
+    @Transaction
+    @Query("""
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
+        FROM articles
+        JOIN nodes ON articles.node_id = nodes.id
+        JOIN documents ON nodes.document_id = documents.id
+        JOIN articles_fts ON articles.rowid = articles_fts.rowid
+        WHERE articles_fts MATCH :query
+          AND documents.is_downloaded = 1
+    """)
+    fun searchDownloadedArticles(query: String): Flow<List<ArticleSearchResult>>
+
     // ========== DOSSIERS ==========
 
 

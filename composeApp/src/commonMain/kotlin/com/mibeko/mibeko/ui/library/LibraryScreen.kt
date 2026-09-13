@@ -75,6 +75,8 @@ fun LibraryScreen() {
                 onSearchSubmit = { viewModel.submitSearch() },
                 onClearSearch = viewModel::clearSearch,
                 onScopeChange = viewModel::updateScope,
+                onDownloadedOnlyChange = viewModel::updateDownloadedOnly,
+                onOpenDownloads = { navController.navigate(Screen.Downloads) },
                 onOpenFilters = { showFilterSheet = true }
             )
 
@@ -151,6 +153,8 @@ private fun LibraryHeader(
     onSearchSubmit: () -> Unit,
     onClearSearch: () -> Unit,
     onScopeChange: (LibraryScope) -> Unit,
+    onDownloadedOnlyChange: (Boolean) -> Unit,
+    onOpenDownloads: () -> Unit,
     onOpenFilters: () -> Unit
 ) {
     Surface(color = MaterialTheme.colorScheme.surface) {
@@ -173,28 +177,23 @@ private fun LibraryHeader(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                if (state.isOffline) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.CloudOff,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Hors-ligne",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (state.isOffline) {
+                        Icon(
+                            Icons.Default.CloudOff,
+                            contentDescription = "Hors-ligne",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    TextButton(onClick = onOpenDownloads) {
+                        Icon(
+                            Icons.Default.DownloadDone,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Téléchargés")
                     }
                 }
             }
@@ -242,6 +241,20 @@ private fun LibraryHeader(
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    item {
+                        FilterChip(
+                            selected = state.downloadedOnly,
+                            onClick = { onDownloadedOnlyChange(!state.downloadedOnly) },
+                            label = { Text("Téléchargés", style = MaterialTheme.typography.labelMedium) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.DownloadDone,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            }
+                        )
+                    }
                     items(LibraryScope.entries.toList()) { scope ->
                         FilterChip(
                             selected = state.scope == scope,
@@ -378,14 +391,25 @@ private fun LibraryHomeContent(
     onOpenArticle: (String) -> Unit
 ) {
     val home = state.home
+    val downloadedCodes = state.localCodes.filter {
+        it.isDownloaded && (state.selectedTypeCode == null || it.type == state.selectedTypeCode)
+    }
     // Hors-ligne : l'accueil retombe sur les documents en base locale.
-    val essentials: List<LibraryHomeDocument> = home?.essential_documents
+    val essentials: List<LibraryHomeDocument> = if (state.downloadedOnly) emptyList() else home?.essential_documents
         ?: state.localCodes
             .filter { it.type.contains("Code", ignoreCase = true) }
             .map { LibraryHomeDocument(id = it.id, title = it.title, type_name = it.type) }
-    val recents: List<LibraryHomeDocument> = home?.recent_documents
-        ?: state.localCodes.take(10)
-            .map {
+    val recents: List<LibraryHomeDocument> = if (state.downloadedOnly) {
+        downloadedCodes.map {
+            LibraryHomeDocument(
+                id = it.id,
+                title = it.title,
+                type_name = it.type,
+                date_publication = it.dateSignature
+            )
+        }
+    } else {
+        home?.recent_documents ?: state.localCodes.take(10).map {
                 LibraryHomeDocument(
                     id = it.id,
                     title = it.title,
@@ -393,6 +417,7 @@ private fun LibraryHomeContent(
                     date_publication = it.dateSignature
                 )
             }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -400,7 +425,7 @@ private fun LibraryHomeContent(
     ) {
         // Échec de `/library/home` alors que le réseau est là : on le dit, avec
         // un Réessayer. Jamais un état vide sur un échec (règle produit n° 1).
-        state.homeError?.let { error ->
+        state.homeError?.takeUnless { state.downloadedOnly }?.let { error ->
             item {
                 MibekoErrorBanner(
                     offline = error.offline,
@@ -411,7 +436,7 @@ private fun LibraryHomeContent(
         }
 
         // Statistiques du fonds : ce que la bibliothèque interroge réellement.
-        if (home != null) {
+        if (home != null && !state.downloadedOnly) {
             item {
                 Row(
                     modifier = Modifier
@@ -427,7 +452,7 @@ private fun LibraryHomeContent(
         }
 
         // Suggestions de recherche cliquables
-        if (home != null && home.suggestions.isNotEmpty()) {
+        if (home != null && home.suggestions.isNotEmpty() && !state.downloadedOnly) {
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -461,7 +486,7 @@ private fun LibraryHomeContent(
         }
 
         // Reprise de lecture (réelle : derniers contenus consultés)
-        if (recentItems.isNotEmpty()) {
+        if (recentItems.isNotEmpty() && !state.downloadedOnly) {
             item {
                 LibrarySectionTitle("Continuer la lecture")
                 LazyRow(
@@ -478,7 +503,11 @@ private fun LibraryHomeContent(
 
         // Derniers textes publiés
         if (recents.isNotEmpty()) {
-            item { LibrarySectionTitle("Derniers textes publiés") }
+            item {
+                LibrarySectionTitle(
+                    if (state.downloadedOnly) "Mes textes téléchargés" else "Derniers textes publiés"
+                )
+            }
             items(recents) { doc ->
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)) {
                     RecentDocumentCard(doc = doc, onClick = { onOpenDocument(doc.id) })
@@ -486,7 +515,7 @@ private fun LibraryHomeContent(
             }
         }
 
-        if (state.isLoading && home == null && state.localCodes.isEmpty()) {
+        if (!state.downloadedOnly && state.isLoading && home == null && state.localCodes.isEmpty()) {
             item {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(48.dp),
@@ -497,7 +526,33 @@ private fun LibraryHomeContent(
             }
         }
 
-        if (!state.isLoading && home == null && state.localCodes.isEmpty() && state.homeError == null) {
+        if (state.downloadedOnly && downloadedCodes.isEmpty()) {
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.DownloadDone,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Aucun texte téléchargé.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Ouvrez Téléchargements pour préparer votre bibliothèque hors-ligne.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        } else if (!state.isLoading && home == null && state.localCodes.isEmpty() && state.homeError == null) {
             item {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(48.dp),

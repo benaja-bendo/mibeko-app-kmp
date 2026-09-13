@@ -839,6 +839,26 @@ class LocalLegalRepository(
     }
 
     /**
+     * Recherche exclusivement dans les contenus que l'utilisateur a rendus
+     * disponibles hors-ligne. Cette voie ne consulte jamais le réseau : elle
+     * alimente le filtre « Téléchargés » de la Bibliothèque sans dépendre de
+     * la pagination du corpus distant.
+     */
+    suspend fun searchDownloadedArticles(query: String): List<ArticleSpec> {
+        return try {
+            val sanitized = sanitizeFtsQuery(query)
+            if (sanitized.isEmpty()) {
+                emptyList()
+            } else {
+                mibekoDao.searchDownloadedArticles(sanitized).first().map { it.toArticleSpec() }
+            }
+        } catch (e: Exception) {
+            recordException(e, context = "LocalLegalRepository.searchDownloadedArticles")
+            emptyList()
+        }
+    }
+
+    /**
      * Local-only search using Room database.
      * Used as primary when offline or as fallback when API fails.
      */

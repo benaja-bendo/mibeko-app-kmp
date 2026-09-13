@@ -79,6 +79,7 @@ data class LibraryUiState(
     val scope: LibraryScope = LibraryScope.ALL,
     val selectedTypeCode: String? = null,
     val selectedInstitutionId: String? = null,
+    val downloadedOnly: Boolean = false,
     val sort: LibrarySort = LibrarySort.RELEVANCE,
     val documentTypes: List<RemoteDocumentType> = emptyList(),
     val institutions: List<RemoteInstitution> = emptyList(),
@@ -91,6 +92,7 @@ data class LibraryUiState(
         get() = (if (scope != LibraryScope.ALL) 1 else 0) +
             (if (selectedTypeCode != null) 1 else 0) +
             (if (selectedInstitutionId != null) 1 else 0) +
+            (if (downloadedOnly) 1 else 0) +
             (if (sort != LibrarySort.RELEVANCE) 1 else 0)
 }
 
@@ -282,6 +284,24 @@ class LibraryViewModel(
                 searchError = null
             ) }
 
+            if (state.downloadedOnly) {
+                val items = repository.searchDownloadedArticles(query)
+                    .asSequence()
+                    .filter { state.selectedTypeCode == null || it.typeCode == state.selectedTypeCode }
+                    .map { it.toLibrarySearchItem() }
+                    .toList()
+                _uiState.update { it.copy(
+                    results = items,
+                    pagination = null,
+                    resultsFromNetwork = false,
+                    isSearching = false,
+                    isLoadingMore = false,
+                    searchError = null
+                ) }
+                if (!append) logSearchPerformed(query, items.size, offline = true)
+                return@launch
+            }
+
             if (networkChecker.isNetworkAvailable()) {
                 try {
                     val response = libraryApi.search(
@@ -396,7 +416,7 @@ class LibraryViewModel(
     // ── Filtres (chaque changement relance la recherche en cours) ────────────
 
     fun updateScope(scope: LibraryScope) {
-        _uiState.update { it.copy(scope = scope) }
+        _uiState.update { it.copy(scope = scope, downloadedOnly = false) }
         if (_uiState.value.hasSearched) runSearch(page = 1)
     }
 
@@ -406,12 +426,26 @@ class LibraryViewModel(
     }
 
     fun updateInstitutionFilter(institutionId: String?) {
-        _uiState.update { it.copy(selectedInstitutionId = institutionId) }
+        _uiState.update { it.copy(selectedInstitutionId = institutionId, downloadedOnly = false) }
+        if (_uiState.value.hasSearched) runSearch(page = 1)
+    }
+
+    fun updateDownloadedOnly(enabled: Boolean) {
+        _uiState.update {
+            it.copy(
+                downloadedOnly = enabled,
+                // Ces filtres sont servis uniquement par l'API et ne sont pas
+                // tous portés par l'index local.
+                scope = if (enabled) LibraryScope.ALL else it.scope,
+                selectedInstitutionId = if (enabled) null else it.selectedInstitutionId,
+                sort = if (enabled) LibrarySort.RELEVANCE else it.sort
+            )
+        }
         if (_uiState.value.hasSearched) runSearch(page = 1)
     }
 
     fun updateSort(sort: LibrarySort) {
-        _uiState.update { it.copy(sort = sort) }
+        _uiState.update { it.copy(sort = sort, downloadedOnly = false) }
         if (_uiState.value.hasSearched) runSearch(page = 1)
     }
 
@@ -420,6 +454,7 @@ class LibraryViewModel(
             scope = LibraryScope.ALL,
             selectedTypeCode = null,
             selectedInstitutionId = null,
+            downloadedOnly = false,
             sort = LibrarySort.RELEVANCE
         ) }
         if (_uiState.value.hasSearched) runSearch(page = 1)
