@@ -4,6 +4,8 @@
 
 Ce dossier regroupe la documentation de l'application mobile Mibeko, destinée aux citoyens et à la diaspora du Congo-Brazzaville. Chaque document est daté et destiné à évoluer avec le code.
 
+**Décisions propres à ce dépôt** : [`decisions.md`](./decisions.md) (identifiants `APP-`). Les décisions transverses sont dans le registre `docs/decisions.md` du monorepo (dépôt `mibeko-docs`).
+
 ## Architecture en bref
 
 - **Compose Multiplatform** (Android + iOS) : l'interface et la logique sont écrites une seule fois en Kotlin, la quasi-totalité du code (~90 %) vit dans `composeApp/src/commonMain`. Les sourceSets `androidMain`/`iosMain` de `composeApp` ne portent que les implémentations spécifiques à chaque plateforme (client HTTP, Firebase). Depuis la migration AGP 10, le point d'entrée Android (Activity, Application, service FCM, manifeste) vit dans un module Gradle séparé, `:androidApp`, qui dépend de `:composeApp` — voir `migration-agp10.md`.

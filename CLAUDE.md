@@ -11,7 +11,7 @@ Le gating serveur existe (`EntitlementsResolver`, `GET /v1/me/entitlements`, `En
 ## Règles produit non négociables
 1. L'app n'affirme **jamais** qu'un texte n'existe pas. Sur échec réseau/API : « Je n'ai pas pu vérifier » + Réessayer. Un état vide ne s'affiche que sur un `Success` avec liste réellement vide.
 2. Aucun libellé ne promet une action que le backend ne fait pas.
-3. Un seul nom pour l'IA : **« Assistant Mibeko »**, partout. État actuel (non conforme, à corriger — voir `docs/decisions.md`) : le backend s'appelle « Mibeko IA » et l'app utilise 6 dénominations différentes (ChatScreen, HomeScreen, OnboardingScreen, SearchResultsScreen…). Ne pas ajouter une 7e.
+3. Un seul nom pour l'IA : **« Assistant Mibeko »**, partout. État actuel (non conforme, à corriger — décision D-021 du registre transverse) : le backend s'appelle « Mibeko IA » et l'app utilise 6 dénominations différentes (ChatScreen, HomeScreen, OnboardingScreen, SearchResultsScreen…). Ne pas ajouter une 7e.
 4. Les erreurs ne sont jamais avalées : `printStackTrace` comme seule gestion est interdit — il n'en reste aucune occurrence (résorbées le 29/08/2026), ne pas en réintroduire. Passer par `UiResult` + `MibekoErrorState`, et remonter l'exception par `recordException(e, context = "Classe.fonction")`.
 5. Pattern d'erreur standard, **livré** dans `util/UiResult.kt` :
    ```kotlin
@@ -38,7 +38,7 @@ Release : voir `.github/workflows/release-play.yml` (déclenché par un tag `v*.
 ## Analytics & observabilité (déjà branché — ne pas réinstaller un SDK)
 - **Mobile (Android + iOS)** : Firebase Analytics + Crashlytics, façade unique `MibekoAnalytics` (`util/MibekoAnalytics.kt`), interface `AnalyticsManager` en expect/actual. Invariants à préserver : jamais `setUserId`, jamais le texte d'une requête utilisateur, gating par consentement (préférence + `setAnalyticsCollectionEnabled`). iOS no-op uniquement si `GoogleService-Info.plist` absent du bundle (secret CI `IOS_GOOGLE_SERVICES_PLIST`).
 - **Web (site + front)** : Umami auto-hébergé (`stats.mibeko.fr`, provisionné par `vps_infra`), plomberie d'injection déjà écrite côté `mibeko-site` et `mibeko-front` — inactive tant que les secrets CI (`PUBLIC_UMAMI_*` / `VITE_UMAMI_*`) ne sont pas passés en `ARG` Docker.
-- **Ne pas proposer PostHog ni Plausible** — décision actée dans `docs/decisions.md` (01/08/2026), ce serait un doublon.
+- **Ne pas proposer PostHog ni Plausible** — décision D-008 du registre transverse (01/08/2026), ce serait un doublon.
 - Avant d'ajouter un événement, vérifier qu'il n'existe pas déjà sous un autre nom (`AnalyticsEvents` dans `MibekoAnalytics.kt`).
 
 ## Design system
@@ -47,7 +47,7 @@ Release : voir `.github/workflows/release-play.yml` (déclenché par un tag `v*.
 ## Conventions de travail
 - Feuille de route transverse : `docs/produit/feuille-de-route-2026-08.md` (dans le dépôt `docs/`) — exécuter phase par phase.
 - Avant de corriger un constat d'audit, **vérifier contre le code actuel** (les références fichier:ligne bougent vite sur ce projet).
-- Toute décision structurante = une ligne datée dans `docs/decisions.md` (dépôt `docs/`, transverse aux 7 dépôts).
+- Toute décision structurante s'écrit au format du registre (D-001) : dans `docs/decisions.md` de ce dépôt (préfixe `APP-`) si elle ne change que ce dépôt ; sinon dans le registre transverse, `docs/decisions.md` du monorepo (dépôt `mibeko-docs`, préfixe `D-`).
 - Commits en français, format `type(scope): titre court` à l'impératif, corps expliquant le POURQUOI. Un sujet cohérent par commit. Jamais sans l'accord explicite de l'utilisateur.
 
 ## Priorités actuelles
