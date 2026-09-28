@@ -6,6 +6,60 @@ publique. Chaque nouvelle mise à jour ajoute une section en haut du fichier.
 
 ---
 
+## 1.4.0 — 29 septembre 2026
+
+Une version pour bien commencer : un premier parcours de découverte partagé
+avec le site, et plusieurs corrections sur le partage, les liens et la lecture.
+
+### Nouveau
+
+- **Un guide de découverte en quatre étapes** à la création du compte : votre
+  cadre d'usage (besoins personnels, études, activité professionnelle), vos
+  centres d'intérêt, puis la découverte des textes hors ligne. Tout est
+  facultatif, « Plus tard » est toujours possible, et le guide se rejoue depuis
+  le Profil. Les réponses sont les mêmes que sur mibeko.fr.
+- **Vos textes téléchargés** se retrouvent d'un geste dans la Bibliothèque
+  (filtre « Téléchargés »).
+- **Le nombre de questions restantes** à l'Assistant Mibeko s'affiche dans la
+  conversation.
+
+### Corrigé
+
+- **Un lien mibeko.fr partagé** (par WhatsApp, par exemple) ouvrait bien le
+  texte, mais la flèche de retour ne faisait plus rien. Elle ramène désormais à
+  l'accueil.
+- **« Partager en PDF »** envoyait un fichier illisible quand le PDF n'était pas
+  inclus dans votre offre. L'application le dit désormais clairement.
+- **Votre téléphone et votre organisation** pouvaient être effacés en modifiant
+  votre profil depuis l'application. Ils sont conservés.
+- **Le lecteur** affiche la hiérarchie des textes (Livre, Titre, Chapitre) et
+  permet de nouveau de sélectionner, copier et naviguer par le sommaire.
+- **Les messages de l'Assistant** distinguent une limite atteinte pour la
+  minute, la journée ou le mois.
+
+### Sous le capot (fiabilité — pas pour la communication publique)
+
+- Onboarding : la plateforme envoyée à l'API est « mobile » (et non
+  « ios »/« android », refusé en 422) ; la dernière étape n'est plus annulée par
+  la fin du parcours (kmp#45). Trouvé en recette, jamais publié.
+- Retour après un lien : l'écran-relais du résolveur est retiré par type, et non
+  plus par instance (kmp#46).
+- Export PDF : `expectSuccess` sur le téléchargement, pour qu'un 403 lève une
+  erreur au lieu de livrer le corps JSON comme fichier (kmp#47).
+- Profil : les champs étendus sont lus sous `profile` (contrat courant de
+  `GET /v1/profile`) ; la 1.3.2 les lisait sous `mobile_profile`, toujours vide.
+- Démarrage par un lien : l'écran de démarrage ne reste plus sous le texte
+  ouvert (iOS).
+- Vérification de l'e-mail : l'écran bloquant est prêt, mais ne s'affiche que si
+  le serveur impose la vérification (`email_verification_required` effectif),
+  ce qui est éteint aujourd'hui (D-023). Sa réactivation suppose cette version
+  publiée et imposée.
+- Connus et reportés : sur Android, un lien reçu application déjà ouverte est
+  ignoré (kmp#51, présent depuis la 1.2) ; 22 titres vides en tête de la
+  Constitution, défaut du corpus et non de l'application (dashboard#215).
+
+---
+
 ## 1.3.2 — 30 août 2026
 
 Version de fiabilité, sans changement visible : un correctif préventif détecté
