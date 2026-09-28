@@ -33,7 +33,7 @@ class OnboardingApiServiceTest {
         }
 
         val data = OnboardingApiService(client, "https://api.test/api")
-            .journey("android", listOf("welcome", "single_choice"))
+            .journey("mobile", listOf("welcome", "single_choice"))
 
         assertTrue(data.available)
         assertEquals("in_progress", data.enrollment?.status)
@@ -43,7 +43,7 @@ class OnboardingApiServiceTest {
         assertEquals("personal", data.journey?.steps?.get(1)?.progress?.value?.toString()?.trim('"'))
         assertFalse(data.journey?.steps?.first()?.progress?.resolved ?: true)
         val url = requireNotNull(request).url.toString()
-        assertTrue(url.contains("platform=android"), url)
+        assertTrue(url.contains("platform=mobile"), url)
         assertTrue(url.contains("known_step_types"), url)
     }
 

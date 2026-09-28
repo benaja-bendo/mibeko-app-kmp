@@ -26,6 +26,13 @@ data class AccountOnboardingUiState(
     val themes: List<LibraryTheme> = emptyList(),
     val replay: Boolean = false,
     val finished: Boolean = false,
+    /**
+     * Posé quand la dernière action guidée emmène elle-même l'utilisateur
+     * ailleurs (« Ouvrir la Bibliothèque ») : la fin du parcours ne doit alors
+     * plus déclencher `onFinished`, qui naviguait vers l'Accueil juste après et
+     * annulait la navigation promise par le bouton.
+     */
+    val leftByGuidedAction: Boolean = false,
     val message: String? = null
 ) {
     val currentStep: OnboardingStep? get() = steps.getOrNull(currentIndex)
@@ -70,6 +77,7 @@ class AccountOnboardingViewModel(
     fun answer(value: JsonElement? = null, after: (() -> Unit)? = null) {
         val state = _uiState.value
         val step = state.currentStep ?: return
+        if (after != null) _uiState.update { it.copy(leftByGuidedAction = true) }
         viewModelScope.launch {
             // Le rejeu conserve les premières réussites. Comme la progression
             // serveur est terminale par étape, seule la dernière action guidée
