@@ -65,7 +65,7 @@ fun AccountOnboardingScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     LaunchedEffect(replay) { viewModel.initialize(replay) }
-    LaunchedEffect(state.finished) { if (state.finished) onFinished() }
+    LaunchedEffect(state.finished) { if (state.finished && !state.leftByGuidedAction) onFinished() }
     LaunchedEffect(state.currentStep?.key) { viewModel.markViewed() }
 
     Scaffold { padding ->
