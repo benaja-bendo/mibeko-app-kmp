@@ -4,6 +4,7 @@ import com.mibeko.mibeko.util.recordException
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.expectSuccess
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -255,10 +256,17 @@ class LegalApiService(
     }
 
     /**
-     * Download a file from a URL.
+     * Télécharge un fichier (export PDF d'un article ou d'un document).
+     *
+     * `expectSuccess` est activé pour CETTE requête : le client global ne
+     * l'active pas, si bien qu'un 403 (export réservé au Pro, dashboard#86)
+     * revenait comme des octets — le corps JSON de l'erreur — partagés ensuite
+     * sous un nom `.pdf`. Il lève désormais `ClientRequestException`, que les
+     * appelants traduisent en « réservé aux comptes Pro ».
      */
     suspend fun downloadFile(url: String): ByteArray {
         return client.get(url) {
+            expectSuccess = true
             timeout { requestTimeoutMillis = 300_000 }
         }.body<ByteArray>()
     }
