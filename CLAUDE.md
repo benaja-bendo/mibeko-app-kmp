@@ -45,10 +45,10 @@ Release : voir `.github/workflows/release-play.yml` (déclenché par un tag `v*.
 « Forêt » uniquement — déjà l'état du code (`ui/theme/Color.kt` : `#1E6B47` action, `#03271A` marque). Doc de référence : `docs/design-system.md` (pas `DESIGN.md`, qui n'existe plus). « Lex Gold » est une divergence de marque **assumée mais confinée au dashboard web** (`mibeko-front`) — ne jamais l'introduire côté mobile.
 
 ## Conventions de travail
-- Feuille de route transverse : `docs/produit/feuille-de-route-2026-08.md` (dans le dépôt `docs/`) — exécuter phase par phase.
+- Feuille de route : `docs/produit/feuille-de-route.md` du monorepo (dépôt `mibeko-docs`), section « App mobile » — Maintenant / Ensuite / Plus tard ; l'état des tickets est sur le tableau GitHub (champ « Horizon »).
 - Avant de corriger un constat d'audit, **vérifier contre le code actuel** (les références fichier:ligne bougent vite sur ce projet).
 - Toute décision structurante s'écrit au format du registre (D-001) : dans `docs/decisions.md` de ce dépôt (préfixe `APP-`) si elle ne change que ce dépôt ; sinon dans le registre transverse, `docs/decisions.md` du monorepo (dépôt `mibeko-docs`, préfixe `D-`).
 - Commits en français, format `type(scope): titre court` à l'impératif, corps expliquant le POURQUOI. Un sujet cohérent par commit. Jamais sans l'accord explicite de l'utilisateur.
 
 ## Priorités actuelles
-Phase 0 faite (push + tag `v1.1.1`) → Phase 1 en cours : pattern `UiResult` déployé écran par écran (Recherche Bibliothèque → Accueil → Notifications → Résolveur de liens), rebranchement des LazyRow `popularCodes`/`recentlyAdded` sur l'accueil, sélecteur « Citoyen / Professionnel » à la place de `ProfileSetup`. Pendant cette phase : pas de Stripe, pas de refonte de surfaces, pas de rebranding, pas de nouveau document stratégique (annexe B du plan).
+Le rôle de l'app est fixé par D-049 (registre transverse, 28/09/2026) : **compagnon grand public** (Assistant, lecture, hors-ligne, alertes), chiffre à suivre = retour dans les 7 jours. **Aucune fonction ne vient sur le mobile parce que le web l'a** ; la parité porte sur les droits (entitlements), jamais sur les écrans. Pas de dossier d'affaire, pas d'achat ni de lien d'achat (D-034). L'ordre des chantiers (publier la 1.4, onglet « Moi » #40, notifications #34…) est dans la feuille de route ci-dessus — ne pas le recopier ici.
