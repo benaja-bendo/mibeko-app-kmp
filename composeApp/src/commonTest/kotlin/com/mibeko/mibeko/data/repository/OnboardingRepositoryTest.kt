@@ -41,8 +41,13 @@ class OnboardingRepositoryTest {
     @Test
     fun `offline mutation stays isolated then server truth wins after reconnect`() = runTest {
         var networkCalls = 0
+        val sentPlatforms = mutableListOf<String>()
         val engine = MockEngine { request ->
             networkCalls++
+            request.url.parameters["platform"]?.let { sentPlatforms += it }
+            (request.body as? io.ktor.http.content.TextContent)?.text
+                ?.let { Regex("\"platform\":\"([^\"]+)\"").find(it)?.groupValues?.get(1) }
+                ?.let { sentPlatforms += it }
             if (request.url.encodedPath.endsWith("/journey")) {
                 respond(
                     content = SERVER_JOURNEY,
@@ -83,6 +88,11 @@ class OnboardingRepositoryTest {
             "personal",
             refreshed.data.journey?.steps?.first()?.progress?.value?.toString()?.trim('"'),
             "Le GET serveur après rejeu reste la vérité affichée"
+        )
+        assertTrue(sentPlatforms.size >= 2, "le rejeu et le GET doivent déclarer une plateforme : $sentPlatforms")
+        assertTrue(
+            sentPlatforms.all { it == OnboardingRepository.PLATFORM },
+            "l'API n'accepte que web|mobile (422 sinon) : $sentPlatforms"
         )
     }
 

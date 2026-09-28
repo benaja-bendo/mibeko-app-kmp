@@ -6,7 +6,6 @@ import com.mibeko.mibeko.data.remote.OnboardingJourneyData
 import com.mibeko.mibeko.data.remote.OnboardingProgress
 import com.mibeko.mibeko.data.remote.OnboardingStepMutation
 import com.mibeko.mibeko.getCurrentTimeMillis
-import com.mibeko.mibeko.getPlatform
 import com.mibeko.mibeko.util.recordException
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import io.ktor.client.plugins.ClientRequestException
@@ -49,10 +48,18 @@ class OnboardingRepository(
 ) {
     companion object {
         val KNOWN_STEP_TYPES = listOf("welcome", "single_choice", "multi_choice", "optional_field", "guided_action", "checklist")
+
+        /**
+         * Valeur de `platform` attendue par l'API d'onboarding : `web` ou
+         * `mobile` (`OnboardingJourney::PLATFORMS`, dashboard#136). Le serveur
+         * refuse `ios`/`android` en 422 : le parcours ne se chargeait jamais et
+         * aucune réponse n'était enregistrée. Android et iOS partagent la même
+         * portée d'étapes (`scope = mobile`), il n'y a donc rien à distinguer ici.
+         */
+        const val PLATFORM = "mobile"
     }
 
-    private val platform: String
-        get() = if (getPlatform().name.lowercase().contains("ios")) "ios" else "android"
+    private val platform: String = PLATFORM
 
     suspend fun load(): OnboardingLoadResult {
         if (preferences.getUserId() == null && preferences.getUserEmail() == null) {
