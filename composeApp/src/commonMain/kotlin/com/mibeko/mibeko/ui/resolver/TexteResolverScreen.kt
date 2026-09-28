@@ -55,7 +55,12 @@ fun TexteResolverScreen(docSlug: String, articleNumber: String?) {
         if (destination != null) {
             navController.navigate(destination) {
                 // Retire l'écran-relais de la pile : le retour ne le rejoue pas.
-                popUpTo(Screen.TexteResolver(docSlug, articleNumber)) { inclusive = true }
+                // Par TYPE, pas par instance : l'entrée créée par le deep link
+                // ne porte pas forcément les mêmes arguments (articleNumber absent
+                // ou nul), et un popUpTo sur une instance qui ne correspond pas ne
+                // retire rien — le retour faisait réapparaître le relais, qui
+                // renvoyait aussitôt vers le texte (retour « bloqué », kmp#46).
+                popUpTo<Screen.TexteResolver> { inclusive = true }
                 launchSingleTop = true
             }
         }
@@ -63,7 +68,7 @@ fun TexteResolverScreen(docSlug: String, articleNumber: String?) {
 
     val goHome = {
         navController.navigate(Screen.Home) {
-            popUpTo(Screen.TexteResolver(docSlug, articleNumber)) { inclusive = true }
+            popUpTo<Screen.TexteResolver> { inclusive = true }
             launchSingleTop = true
         }
     }
