@@ -69,4 +69,6 @@ object AnalyticsEvents {
     const val APP_UPDATE_FORCED_CLICKED = "app_update_forced_clicked"
     const val REVIEW_REQUESTED = "review_requested"
     const val CONTACT_SUBMITTED = "contact_submitted"
+    /** Carte « Mibeko Apps » de « Moi » : le lien est parti par le partage natif (kmp#40). */
+    const val MIBEKO_APPS_LINK_SHARED = "mibeko_apps_link_shared"
 }

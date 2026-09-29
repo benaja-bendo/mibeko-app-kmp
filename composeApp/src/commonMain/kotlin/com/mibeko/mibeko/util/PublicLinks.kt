@@ -20,6 +20,9 @@ object PublicLinks {
     /** Origine du portail citoyen. Le domaine réel est mibeko.fr (pas .cg). */
     const val SITE_ORIGIN: String = "https://mibeko.fr"
 
+    /** Mibeko Apps, l'espace de travail sur ordinateur (D-049). */
+    const val MIBEKO_APPS: String = "https://app.mibeko.fr"
+
     /**
      * Lien public d'un document. Retombe sur [SITE_ORIGIN] si le slug manque.
      */

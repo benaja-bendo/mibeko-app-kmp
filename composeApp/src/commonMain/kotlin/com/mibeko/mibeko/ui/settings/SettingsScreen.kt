@@ -680,6 +680,38 @@ fun SettingsScreen() {
                 )
             }
 
+            // --- MIBEKO APPS (kmp#40, D-049) --- seulement pour un cadre
+            // d'usage professionnel : le mobile ne fait pas le travail
+            // d'affaire, il indique où il se fait. Ni prix ni achat (D-034).
+            if (isAuthenticated && uiState.usageContext == "professional") {
+                SettingsGroup("SUR ORDINATEUR") {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Mibeko Apps, sur ordinateur",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Suivez vos affaires et leurs échéances, et rédigez à partir de modèles, " +
+                                "depuis votre ordinateur.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.shareMibekoAppsLink() },
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("M'envoyer le lien", style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
+                }
+            }
+
             // --- COMPTE ---
             if (isAuthenticated) {
                 SettingsGroup("COMPTE") {
