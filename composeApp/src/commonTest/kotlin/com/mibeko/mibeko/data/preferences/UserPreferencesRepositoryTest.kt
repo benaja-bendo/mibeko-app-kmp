@@ -23,6 +23,18 @@ class UserPreferencesRepositoryTest {
     }
 
     @Test
+    fun `les notifications sont actives par defaut mais un refus explicite est garde`() {
+        val repository = UserPreferencesRepository(MapSettings())
+
+        // APP-004 : l'autorisation du système, demandée au bon moment, recueille le consentement.
+        assertTrue(repository.isNotificationsEnabled())
+        assertFalse(repository.wasNotificationPermissionAsked())
+
+        repository.setNotificationsEnabled(false)
+        assertFalse(repository.isNotificationsEnabled())
+    }
+
+    @Test
     fun `la verification email est fausse par defaut et effacee a la deconnexion`() {
         val repository = UserPreferencesRepository(MapSettings())
 

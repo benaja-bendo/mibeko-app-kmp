@@ -18,6 +18,9 @@ import com.mibeko.mibeko.data.remote.SlugFetchResult
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import com.mibeko.mibeko.util.recordException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
@@ -66,6 +69,15 @@ class LocalLegalRepository(
     private val networkChecker: NetworkConnectivityChecker,
     private val userPreferencesRepository: UserPreferencesRepository
 ) {
+
+    private val _offlineDownloads = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /**
+     * Émis après chaque texte réellement mis à disposition hors-ligne à la
+     * demande de l'utilisateur : c'est le « bon moment » pour proposer les
+     * notifications (APP-004, kmp#34).
+     */
+    val offlineDownloads: SharedFlow<Unit> = _offlineDownloads.asSharedFlow()
 
     /**
      * Synchronisation initiale du corpus, REPRENABLE.
@@ -426,6 +438,7 @@ class LocalLegalRepository(
         // badge menteur : rien de consultable une fois hors connexion.
         if (articles.isNotEmpty()) {
             mibekoDao.updateDocumentDownloadStatus(documentId, true)
+            _offlineDownloads.tryEmit(Unit)
         }
         return articles.isNotEmpty()
     }
@@ -585,6 +598,7 @@ class LocalLegalRepository(
 
             mibekoDao.upsertNodes(listOf(node))
             mibekoDao.upsertArticles(listOf(entity))
+            _offlineDownloads.tryEmit(Unit)
         } else {
             mibekoDao.updateArticleOfflineStatus(article.id, false)
         }

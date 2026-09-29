@@ -37,6 +37,7 @@ class UserPreferencesRepository(private val settings: Settings) {
         internal const val KEY_APP_THEME = "app_theme"
         internal const val KEY_LAST_SYNC_TIMESTAMP = "last_sync_timestamp"
         internal const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
+        internal const val KEY_NOTIFICATION_PERMISSION_ASKED = "notification_permission_asked"
         internal const val KEY_DISCLAIMER_ACCEPTED = "disclaimer_accepted"
         internal const val KEY_TEXT_SIZE = "text_size"
         internal const val KEY_READER_THEME = "reader_theme"
@@ -309,10 +310,21 @@ class UserPreferencesRepository(private val settings: Settings) {
     }
 
     /**
-     * Checks if notifications are enabled by the user.
+     * Réglage « Notifications » de l'application. Activé par défaut (APP-004,
+     * kmp#34) : c'est l'autorisation du système, demandée au bon moment, qui
+     * recueille le consentement. Un choix explicite « désactivé » reste
+     * respecté, puisqu'il est enregistré.
      */
     fun isNotificationsEnabled(): Boolean {
-        return settings.getBoolean(KEY_NOTIFICATIONS_ENABLED, false)
+        return settings.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
+    }
+
+    /** L'autorisation du système a-t-elle déjà été demandée hors des Réglages ? Une seule fois (APP-004). */
+    fun wasNotificationPermissionAsked(): Boolean =
+        settings.getBoolean(KEY_NOTIFICATION_PERMISSION_ASKED, false)
+
+    fun setNotificationPermissionAsked(asked: Boolean) {
+        settings.putBoolean(KEY_NOTIFICATION_PERMISSION_ASKED, asked)
     }
 
     /**
