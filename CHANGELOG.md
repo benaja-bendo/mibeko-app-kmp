@@ -6,6 +6,79 @@ publique. Chaque nouvelle mise à jour ajoute une section en haut du fichier.
 
 ---
 
+## 1.5.0 — 29 septembre 2026
+
+Une application plus simple : quatre onglets, l'Assistant Mibeko à portée de
+main, vos favoris dans « Moi ». Et une série de corrections sur les liens, la
+recherche hors ligne, la connexion et l'ouverture des PDF.
+
+### Nouveau
+
+- **Quatre onglets : Accueil, Bibliothèque, Assistant, Moi.** L'Assistant
+  Mibeko a désormais son propre onglet.
+- **« Moi » remplace « Profil »** et commence par **« Mes favoris »** : les
+  articles marqués d'un signet. Dans un article, le signet ajoute ou retire un
+  favori d'un seul geste, et vos favoris se retrouvent sur tous vos appareils.
+- **Les dossiers quittent l'application.** Ceux que vous aviez créés restent
+  enregistrés sur votre compte et se consultent sur app.mibeko.fr.
+- **Les alertes de nouveaux textes** : après votre premier téléchargement d'un
+  texte, l'application vous propose d'autoriser les notifications (Android).
+- **Pour les professionnels du droit**, « Moi » présente Mibeko Apps, l'espace
+  de travail sur ordinateur, et permet de s'en envoyer le lien.
+
+### Corrigé
+
+- **Un lien mibeko.fr** reçu alors que l'application était déjà ouverte
+  n'ouvrait pas le texte sur Android. Il l'ouvre désormais.
+- **La question posée avant de vous connecter** n'est plus renvoyée — ni
+  décomptée de vos questions — à chaque retour arrière après la connexion.
+- **Le nombre de questions restantes** de l'Assistant se met à jour après
+  chaque réponse.
+- **La recherche hors ligne** affiche le nom du texte dans chaque résultat, et
+  non plus seulement « Chapitre II ».
+- **Les filtres de recherche** : hors ligne, le type de texte s'applique ; les
+  filtres que l'application ne peut pas appliquer sans connexion sont signalés.
+- **« Ouvrir le document »** ne reste plus sans effet sur un téléphone Android
+  sans lecteur PDF : le PDF s'ouvre dans le navigateur, ou un message
+  l'explique.
+
+### Sous le capot (fiabilité — pas pour la communication publique)
+
+- Liens : une composition ne retire plus que son propre écouteur de liens ; un
+  démarrage par lien relançait l'activité et effaçait celui de la nouvelle
+  (kmp#51). Même famille : `ActivityProvider.clear(activity)` — après un
+  démarrage par lien, aucune fenêtre système ne pouvait plus s'ouvrir, demande
+  d'avis comprise.
+- Favoris : identifiant du dossier Favoris dérivé du compte (UUID v8) et fusion
+  des doublons à la synchronisation (kmp#11, D-052). Mise à jour 1.4 → 1.5
+  vérifiée : le Favoris de la 1.4 est fusionné dans le nouveau, les dossiers
+  ordinaires restent intacts sur le serveur.
+- Navigation : `Screen.Assistant` (onglet) et `Screen.Favorites` ; écrans de
+  dossiers, feuille « Ajouter à un dossier » et réglage « Alertes Dossiers »
+  retirés (kmp#40, APP-003, D-052). La synchronisation des favoris part de
+  « Moi », de « Mes favoris » et du signet du lecteur.
+- Notifications : réglage activé par défaut ; appareil enregistré seulement si
+  l'autorisation système est accordée ; demande unique après le premier
+  téléchargement, jamais sur iPhone avant kmp#18 ; Android 12 et avant, sans
+  fenêtre système, inscrits dès le démarrage (kmp#34, APP-004).
+- Recherche hors ligne : titre et libellé du document dans les requêtes
+  locales, fil d'Ariane de la forme de l'API (kmp#10) ; type de texte appliqué
+  au repli local, périmètre, institution et tri nommés (kmp#12).
+- PDF Android : repli sur le navigateur, message sinon, `recordException`
+  (kmp#23).
+- Connexion : l'écran de connexion est retiré par type (`popUpTo<Screen.Login>`)
+  et non plus par instance ; avec une question d'invité en attente, il restait
+  sous la conversation et chaque retour la renvoyait (kmp#63, présent depuis la
+  1.4).
+- Assistant : compteur relu à chaque affichage et après chaque réponse ;
+  l'onglet gardait le chiffre lu à sa création (kmp#62).
+- Connus et reportés : le clavier de la conversation fait remonter toute la
+  fenêtre (déjà le cas en 1.4) ; push iPhone (kmp#18) ; « Plus tard » du guide
+  de découverte le repropose à chaque lancement (statut `postponed`, depuis le
+  12/09 — question produit).
+
+---
+
 ## 1.4.0 — 29 septembre 2026
 
 Une version pour bien commencer : un premier parcours de découverte partagé
