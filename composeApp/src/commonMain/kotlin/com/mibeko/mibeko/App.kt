@@ -72,6 +72,7 @@ import com.mibeko.mibeko.util.UpdateState
 import com.mibeko.mibeko.util.VersionGate
 import com.mibeko.mibeko.util.addFocusCleaner
 import com.mibeko.mibeko.util.getAppVersionName
+import com.mibeko.mibeko.util.recordException
 import org.koin.compose.koinInject
 
 @Composable
@@ -90,9 +91,10 @@ fun App() {
     MibekoTheme(darkTheme = isDarkTheme) {
         val navController = rememberNavController()
 
-        // Deep links transmis par la couche native (iOS : onOpenURL).
+        // Deep links transmis par la couche native (iOS : onOpenURL ;
+        // Android : onNewIntent, application déjà ouverte).
         DisposableEffect(navController) {
-            ExternalUriHandler.listener = { uri ->
+            val listener: (String) -> Unit = { uri ->
                 runCatching {
                     // Démarrage à froid : l'URI arrive pendant que Splash est
                     // encore l'entrée courante (son délai d'amorçage n'est pas
@@ -108,9 +110,12 @@ fun App() {
                         }
                     }
                     navController.navigate(NavUri(uri))
-                }
+                }.onFailure { recordException(it, context = "App.deepLink") }
             }
-            onDispose { ExternalUriHandler.listener = null }
+            ExternalUriHandler.listener = listener
+            // Pas de retrait inconditionnel : une composition détruite après
+            // qu'une autre s'est enregistrée effacerait l'écouteur de celle-ci.
+            onDispose { ExternalUriHandler.unregister(listener) }
         }
 
         // Session expirée (401 sur route authentifiée, jeton déjà purgé par le
