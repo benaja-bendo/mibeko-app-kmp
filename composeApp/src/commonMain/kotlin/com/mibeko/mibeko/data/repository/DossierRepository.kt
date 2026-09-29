@@ -77,27 +77,46 @@ class DossierRepository(
         return dao.searchDossiers(query)
     }
 
+    /**
+     * Le dossier Favoris du compte, sous un identifiant dérivé du compte et
+     * donc commun à tous ses appareils (kmp#11). Sans compte connu (invité, ou
+     * session ouverte avant que l'identifiant ne soit enregistré), on garde un
+     * identifiant aléatoire : il sera fondu dans celui du compte à la
+     * prochaine synchronisation connectée.
+     */
     @OptIn(ExperimentalUuidApi::class)
     suspend fun getOrCreateFavoritesDossier(): DossierEntity {
+        consolidateFavorites()
+        val canonicalId = favoritesDossierId()
         val favorisList = dao.getDossiersByTag(DossierTag.FAVORIS).first()
-        if (favorisList.isNotEmpty()) {
-            return favorisList.first()
-        }
+        favorisList.firstOrNull { canonicalId == null || it.id == canonicalId }?.let { return it }
 
-        val dossierId = Uuid.random().toString()
-        val now = getCurrentTimeMillis()
-        val dossier = DossierEntity(
-            id = dossierId,
-            name = "Mes Favoris",
-            legal_domain = "Général",
-            tag = DossierTag.FAVORIS,
-            description = "Collection automatique de vos articles favoris",
-            color = "#8F4C31",
-            created_at = now,
-            updated_at = now
+        val dossier = FavoritesDossier.create(
+            id = canonicalId ?: Uuid.random().toString(),
+            now = getCurrentTimeMillis()
         )
         dao.insertDossier(dossier)
         return dossier
+    }
+
+    private fun favoritesDossierId(): String? =
+        preferences.getUserId()?.let(FavoritesDossier::idFor)
+
+    /**
+     * Fond les dossiers Favoris en double dans celui du compte.
+     * Renvoie `true` si la base locale a changé.
+     */
+    private suspend fun consolidateFavorites(): Boolean {
+        val canonicalId = favoritesDossierId() ?: return false
+        val now = getCurrentTimeMillis()
+        val plan = FavoritesDossier.consolidate(
+            canonicalId = canonicalId,
+            favoris = dao.getDossiersByTag(DossierTag.FAVORIS).first(),
+            links = dao.getDossierArticlesOnce(),
+            now = now
+        ) ?: return false
+        dao.applyFavoritesConsolidation(plan.canonical, plan.links, plan.duplicateIds, deletedAt = now)
+        return true
     }
 
     @OptIn(ExperimentalUuidApi::class)
@@ -219,39 +238,52 @@ class DossierRepository(
             _syncState.value = DossierSyncState.Syncing
             try {
                 guardAccountSwitch()
-
-                val pendingDeletions = dao.getPendingDossierDeletions()
-                val request = DossierSyncRequest(
-                    dossiers = buildLocalSnapshot(),
-                    deleted_ids = pendingDeletions.map { it.id }
-                )
-
-                val response = dossierApiService.sync(request)
-                val data = response.data
-                if (!response.success || data == null) {
-                    _syncState.value = DossierSyncState.Error(
-                        response.message?.ifBlank { null } ?: "Synchronisation impossible"
-                    )
-                    return
-                }
-
-                dao.applyDossierSyncState(
-                    dossiers = data.dossiers.map { it.toEntity() },
-                    linksByDossier = data.dossiers.associate { dossier ->
-                        dossier.id to dossier.articles.map { it.toEntity(dossier.id) }
-                    },
-                    deletedIds = data.deleted_ids
-                )
-                dao.clearPendingDossierDeletions(pendingDeletions.map { it.id })
-
-                val syncedAt = data.synced_at.takeIf { it > 0 } ?: getCurrentTimeMillis()
-                preferences.setDossierLastSyncAt(syncedAt)
-                _syncState.value = DossierSyncState.Synced(syncedAt)
+                consolidateFavorites()
+                if (!pushAndApply()) return
+                // Le serveur peut renvoyer le dossier Favoris d'un autre
+                // appareil, encore sous un identifiant aléatoire : on le fond
+                // dans celui du compte et on pousse le résultat tout de suite.
+                if (consolidateFavorites()) pushAndApply()
             } catch (e: Exception) {
                 recordException(e, context = "DossierRepository.sync")
                 _syncState.value = DossierSyncState.Error(e.message ?: "Erreur réseau")
             }
         }
+    }
+
+    /**
+     * Pousse l'état local, puis applique l'état fusionné renvoyé par le
+     * serveur. Renvoie `false` si le serveur a refusé la synchronisation.
+     */
+    private suspend fun pushAndApply(): Boolean {
+        val pendingDeletions = dao.getPendingDossierDeletions()
+        val request = DossierSyncRequest(
+            dossiers = buildLocalSnapshot(),
+            deleted_ids = pendingDeletions.map { it.id }
+        )
+
+        val response = dossierApiService.sync(request)
+        val data = response.data
+        if (!response.success || data == null) {
+            _syncState.value = DossierSyncState.Error(
+                response.message?.ifBlank { null } ?: "Synchronisation impossible"
+            )
+            return false
+        }
+
+        dao.applyDossierSyncState(
+            dossiers = data.dossiers.map { it.toEntity() },
+            linksByDossier = data.dossiers.associate { dossier ->
+                dossier.id to dossier.articles.map { it.toEntity(dossier.id) }
+            },
+            deletedIds = data.deleted_ids
+        )
+        dao.clearPendingDossierDeletions(pendingDeletions.map { it.id })
+
+        val syncedAt = data.synced_at.takeIf { it > 0 } ?: getCurrentTimeMillis()
+        preferences.setDossierLastSyncAt(syncedAt)
+        _syncState.value = DossierSyncState.Synced(syncedAt)
+        return true
     }
 
     /**
