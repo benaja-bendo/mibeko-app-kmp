@@ -43,7 +43,8 @@ fun ProfileSetupScreen(
                 else -> Screen.Home
             }
             navController.navigate(destination) {
-                popUpTo(Screen.ProfileSetup()) { inclusive = true }
+                // Par type : voir LoginScreen.
+                popUpTo<Screen.ProfileSetup> { inclusive = true }
             }
         }
     }

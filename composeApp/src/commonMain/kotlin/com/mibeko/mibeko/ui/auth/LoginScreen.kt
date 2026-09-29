@@ -59,7 +59,13 @@ fun LoginScreen(
                 )
             }
             navController.navigate(destination) {
-                popUpTo(Screen.Login()) { inclusive = true }
+                // Par type, jamais par instance : `Screen.Login()` ne désigne
+                // que l'entrée SANS question en attente. Avec une question,
+                // Login restait sous la conversation ; un retour le rouvrait,
+                // son état « connecté » relançait tout le parcours et la
+                // question repartait, décomptée une fois de plus (kmp#63,
+                // même piège que kmp#46).
+                popUpTo<Screen.Login> { inclusive = true }
             }
         }
     }
