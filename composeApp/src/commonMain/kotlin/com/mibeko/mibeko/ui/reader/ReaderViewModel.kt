@@ -187,9 +187,15 @@ class ReaderViewModel(
                 if (newStatus) {
                     analytics.logEvent(AnalyticsEvents.FAVORITE_ADDED)
                 }
+                _snackbarMessage.value = if (newStatus) "Ajouté à Mes favoris" else "Retiré de Mes favoris"
 
                 // Reload article to update UI state
                 loadArticle(currentArticle.id)
+
+                // Pousse le favori tout de suite vers les autres appareils :
+                // l'onglet Dossiers, qui synchronisait, n'existe plus. Sans
+                // compte ou sans réseau, syncNow ne fait rien.
+                dossierRepository.syncNow()
             } catch (e: Exception) {
                 // Chemin favoris = crash opaque historique (audit 07/2026) : on
                 // remonte l'exception au collecteur avant de l'afficher.

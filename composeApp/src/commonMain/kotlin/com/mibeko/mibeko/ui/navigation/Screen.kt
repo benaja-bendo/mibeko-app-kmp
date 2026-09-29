@@ -77,9 +77,6 @@ sealed class Screen {
     @Serializable
     data class TexteResolver(val docSlug: String, val articleNumber: String? = null) : Screen()
     
-    @Serializable
-    data object Dossiers : Screen()
-
     /**
      * Onglet « Assistant » (APP-003) : une conversation neuve, sans flèche de
      * retour. Distinct de [Chat], qui s'empile au-dessus d'un autre écran avec
@@ -103,9 +100,6 @@ sealed class Screen {
 
     @Serializable
     data object Contact : Screen()
-    
-    @Serializable
-    data class DossierDetail(val dossierId: String) : Screen()
     
     @Serializable
     data object OfficialJournalList : Screen()
