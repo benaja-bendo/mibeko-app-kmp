@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        ActivityProvider.clear()
+        ActivityProvider.clear(this)
     }
 }
 
