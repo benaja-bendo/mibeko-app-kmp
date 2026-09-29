@@ -8,7 +8,6 @@ import com.mibeko.mibeko.data.remote.AiChatReference
 import com.mibeko.mibeko.data.remote.AiMode
 import com.mibeko.mibeko.data.remote.AiStreamEvent
 import com.mibeko.mibeko.data.remote.AssistantReference
-import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.remote.RemoteEntitlements
 import com.mibeko.mibeko.getCurrentTimeMillis
 import com.mibeko.mibeko.util.AnalyticsEvents
@@ -143,7 +142,8 @@ data class ReferencePickerState(
 class ChatViewModel(
     private val aiApiService: AiChatApi,
     private val analytics: MibekoAnalytics? = null,
-    private val authApiService: AuthApiService? = null
+    /** GET /v1/me/entitlements ; null : aucun compteur (tests). */
+    private val fetchEntitlements: (suspend () -> RemoteEntitlements?)? = null
 ) : ViewModel() {
 
     private val _chatState = MutableStateFlow<ChatState>(ChatState.Idle)
@@ -153,22 +153,32 @@ class ChatViewModel(
     // rôle local — seule source : GET /v1/me/entitlements.
     private val _entitlements = MutableStateFlow<UiResult<RemoteEntitlements>>(UiResult.Loading)
     val entitlements: StateFlow<UiResult<RemoteEntitlements>> = _entitlements.asStateFlow()
+    private var entitlementsJob: Job? = null
 
-    init {
-        loadEntitlements()
-    }
-
+    /**
+     * Relit le compteur. Appelé à chaque affichage de l'écran et après chaque
+     * réponse : l'onglet Assistant garde son ViewModel d'un onglet à l'autre,
+     * et un compteur lu une seule fois à la création restait figé jusqu'au
+     * redémarrage — voire masqué, si l'onglet avait été ouvert avant la
+     * connexion (kmp#62). Un chiffre déjà affiché le reste pendant la
+     * relecture, pour que la ligne ne clignote pas à chaque question.
+     */
     fun loadEntitlements() {
-        val service = authApiService ?: return
-        viewModelScope.launch {
-            _entitlements.value = UiResult.Loading
+        val fetch = fetchEntitlements ?: return
+        entitlementsJob?.cancel()
+        entitlementsJob = viewModelScope.launch {
+            if (_entitlements.value !is UiResult.Success) {
+                _entitlements.value = UiResult.Loading
+            }
             try {
-                val data = service.getEntitlements().data
+                val data = fetch()
                 _entitlements.value = if (data != null) {
                     UiResult.Success(data)
                 } else {
                     UiResult.Error(offline = false, retry = ::loadEntitlements)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 recordException(e, context = "ChatViewModel.loadEntitlements")
                 _entitlements.value = UiResult.Error(offline = true, retry = ::loadEntitlements)
@@ -403,6 +413,9 @@ class ChatViewModel(
             } catch (e: Exception) {
                 _chatState.value = buildFailureState(e, message, aiMessageId)
             }
+            // La question vient d'être décomptée côté serveur, ou refusée
+            // pour quota (429) : dans les deux cas, le chiffre affiché a changé.
+            loadEntitlements()
         }
     }
 
