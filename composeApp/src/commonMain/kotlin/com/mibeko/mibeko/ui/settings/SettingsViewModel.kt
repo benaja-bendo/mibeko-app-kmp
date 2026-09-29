@@ -115,6 +115,19 @@ class SettingsViewModel(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
+    /**
+     * Carte « Mibeko Apps, sur ordinateur » (kmp#40, D-049) : le partage
+     * natif du téléphone envoie le lien là où le professionnel travaille
+     * (e-mail, WhatsApp). Aucune route d'API, ni prix ni achat (D-034).
+     */
+    fun shareMibekoAppsLink() {
+        contentSharer.shareText(
+            text = "Mibeko Apps, pour travailler sur ordinateur : ${com.mibeko.mibeko.util.PublicLinks.MIBEKO_APPS}",
+            title = "Mibeko Apps"
+        )
+        analytics.logEvent(AnalyticsEvents.MIBEKO_APPS_LINK_SHARED)
+    }
+
     init {
         loadInitialState()
         refreshDiskUsage()
