@@ -10,6 +10,8 @@ import com.mibeko.mibeko.data.remote.RemoteAssistantQuota
 import com.mibeko.mibeko.data.remote.RemoteEntitlementFeatures
 import com.mibeko.mibeko.data.remote.RemoteEntitlementQuotas
 import com.mibeko.mibeko.data.remote.RemoteEntitlements
+import com.mibeko.mibeko.util.UiResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -293,5 +295,86 @@ class ChatViewModelTest {
         assertEquals("Le préavis est de trois mois.", state.messages.last().content)
         assertFalse(state.isTyping)
         assertNull(state.inlineError)
+    }
+
+    // --- Compteur : l'onglet Assistant garde son ViewModel, le chiffre doit suivre ---
+
+    @Test
+    fun `le compteur est relu apres chaque reponse`() = runTest(dispatcher) {
+        var used = 0
+        val api = FakeAiChatApi(streamFactory = {
+            flow {
+                used++ // le serveur décompte la question
+                emit(AiStreamEvent.Delta("Réponse"))
+            }
+        })
+        val viewModel = ChatViewModel(api, fetchEntitlements = { fakeEntitlements(used = used, limit = 50) })
+
+        viewModel.loadEntitlements()
+        dispatcher.scheduler.advanceUntilIdle()
+        viewModel.sendMessage("Question")
+        dispatcher.scheduler.advanceUntilIdle()
+
+        val shown = viewModel.entitlements.value as UiResult.Success
+        assertEquals("49 questions restantes", assistantQuotaSummary(shown.data))
+    }
+
+    @Test
+    fun `le compteur est relu apres un envoi refuse`() = runTest(dispatcher) {
+        var reads = 0
+        val api = FakeAiChatApi(streamFactory = { flow { throw RuntimeException("429") } })
+        val viewModel = ChatViewModel(api, fetchEntitlements = {
+            reads++
+            fakeEntitlements(used = 50, limit = 50)
+        })
+
+        viewModel.sendMessage("Question")
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, reads)
+        val shown = viewModel.entitlements.value as UiResult.Success
+        assertEquals("Quota atteint", assistantQuotaSummary(shown.data))
+    }
+
+    @Test
+    fun `le compteur apparait au retour sur l onglet apres connexion`() = runTest(dispatcher) {
+        var connected = false
+        val viewModel = ChatViewModel(FakeAiChatApi(), fetchEntitlements = {
+            if (connected) fakeEntitlements(used = 0, limit = 50) else null
+        })
+
+        viewModel.loadEntitlements() // onglet ouvert en invité
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(viewModel.entitlements.value is UiResult.Error)
+
+        connected = true
+        viewModel.loadEntitlements() // l'écran est réaffiché après la connexion
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(viewModel.entitlements.value is UiResult.Success)
+    }
+
+    @Test
+    fun `un compteur affiche reste visible pendant sa relecture`() = runTest(dispatcher) {
+        val secondRead = CompletableDeferred<Unit>()
+        var reads = 0
+        val viewModel = ChatViewModel(FakeAiChatApi(), fetchEntitlements = {
+            reads++
+            if (reads > 1) secondRead.await()
+            fakeEntitlements(used = reads, limit = 50)
+        })
+
+        viewModel.loadEntitlements()
+        dispatcher.scheduler.advanceUntilIdle()
+        viewModel.loadEntitlements()
+        dispatcher.scheduler.runCurrent()
+
+        // Relecture en cours : l'ancien chiffre reste, jamais « Loading ».
+        assertTrue(viewModel.entitlements.value is UiResult.Success)
+
+        secondRead.complete(Unit)
+        dispatcher.scheduler.advanceUntilIdle()
+        val shown = viewModel.entitlements.value as UiResult.Success
+        assertEquals("48 questions restantes", assistantQuotaSummary(shown.data))
     }
 }

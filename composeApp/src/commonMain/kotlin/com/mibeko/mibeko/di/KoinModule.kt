@@ -217,7 +217,15 @@ val commonModule = module {
     viewModel { LibraryViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { DownloadsViewModel(get()) }
     viewModel { NotificationsViewModel(get(), get()) }
-    viewModel { ChatViewModel(get(), get(), get()) }
+    viewModel {
+        val authApiService = get<AuthApiService>()
+        val preferences = get<UserPreferencesRepository>()
+        // Un invité n'a pas de compteur : ne pas appeler l'API pour rapporter
+        // un refus à chaque affichage de l'onglet.
+        ChatViewModel(get(), get(), fetchEntitlements = {
+            if (preferences.isLoggedIn()) authApiService.getEntitlements().data else null
+        })
+    }
     viewModel { ConversationHistoryViewModel(get()) }
     viewModel { AccountOnboardingViewModel(get(), get(), get()) }
     viewModel { com.mibeko.mibeko.ui.contact.ContactViewModel(get(), get(), get()) }

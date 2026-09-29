@@ -99,6 +99,13 @@ fun ChatScreen(
         viewModel.initChat(conversationId, initialPrompt)
     }
 
+    // À chaque affichage, retour sur l'onglet compris : le ViewModel de
+    // l'onglet survit, son compteur doit suivre (connexion, questions posées
+    // depuis une autre conversation).
+    LaunchedEffect(Unit) {
+        viewModel.loadEntitlements()
+    }
+
     // Référence apportée par le lecteur : elle apparaît comme une puce
     // épinglée, l'utilisateur pose ensuite sa question librement.
     LaunchedEffect(pinnedDocumentId) {
