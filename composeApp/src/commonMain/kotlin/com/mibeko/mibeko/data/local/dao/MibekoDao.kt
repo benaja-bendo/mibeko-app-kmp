@@ -434,6 +434,29 @@ interface MibekoDao {
         }
     }
 
+    /**
+     * Ne garde que le dossier Favoris du compte (kmp#11) : écrit l'union des
+     * favoris dans le dossier canonique, puis supprime les doublons et les
+     * note pour la prochaine synchronisation. Le dossier canonique s'écrit en
+     * premier : son remplacement efface ses liens en cascade, réécrits juste
+     * après.
+     */
+    @Transaction
+    suspend fun applyFavoritesConsolidation(
+        canonical: DossierEntity,
+        links: List<DossierArticleEntity>,
+        duplicateIds: List<String>,
+        deletedAt: Long
+    ) {
+        insertDossier(canonical)
+        clearDossierArticlesFor(canonical.id)
+        insertDossierArticles(links)
+        deleteDossiersByIds(duplicateIds)
+        duplicateIds.forEach { id ->
+            insertPendingDossierDeletion(PendingDossierDeletionEntity(id = id, deletedAt = deletedAt))
+        }
+    }
+
     // ========== CLEAR DATA ==========
 
     @Query("DELETE FROM documents")
