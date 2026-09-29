@@ -80,6 +80,18 @@ sealed class Screen {
     @Serializable
     data object Dossiers : Screen()
 
+    /**
+     * Onglet « Assistant » (APP-003) : une conversation neuve, sans flèche de
+     * retour. Distinct de [Chat], qui s'empile au-dessus d'un autre écran avec
+     * une question, une conversation ou une référence déjà choisie.
+     */
+    @Serializable
+    data object Assistant : Screen()
+
+    /** « Mes favoris » (D-052) : la liste des articles marqués d'un signet, ouverte depuis « Moi ». */
+    @Serializable
+    data object Favorites : Screen()
+
     @Serializable
     data object Library : Screen()
 
@@ -124,8 +136,8 @@ val LocalNavController = staticCompositionLocalOf<NavController> {
 }
 
 /**
- * Bascule vers un onglet de premier niveau (Accueil, Bibliothèque, Dossiers,
- * Profil). Point d'entrée unique : la barre du bas ET les raccourcis internes
+ * Bascule vers un onglet de premier niveau (Accueil, Bibliothèque, Assistant,
+ * Moi). Point d'entrée unique : la barre du bas ET les raccourcis internes
  * (carte « Parcourir les textes » de l'accueil) doivent poser exactement les
  * mêmes options, sinon `backStackMap` diverge et l'onglet visé devient
  * injoignable.

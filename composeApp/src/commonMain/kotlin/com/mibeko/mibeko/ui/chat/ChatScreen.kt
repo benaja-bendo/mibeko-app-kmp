@@ -40,6 +40,10 @@ import com.mibeko.mibeko.ui.navigation.LocalNavController
 import com.mibeko.mibeko.ui.navigation.Screen
 import com.mibeko.mibeko.util.articlePlainText
 import com.mibeko.mibeko.util.UiResult
+import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
+import com.mibeko.mibeko.util.AnalyticsEvents
+import com.mibeko.mibeko.util.MibekoAnalytics
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.animation.core.*
 
@@ -52,9 +56,13 @@ fun ChatScreen(
     conversationId: String?,
     initialPrompt: String?,
     pinnedDocumentId: String? = null,
-    pinnedLabel: String? = null
+    pinnedLabel: String? = null,
+    /** Onglet « Assistant » de la barre du bas : pas de flèche de retour. */
+    isTabRoot: Boolean = false
 ) {
     val navController = LocalNavController.current
+    val preferences = koinInject<UserPreferencesRepository>()
+    val analytics = koinInject<MibekoAnalytics>()
     val viewModel: ChatViewModel = koinViewModel()
     val chatState by viewModel.chatState.collectAsState()
     val entitlements by viewModel.entitlements.collectAsState()
@@ -125,14 +133,21 @@ fun ChatScreen(
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 navigationIcon = {
-                    if (navController.previousBackStackEntry != null) {
+                    if (!isTabRoot && navController.previousBackStackEntry != null) {
                         IconButton(onClick = { navController.popBackStack() }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { navController.navigate(Screen.ConversationHistory) }) {
+                    IconButton(onClick = {
+                        if (preferences.isLoggedIn()) {
+                            navController.navigate(Screen.ConversationHistory)
+                        } else {
+                            analytics.logEvent(AnalyticsEvents.LOGIN_WALL_SHOWN, mapOf("context" to "conversation_history"))
+                            navController.navigate(Screen.Login(redirectToHistory = true))
+                        }
+                    }) {
                         Icon(Icons.Default.History, contentDescription = "Historique des conversations")
                     }
                 }
@@ -283,7 +298,15 @@ fun ChatScreen(
                     onClick = {
                         val message = textState.text
                         if (message.isNotBlank()) {
-                            viewModel.sendMessage(message)
+                            if (preferences.isLoggedIn()) {
+                                viewModel.sendMessage(message)
+                            } else {
+                                // Onglet Assistant ouvert en invité : comme depuis
+                                // l'accueil, la question traverse la connexion au
+                                // lieu d'échouer sur un 401.
+                                analytics.logEvent(AnalyticsEvents.LOGIN_WALL_SHOWN, mapOf("context" to "assistant"))
+                                navController.navigate(Screen.Login(redirectChatPrompt = message))
+                            }
                             textState = TextFieldValue("")
                         }
                     },

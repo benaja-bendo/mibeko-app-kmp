@@ -59,6 +59,7 @@ import com.mibeko.mibeko.ui.onboarding.OnboardingScreen
 import com.mibeko.mibeko.ui.onboarding.AccountOnboardingScreen
 import com.mibeko.mibeko.ui.reader.ReaderScreen
 import com.mibeko.mibeko.ui.resolver.TexteResolverScreen
+import com.mibeko.mibeko.ui.settings.FavoritesScreen
 import com.mibeko.mibeko.ui.settings.SettingsScreen
 import com.mibeko.mibeko.ui.splash.SplashScreen
 import com.mibeko.mibeko.ui.theme.MibekoTheme
@@ -187,11 +188,12 @@ fun App() {
                 modifier = Modifier.fillMaxSize().addFocusCleaner(focusManager)
             ) {
                 // Écrans de premier niveau affichant la barre de navigation.
-                // Le chat n'en fait pas partie : c'est un écran immersif.
+                // L'onglet Assistant en fait partie ; une conversation ouverte
+                // depuis un autre écran (Screen.Chat) reste immersive.
                 val bottomBarScreens = listOf(
                     Screen.Home::class.qualifiedName,
                     Screen.Library::class.qualifiedName,
-                    Screen.Dossiers::class.qualifiedName,
+                    Screen.Assistant::class.qualifiedName,
                     Screen.Settings::class.qualifiedName
                 )
 
@@ -314,6 +316,10 @@ fun App() {
                         composable<Screen.Home> { HomeScreen() }
                         composable<Screen.Settings> { SettingsScreen() }
                         composable<Screen.Dossiers> { DossierScreen() }
+                        composable<Screen.Assistant> {
+                            ChatScreen(conversationId = null, initialPrompt = null, isTabRoot = true)
+                        }
+                        composable<Screen.Favorites> { FavoritesScreen() }
                         composable<Screen.Library> { LibraryScreen() }
                         composable<Screen.Downloads> { DownloadsScreen() }
                         composable<Screen.Notifications> { NotificationsScreen() }

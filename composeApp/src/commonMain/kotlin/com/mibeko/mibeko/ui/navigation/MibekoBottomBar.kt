@@ -3,7 +3,7 @@ package com.mibeko.mibeko.ui.navigation
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.HorizontalDivider
@@ -27,9 +27,10 @@ private data class BottomBarItem(
 )
 
 /**
- * Barre de navigation principale : Accueil, Bibliothèque, Dossiers, Profil.
- * L'assistant n'a pas d'onglet dédié — il vit sur l'accueil (champ hero) et
- * dans les actions contextuelles, pour réduire la charge cognitive.
+ * Barre de navigation principale : Accueil, Bibliothèque, Assistant, Moi
+ * (APP-003). L'Assistant, fonction la plus utilisée, a son onglet ; « Moi »
+ * regroupe le compte, les alertes et les favoris. Le mobile n'a plus
+ * d'onglet Dossiers (D-052).
  */
 @Composable
 fun MibekoBottomBar(navController: NavController) {
@@ -39,8 +40,8 @@ fun MibekoBottomBar(navController: NavController) {
     val items = listOf(
         BottomBarItem("Accueil", Icons.Filled.Home, Screen.Home, Screen.Home::class.qualifiedName),
         BottomBarItem("Bibliothèque", Icons.AutoMirrored.Filled.MenuBook, Screen.Library, Screen.Library::class.qualifiedName),
-        BottomBarItem("Dossiers", Icons.Filled.Folder, Screen.Dossiers, Screen.Dossiers::class.qualifiedName),
-        BottomBarItem("Profil", Icons.Filled.Person, Screen.Settings, Screen.Settings::class.qualifiedName)
+        BottomBarItem("Assistant", Icons.Filled.AutoAwesome, Screen.Assistant, Screen.Assistant::class.qualifiedName),
+        BottomBarItem("Moi", Icons.Filled.Person, Screen.Settings, Screen.Settings::class.qualifiedName)
     )
 
     Column {

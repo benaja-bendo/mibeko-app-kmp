@@ -37,6 +37,7 @@ import com.mibeko.mibeko.ui.dossier.ArticleSelectionViewModel
 import com.mibeko.mibeko.ui.dossier.DossierDetailViewModel
 import com.mibeko.mibeko.ui.dossier.DossierViewModel
 import com.mibeko.mibeko.ui.components.DossierSelectionViewModel
+import com.mibeko.mibeko.ui.settings.FavoritesViewModel
 import com.mibeko.mibeko.ui.settings.SettingsViewModel
 import com.mibeko.mibeko.ui.officialjournal.OfficialJournalViewModel
 import com.mibeko.mibeko.ui.chat.ChatViewModel
@@ -201,6 +202,7 @@ val commonModule = module {
     viewModel { DocumentDetailViewModel(get(), get(), get()) }
     viewModel { TexteResolverViewModel(get(), get(), get()) }
     viewModel { SettingsViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { FavoritesViewModel(get(), get()) }
     viewModel { OfficialJournalViewModel(get(), get()) }
     viewModel { LibraryViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { DownloadsViewModel(get()) }
