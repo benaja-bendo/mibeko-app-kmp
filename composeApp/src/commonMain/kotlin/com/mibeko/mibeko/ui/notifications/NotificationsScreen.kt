@@ -267,7 +267,7 @@ fun NotificationsScreen() {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Les alertes de veille juridique et de vos dossiers sont liées à votre compte.",
+                "Les alertes de veille juridique sont liées à votre compte.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center

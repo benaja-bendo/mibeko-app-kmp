@@ -254,13 +254,6 @@ fun SettingsScreen() {
                             checked = uiState.isLegalMonitoringEnabled,
                             onCheckedChange = { viewModel.setLegalMonitoringEnabled(it) }
                         )
-                        SettingsSwitch(
-                            title = "Alertes Dossiers", 
-                            subtitle = "Mises à jour", 
-                            icon = Icons.Filled.FolderSpecial,
-                            checked = uiState.isDossierAlertsEnabled,
-                            onCheckedChange = { viewModel.setDossierAlertsEnabled(it) }
-                        )
                     }
                 }
             },
@@ -457,7 +450,7 @@ fun SettingsScreen() {
             text = {
                 Column {
                     Text(
-                        "Cette action est définitive : votre compte, vos dossiers synchronisés et votre historique seront supprimés. " +
+                        "Cette action est définitive : votre compte, vos favoris, vos données synchronisées et votre historique seront supprimés. " +
                             "Confirmez avec votre mot de passe."
                     )
                     Spacer(modifier = Modifier.height(16.dp))

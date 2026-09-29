@@ -43,8 +43,6 @@ import com.mibeko.mibeko.ui.chat.ChatScreen
 import com.mibeko.mibeko.ui.chat.ConversationHistoryScreen
 import com.mibeko.mibeko.ui.contact.ContactScreen
 import com.mibeko.mibeko.ui.details.DocumentDetailScreen
-import com.mibeko.mibeko.ui.dossier.DossierDetailScreen
-import com.mibeko.mibeko.ui.dossier.DossierScreen
 import com.mibeko.mibeko.ui.downloads.DownloadsScreen
 import com.mibeko.mibeko.ui.home.HomeScreen
 import com.mibeko.mibeko.ui.library.LibraryScreen
@@ -315,7 +313,6 @@ fun App() {
                         }
                         composable<Screen.Home> { HomeScreen() }
                         composable<Screen.Settings> { SettingsScreen() }
-                        composable<Screen.Dossiers> { DossierScreen() }
                         composable<Screen.Assistant> {
                             ChatScreen(conversationId = null, initialPrompt = null, isTabRoot = true)
                         }
@@ -361,11 +358,6 @@ fun App() {
                         ) { backStackEntry ->
                             val route = backStackEntry.toRoute<Screen.TexteResolver>()
                             TexteResolverScreen(docSlug = route.docSlug, articleNumber = route.articleNumber)
-                        }
-
-                        composable<Screen.DossierDetail> { backStackEntry ->
-                            val route = backStackEntry.toRoute<Screen.DossierDetail>()
-                            DossierDetailScreen(route.dossierId)
                         }
 
 

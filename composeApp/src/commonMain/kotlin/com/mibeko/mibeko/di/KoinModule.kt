@@ -33,10 +33,6 @@ import com.mibeko.mibeko.ui.library.LibraryViewModel
 import com.mibeko.mibeko.ui.downloads.DownloadsViewModel
 import com.mibeko.mibeko.ui.notifications.NotificationsViewModel
 import com.mibeko.mibeko.ui.onboarding.AccountOnboardingViewModel
-import com.mibeko.mibeko.ui.dossier.ArticleSelectionViewModel
-import com.mibeko.mibeko.ui.dossier.DossierDetailViewModel
-import com.mibeko.mibeko.ui.dossier.DossierViewModel
-import com.mibeko.mibeko.ui.components.DossierSelectionViewModel
 import com.mibeko.mibeko.ui.settings.FavoritesViewModel
 import com.mibeko.mibeko.ui.settings.SettingsViewModel
 import com.mibeko.mibeko.ui.officialjournal.OfficialJournalViewModel
@@ -207,10 +203,6 @@ val commonModule = module {
     viewModel { LibraryViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { DownloadsViewModel(get()) }
     viewModel { NotificationsViewModel(get(), get()) }
-    viewModel { DossierViewModel(get(), get()) }
-    viewModel { DossierSelectionViewModel(get(), get()) }
-    viewModel { ArticleSelectionViewModel(get(), get(), get()) }
-    viewModel { params -> DossierDetailViewModel(params.get(), get(), get()) }
     viewModel { ChatViewModel(get(), get(), get()) }
     viewModel { ConversationHistoryViewModel(get()) }
     viewModel { AccountOnboardingViewModel(get(), get(), get()) }

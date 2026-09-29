@@ -15,7 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.FolderSpecial
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,9 +57,9 @@ private val pages = listOf(
         description = "Accédez aux codes, lois et journaux officiels où que vous soyez. Téléchargez les textes pour une consultation sans internet."
     ),
     OnboardingPage(
-        icon = Icons.Filled.FolderSpecial,
-        title = "Organisez vos recherches",
-        description = "Créez vos dossiers thématiques, sauvegardez vos textes favoris et retrouvez facilement ce qui compte pour vous."
+        icon = Icons.Filled.Bookmark,
+        title = "Gardez l'essentiel",
+        description = "Touchez le signet d'un article pour le retrouver dans « Moi », parmi vos favoris."
     )
 )
 

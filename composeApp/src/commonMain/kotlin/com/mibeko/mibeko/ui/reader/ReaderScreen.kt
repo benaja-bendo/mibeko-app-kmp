@@ -38,7 +38,6 @@ import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.graphics.Color
-import com.mibeko.mibeko.ui.components.DossierSelectionSheet
 import com.mibeko.mibeko.ui.components.LegalTableBlock
 import com.mibeko.mibeko.ui.components.MibekoBreadcrumb
 import com.mibeko.mibeko.ui.components.BreadcrumbSegment
@@ -75,7 +74,6 @@ fun ReaderScreen(articleId: String) {
         var showSettings by remember { mutableStateOf(false) }
         var showShareSheet by remember { mutableStateOf(false) }
         var showReportDialog by remember { mutableStateOf(false) }
-        var showDossierSelection by remember { mutableStateOf(false) }
         var showToc by remember { mutableStateOf(false) }
         var showSources by remember { mutableStateOf(false) }
 
@@ -215,11 +213,11 @@ fun ReaderScreen(articleId: String) {
                                     tint = if (currentArticle.isDownloaded) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.6f)
                                 )
                             }
-                            // Favorite Toggle
-                            IconButton(onClick = { showDossierSelection = true }) {
+                            // Favori en un toucher (D-052) : plus de choix de dossier.
+                            IconButton(onClick = { viewModel.toggleFavorite() }) {
                                 Icon(
                                     if (currentArticle.isFavorite) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                                    contentDescription = "Ajouter à un dossier",
+                                    contentDescription = if (currentArticle.isFavorite) "Retirer des favoris" else "Ajouter aux favoris",
                                     tint = if (currentArticle.isFavorite) MaterialTheme.colorScheme.primary else textColor.copy(alpha = 0.6f)
                                 )
                             }
@@ -483,16 +481,6 @@ fun ReaderScreen(articleId: String) {
 
         if (showSources) {
             OfficialSourcesSheet(onDismiss = { showSources = false })
-        }
-
-        if (showDossierSelection) {
-            DossierSelectionSheet(
-                articleId = currentArticle.id,
-                onDismiss = { 
-                    showDossierSelection = false
-                    viewModel.loadArticle(currentArticle.id) // Reload to get updated isFavorite status
-                }
-            )
         }
 
         if (showSettings) {
