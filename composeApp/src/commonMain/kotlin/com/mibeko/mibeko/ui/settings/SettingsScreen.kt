@@ -40,6 +40,8 @@ fun SettingsScreen() {
     val navController = com.mibeko.mibeko.ui.navigation.LocalNavController.current
     val viewModel = koinViewModel<SettingsViewModel>()
     val uiState by viewModel.uiState.collectAsState()
+    val favoritesViewModel = koinViewModel<FavoritesViewModel>()
+    val favoritesCount by favoritesViewModel.count.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     
@@ -549,7 +551,7 @@ fun SettingsScreen() {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Profil", fontWeight = FontWeight.Bold) },
+                title = { Text("Moi", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
@@ -635,7 +637,7 @@ fun SettingsScreen() {
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Limited access mode",
+                        text = "Accès limité",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -665,6 +667,24 @@ fun SettingsScreen() {
                         }
                     }
                 }
+            }
+
+            // --- FAVORIS (D-052) --- visible aussi en invité : les favoris
+            // vivent d'abord sur l'appareil.
+            SettingsGroup("MES FAVORIS") {
+                SettingsItem(
+                    title = "Mes favoris",
+                    subtitle = when (val count = favoritesCount) {
+                        null -> ""
+                        0 -> "Aucun article pour l'instant"
+                        1 -> "1 article"
+                        else -> "$count articles"
+                    },
+                    icon = Icons.Filled.Bookmark,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    iconBackground = MaterialTheme.colorScheme.primaryContainer,
+                    onClick = { navController.navigate(com.mibeko.mibeko.ui.navigation.Screen.Favorites) }
+                )
             }
 
             // --- COMPTE ---
