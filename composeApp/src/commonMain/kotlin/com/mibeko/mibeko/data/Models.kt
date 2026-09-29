@@ -38,6 +38,10 @@ data class ArticleSpec(
     val typeCode: String = "", // Added for filtering
     val isFavorite: Boolean = false,
     val isDownloaded: Boolean = false,
+    /** Titre officiel du document ; vide si la source ne le fournit pas. */
+    val documentTitle: String = "",
+    /** Objet dérivé du corps de l'acte (D-039), à afficher à côté du titre, jamais à sa place. */
+    val documentDescriptiveLabel: String? = null,
     /**
      * Tableaux de l'article. Vide pour la quasi-totalité du corpus, et pour tout
      * article synchronisé avant que l'API ne les transporte : le rendu retombe

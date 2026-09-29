@@ -408,7 +408,10 @@ class LibraryViewModel(
         number = number,
         content = content,
         document_id = codeId,
-        document_title = breadcrumb.substringBefore(">").trim().ifBlank { title },
+        // Le titre du document vient de la base locale ; déduire du fil
+        // d'Ariane ne sert plus qu'aux sources qui ne le fournissent pas.
+        document_title = documentTitle.ifBlank { breadcrumb.substringBefore(">").trim().ifBlank { title } },
+        document_descriptive_label = documentDescriptiveLabel,
         document_type = typeCode,
         breadcrumb = breadcrumb
     )

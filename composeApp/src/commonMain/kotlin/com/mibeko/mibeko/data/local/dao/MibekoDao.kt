@@ -199,7 +199,8 @@ interface MibekoDao {
 
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code,
+               documents.title as document_title, documents.descriptive_label as document_descriptive_label
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
@@ -209,7 +210,8 @@ interface MibekoDao {
 
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code,
+               documents.title as document_title, documents.descriptive_label as document_descriptive_label
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
@@ -219,7 +221,8 @@ interface MibekoDao {
 
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code,
+               documents.title as document_title, documents.descriptive_label as document_descriptive_label
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
@@ -263,7 +266,8 @@ interface MibekoDao {
 
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code,
+               documents.title as document_title, documents.descriptive_label as document_descriptive_label
         FROM articles 
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
@@ -282,7 +286,8 @@ interface MibekoDao {
      */
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code,
+               documents.title as document_title, documents.descriptive_label as document_descriptive_label
         FROM articles
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
@@ -294,7 +299,8 @@ interface MibekoDao {
     /** Recherche FTS limitée aux documents téléchargés dans leur intégralité. */
     @Transaction
     @Query("""
-        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code
+        SELECT articles.*, nodes.document_id, nodes.title as node_title, documents.is_downloaded as doc_is_downloaded, documents.type_code,
+               documents.title as document_title, documents.descriptive_label as document_descriptive_label
         FROM articles
         JOIN nodes ON articles.node_id = nodes.id
         JOIN documents ON nodes.document_id = documents.id
@@ -499,7 +505,13 @@ data class ArticleSearchResult(
     val document_id: String,
     val node_title: String,
     val doc_is_downloaded: Boolean,
-    val type_code: String // Added for filtering
+    val type_code: String, // Added for filtering
+    /**
+     * Titre officiel du document. Sans lui, le repli hors-ligne affichait la
+     * division (« Chapitre II ») à la place du texte (kmp#10).
+     */
+    val document_title: String,
+    val document_descriptive_label: String? = null
 )
 
 data class DossierArticleWithDetails(

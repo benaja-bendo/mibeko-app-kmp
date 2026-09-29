@@ -30,12 +30,27 @@ fun com.mibeko.mibeko.data.local.dao.ArticleSearchResult.toArticleSpec(): Articl
         number = article.number,
         title = node_title,
         content = article.content,
-        breadcrumb = node_title,
+        breadcrumb = localBreadcrumb(document_title, document_descriptive_label, node_title),
         typeCode = type_code, // Added
         isFavorite = article.is_favorite,
-        isDownloaded = doc_is_downloaded || article.is_offline
+        isDownloaded = doc_is_downloaded || article.is_offline,
+        documentTitle = document_title,
+        documentDescriptiveLabel = document_descriptive_label
     )
 }
+
+/**
+ * Fil d'Ariane d'un article lu dans la base locale, de la même forme que
+ * celui de l'API (sans le type de texte, que la base locale ne nomme pas) :
+ * titre officiel, libellé descriptif s'il existe, puis division (kmp#10).
+ * Les maillons vides ou répétés sont omis.
+ */
+internal fun localBreadcrumb(documentTitle: String, descriptiveLabel: String?, nodeTitle: String): String =
+    listOf(documentTitle, descriptiveLabel.orEmpty(), nodeTitle)
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .distinct()
+        .joinToString(" > ")
 
 // Mapper that takes extra context from joins
 fun ArticleEntity.toArticleSpec(
@@ -101,6 +116,7 @@ fun com.mibeko.mibeko.data.remote.RemoteSearchResult.toArticleSpec(): ArticleSpe
         content = content ?: "",
         breadcrumb = breadcrumb,
         typeCode = document_type, // Map document_type from API to typeCode
-        isFavorite = false // Remote results don't have favorite status
+        isFavorite = false, // Remote results don't have favorite status
+        documentTitle = document_title
     )
 }
