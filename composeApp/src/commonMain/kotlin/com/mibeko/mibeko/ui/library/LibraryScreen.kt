@@ -792,28 +792,40 @@ private fun LibraryResultsContent(
         contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp)
     ) {
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = when {
-                        state.isSearching -> "Recherche en cours…"
-                        state.pagination != null -> {
-                            val total = state.pagination.total
-                            "$total résultat${if (total > 1) "s" else ""}"
-                        }
-                        else -> "${state.results.size} résultat${if (state.results.size > 1) "s" else ""}"
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (!state.resultsFromNetwork) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "Résultats hors-ligne",
+                        text = when {
+                            state.isSearching -> "Recherche en cours…"
+                            state.pagination != null -> {
+                                val total = state.pagination.total
+                                "$total résultat${if (total > 1) "s" else ""}"
+                            }
+                            else -> "${state.results.size} résultat${if (state.results.size > 1) "s" else ""}"
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (!state.resultsFromNetwork) {
+                        Text(
+                            text = "Résultats hors-ligne",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
+                // Un filtre affiché actif doit porter, ou le dire (kmp#12).
+                if (!state.resultsFromNetwork && state.offlineIgnoredFilters.isNotEmpty()) {
+                    Text(
+                        text = "Hors ligne, ces filtres ne s'appliquent pas : " +
+                            state.offlineIgnoredFilters.joinToString(", ") + ".",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
             }
