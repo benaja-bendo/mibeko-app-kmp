@@ -1,5 +1,6 @@
 package com.mibeko.mibeko.ui.library
 
+import com.mibeko.mibeko.data.ArticleSpec
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -22,5 +23,31 @@ class LibraryFiltersTest {
         )
 
         assertEquals(5, state.activeFilterCount)
+    }
+
+    private fun article(id: String, type: String) =
+        ArticleSpec(id = id, codeId = "d-$id", number = "1", title = "Chapitre I", content = "…", breadcrumb = "", typeCode = type)
+
+    @Test
+    fun `hors ligne le filtre de type s applique au repli local`() {
+        val resultats = listOf(article("a", "LOI"), article("b", "DECRET"), article("c", "LOI"))
+
+        val filtres = resultats.withLocalFilters(LibraryUiState(selectedTypeCode = "LOI"))
+
+        assertEquals(listOf("a", "c"), filtres.map { it.id })
+        assertEquals(3, resultats.withLocalFilters(LibraryUiState()).size)
+    }
+
+    @Test
+    fun `hors ligne les filtres que la base locale ignore sont nommes`() {
+        assertEquals(emptyList(), LibraryUiState(selectedTypeCode = "LOI").filtersIgnoredOffline())
+        assertEquals(
+            listOf("périmètre", "institution", "tri"),
+            LibraryUiState(
+                scope = LibraryScope.OHADA,
+                selectedInstitutionId = "inst-1",
+                sort = LibrarySort.DATE_DESC
+            ).filtersIgnoredOffline()
+        )
     }
 }

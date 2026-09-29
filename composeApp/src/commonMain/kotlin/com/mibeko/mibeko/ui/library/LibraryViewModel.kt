@@ -68,6 +68,11 @@ data class LibraryUiState(
     /** false quand les résultats viennent de la base locale (mode hors-ligne). */
     val resultsFromNetwork: Boolean = true,
     /**
+     * Filtres actifs que le repli local n'a pas pu appliquer (kmp#12) :
+     * l'écran les nomme au lieu de les laisser croire appliqués.
+     */
+    val offlineIgnoredFilters: List<String> = emptyList(),
+    /**
      * Non-null quand la dernière tentative de recherche a échoué — que des
      * résultats de repli soient affichés ou non (voir [UiResult.Error]).
      * Jamais null simplement parce que [results] est vide.
@@ -95,6 +100,21 @@ data class LibraryUiState(
             (if (downloadedOnly) 1 else 0) +
             (if (sort != LibrarySort.RELEVANCE) 1 else 0)
 }
+
+/**
+ * Filtres actifs que la base locale ne sait pas appliquer (kmp#12) : elle ne
+ * stocke ni le périmètre, ni l'identifiant de l'institution, ni la date des
+ * résultats. Le type de texte, lui, s'applique hors-ligne.
+ */
+internal fun LibraryUiState.filtersIgnoredOffline(): List<String> = buildList {
+    if (scope != LibraryScope.ALL) add("périmètre")
+    if (selectedInstitutionId != null) add("institution")
+    if (sort != LibrarySort.RELEVANCE) add("tri")
+}
+
+/** Applique au repli local les filtres qu'il connaît : aujourd'hui, le type de texte. */
+internal fun List<ArticleSpec>.withLocalFilters(state: LibraryUiState): List<ArticleSpec> =
+    filter { state.selectedTypeCode == null || it.typeCode == state.selectedTypeCode }
 
 /**
  * Bibliothèque alignée sur le poste de travail web : accueil vivant servi par
@@ -294,6 +314,7 @@ class LibraryViewModel(
                     results = items,
                     pagination = null,
                     resultsFromNetwork = false,
+                    offlineIgnoredFilters = emptyList(),
                     isSearching = false,
                     isLoadingMore = false,
                     searchError = null
@@ -316,6 +337,7 @@ class LibraryViewModel(
                         results = if (append) it.results + response.data else response.data,
                         pagination = response.pagination,
                         resultsFromNetwork = true,
+                        offlineIgnoredFilters = emptyList(),
                         isSearching = false,
                         isLoadingMore = false
                     ) }
@@ -332,14 +354,19 @@ class LibraryViewModel(
 
     /** Recherche FTS locale (documents téléchargés) quand le réseau manque ou a échoué. */
     private suspend fun searchLocallyAsFallback(query: String, append: Boolean) {
+        // Les filtres restent affichés actifs : on applique ceux que la base
+        // locale connaît, et on nomme les autres (kmp#12).
+        val filters = _uiState.value
+        val ignored = filters.filtersIgnoredOffline()
         try {
             when (val local = repository.searchHybrid(query = query)) {
                 is SearchResult.Success -> {
-                    val items = local.articles.map { it.toLibrarySearchItem() }
+                    val items = local.articles.withLocalFilters(filters).map { it.toLibrarySearchItem() }
                     _uiState.update { it.copy(
                         results = if (append) it.results + items else items,
                         pagination = null,
                         resultsFromNetwork = false,
+                        offlineIgnoredFilters = ignored,
                         isSearching = false,
                         isLoadingMore = false,
                         searchError = null
@@ -351,11 +378,12 @@ class LibraryViewModel(
                     // Panne API : ne jamais jeter les résultats locaux de repli
                     // déjà calculés — un « aucun résultat » serait un faux
                     // négatif juridique (règle produit non négociable).
-                    val items = local.fallbackArticles.map { it.toLibrarySearchItem() }
+                    val items = local.fallbackArticles.withLocalFilters(filters).map { it.toLibrarySearchItem() }
                     _uiState.update { it.copy(
                         results = if (append) it.results + items else items,
                         pagination = null,
                         resultsFromNetwork = false,
+                        offlineIgnoredFilters = ignored,
                         isSearching = false,
                         isLoadingMore = false,
                         searchError = UiResult.Error(
