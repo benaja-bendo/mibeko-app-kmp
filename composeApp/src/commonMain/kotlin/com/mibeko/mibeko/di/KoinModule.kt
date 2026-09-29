@@ -41,6 +41,8 @@ import com.mibeko.mibeko.ui.chat.ConversationHistoryViewModel
 import com.mibeko.mibeko.util.MibekoAnalytics
 import com.mibeko.mibeko.util.NetworkConnectivityChecker
 import com.mibeko.mibeko.util.NotificationManager
+import com.mibeko.mibeko.util.NotificationPermissionPrompt
+import com.mibeko.mibeko.getPlatform
 import com.mibeko.mibeko.util.getAnalyticsManager
 import com.mibeko.mibeko.util.getDeviceId
 import com.mibeko.mibeko.util.getNetworkConnectivityChecker
@@ -184,7 +186,19 @@ val commonModule = module {
     single { LocalLegalRepository(get(), get(), get(), get()) }
     single { DossierRepository(get(), get(), get(), get(), get()) }
     single { NotificationRepository(get(), get<AppConfig>().baseUrl) }
-    single { PushTokenRegistrar(get(), get()) }
+    single {
+        PushTokenRegistrar(
+            get(),
+            registerDevice = get<NotificationRepository>()::registerDevice,
+            isPermissionGranted = { get<NotificationManager>().isPermissionGranted() }
+        )
+    }
+    single {
+        NotificationPermissionPrompt(
+            get(), get(), get(), get(),
+            pushSupported = getPlatform().name.lowercase().contains("android")
+        )
+    }
     single { OnboardingRepository(get(), get(), get(), get()) }
 
     viewModel { LoginViewModel(get(), get(), get(), get()) }

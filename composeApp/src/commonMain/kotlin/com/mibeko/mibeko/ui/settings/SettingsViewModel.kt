@@ -411,7 +411,11 @@ class SettingsViewModel(
         // Load offline mode preference
         val offlineMode = userPreferencesRepository.isOfflineModeEnabled()
         val theme = userPreferencesRepository.getAppTheme()
-        val notifications = userPreferencesRepository.isNotificationsEnabled()
+        // Le réglage est actif par défaut (APP-004) : le commutateur n'affiche
+        // « Activé » que si le système autorise aussi les notifications, sinon
+        // il promettrait des alertes qui n'arriveront pas.
+        val notifications = userPreferencesRepository.isNotificationsEnabled() &&
+            notificationManager.isPermissionGranted()
         val lastSync = userPreferencesRepository.getLastSyncTimestamp()
         
         _uiState.update { it.copy(

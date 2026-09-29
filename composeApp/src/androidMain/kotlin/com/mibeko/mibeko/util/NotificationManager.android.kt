@@ -12,6 +12,12 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 /**
+ * Code de la demande d'autorisation POST_NOTIFICATIONS : `MainActivity` s'en
+ * sert pour reconnaître la réponse de la fenêtre du système.
+ */
+const val NOTIFICATION_PERMISSION_REQUEST_CODE = 101
+
+/**
  * Helper object for Context injection via Koin.
  */
 private object NotificationContextProvider : KoinComponent {
@@ -40,7 +46,7 @@ class AndroidNotificationManager(private val context: Context) : NotificationMan
                     ActivityCompat.requestPermissions(
                         activity,
                         arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                        101
+                        NOTIFICATION_PERMISSION_REQUEST_CODE
                     )
                     // Note: On ne peut pas facilement attendre le résultat ici sans changer l'architecture.
                     // On retourne true pour permettre au switch de s'activer, car l'utilisateur

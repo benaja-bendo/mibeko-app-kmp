@@ -33,6 +33,7 @@ import com.mibeko.mibeko.data.auth.SessionEvents
 import com.mibeko.mibeko.data.preferences.UserPreferencesRepository
 import com.mibeko.mibeko.data.remote.AuthApiService
 import com.mibeko.mibeko.data.remote.LegalApiService
+import com.mibeko.mibeko.data.repository.LocalLegalRepository
 import com.mibeko.mibeko.data.repository.PushTokenRegistrar
 import com.mibeko.mibeko.ui.auth.ForgotPasswordScreen
 import com.mibeko.mibeko.ui.auth.EmailVerificationScreen
@@ -66,6 +67,7 @@ import com.mibeko.mibeko.ui.update.UpdateBanner
 import com.mibeko.mibeko.util.AnalyticsEvents
 import com.mibeko.mibeko.util.ExternalUriHandler
 import com.mibeko.mibeko.util.MibekoAnalytics
+import com.mibeko.mibeko.util.NotificationPermissionPrompt
 import com.mibeko.mibeko.util.StoreUrls
 import com.mibeko.mibeko.util.UpdateState
 import com.mibeko.mibeko.util.VersionGate
@@ -136,6 +138,18 @@ fun App() {
         val pushTokenRegistrar = koinInject<PushTokenRegistrar>()
         LaunchedEffect(Unit) {
             pushTokenRegistrar.flushPendingToken()
+        }
+
+        // Autorisation des notifications demandée au bon moment : après le
+        // premier téléchargement d'un texte (APP-004), jamais à l'ouverture.
+        // Collecté ici, sur le fil principal, parce que la fenêtre du système
+        // a besoin de l'activité au premier plan.
+        val legalRepository = koinInject<LocalLegalRepository>()
+        val notificationPermissionPrompt = koinInject<NotificationPermissionPrompt>()
+        LaunchedEffect(Unit) {
+            legalRepository.offlineDownloads.collect {
+                notificationPermissionPrompt.afterOfflineDownload()
+            }
         }
 
         // Applique le consentement télémétrie persisté au SDK Analytics

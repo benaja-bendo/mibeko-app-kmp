@@ -14,16 +14,22 @@ import kotlinx.coroutines.launch
  * Le token peut être renouvelé par la plateforme à tout moment, y compris
  * quand l'utilisateur n'est pas connecté : il est alors mis en attente dans
  * les préférences et envoyé au prochain login ou démarrage connecté.
- * L'envoi n'a lieu que si l'utilisateur a activé les notifications dans
- * l'app : c'est le réglage qui pilote l'enregistrement de l'appareil.
+ * L'envoi n'a lieu que si le réglage de l'application est actif (il l'est
+ * par défaut, APP-004) ET si le système autorise les notifications : un
+ * appareil enregistré sans autorisation recevrait des push que le système
+ * jette, et gonflerait le compte des appareils joignables (kmp#34).
  */
 class PushTokenRegistrar(
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val notificationRepository: NotificationRepository
-) {
+    /** `NotificationRepository.registerDevice` en production ; vrai si le serveur a accepté. */
+    private val registerDevice: suspend (deviceId: String, pushToken: String, platform: String) -> Boolean,
+    private val isPermissionGranted: () -> Boolean,
     // Cycle de vie applicatif : l'envoi d'un token ne doit pas être annulé
     // par la destruction d'un écran ou du service de messaging.
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    private val deviceId: () -> String = { getDeviceId() },
+    private val platformName: () -> String = { getPlatform().name.lowercase() }
+) {
 
     /** Appelé par la couche native quand la plateforme délivre un nouveau token push. */
     fun onNewToken(token: String) {
@@ -51,15 +57,11 @@ class PushTokenRegistrar(
             ?: return
         if (!userPreferencesRepository.isLoggedIn()) return
         if (!userPreferencesRepository.isNotificationsEnabled()) return
+        if (!isPermissionGranted()) return
 
         scope.launch {
-            val platformName = getPlatform().name.lowercase()
-            val backendPlatform = if (platformName.contains("android")) "android" else "ios"
-            val registered = notificationRepository.registerDevice(
-                deviceId = getDeviceId(),
-                pushToken = token,
-                platform = backendPlatform
-            )
+            val backendPlatform = if (platformName().contains("android")) "android" else "ios"
+            val registered = registerDevice(deviceId(), token, backendPlatform)
             if (registered) {
                 userPreferencesRepository.setPendingPushToken(null)
                 userPreferencesRepository.setLastPushToken(token)
