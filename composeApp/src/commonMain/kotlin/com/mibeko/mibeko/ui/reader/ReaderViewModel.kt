@@ -329,10 +329,14 @@ class ReaderViewModel(
         val documentTitle = _uiState.value.documentTitle ?: "Document"
 
         // Lien public vers le portail citoyen mibeko.fr (slug connu → article
-        // précis ; slug inconnu → accueil, cf. PublicLinks).
-        val link = com.mibeko.mibeko.util.PublicLinks.article(
-            documentSlug = _uiState.value.documentSlug,
-            articleNumber = currentArticle.number
+        // précis ; slug inconnu → accueil), marqué comme partage de l'app :
+        // la campagne reprend le `format` de l'événement ci-dessous (kmp#67).
+        val link = com.mibeko.mibeko.util.PublicLinks.shared(
+            com.mibeko.mibeko.util.PublicLinks.article(
+                documentSlug = _uiState.value.documentSlug,
+                articleNumber = currentArticle.number
+            ),
+            format = com.mibeko.mibeko.util.PublicLinks.SHARE_FORMAT_LINK
         )
 
         // Create a rich message with context and the link
@@ -346,7 +350,10 @@ class ReaderViewModel(
         }
 
         contentSharer.shareText(message, "$label - Mibeko")
-        analytics.logEvent(AnalyticsEvents.READER_SHARE, mapOf("format" to "link"))
+        analytics.logEvent(
+            AnalyticsEvents.READER_SHARE,
+            mapOf("format" to com.mibeko.mibeko.util.PublicLinks.SHARE_FORMAT_LINK)
+        )
     }
 
     fun copyArticleText() {
