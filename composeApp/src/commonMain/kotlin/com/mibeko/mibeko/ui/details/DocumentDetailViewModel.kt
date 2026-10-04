@@ -204,8 +204,8 @@ class DocumentDetailViewModel(
         val doc = _uiState.value.document ?: return
 
         // Lien public vers le portail citoyen mibeko.fr (slug connu → texte
-        // précis ; slug inconnu → accueil, cf. PublicLinks).
-        val link = com.mibeko.mibeko.util.PublicLinks.document(doc.slug)
+        // précis ; slug inconnu → accueil), marqué comme partage de l'app (kmp#67).
+        val link = sharedDocumentLink(doc.slug)
 
         val message = buildString {
             appendLine("📚 ${doc.title}")
@@ -220,10 +220,18 @@ class DocumentDetailViewModel(
 
     fun copyDocumentLink() {
         val doc = _uiState.value.document ?: return
-        val url = com.mibeko.mibeko.util.PublicLinks.document(doc.slug)
+        // Un lien copié finit presque toujours collé dans une messagerie :
+        // même marqueur qu'un partage.
+        val url = sharedDocumentLink(doc.slug)
         contentSharer.copyToClipboard(url)
         _uiState.update { it.copy(message = "✓ Lien copié dans le presse-papiers") }
     }
+
+    private fun sharedDocumentLink(slug: String?): String =
+        com.mibeko.mibeko.util.PublicLinks.shared(
+            com.mibeko.mibeko.util.PublicLinks.document(slug),
+            format = com.mibeko.mibeko.util.PublicLinks.SHARE_FORMAT_LINK
+        )
 
     fun shareDocumentAsPdf() {
         val doc = _uiState.value.document ?: return

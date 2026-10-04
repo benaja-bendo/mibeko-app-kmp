@@ -68,6 +68,7 @@ import com.mibeko.mibeko.util.AnalyticsEvents
 import com.mibeko.mibeko.util.ExternalUriHandler
 import com.mibeko.mibeko.util.MibekoAnalytics
 import com.mibeko.mibeko.util.NotificationPermissionPrompt
+import com.mibeko.mibeko.util.PublicLinks
 import com.mibeko.mibeko.util.StoreUrls
 import com.mibeko.mibeko.util.UpdateState
 import com.mibeko.mibeko.util.VersionGate
@@ -360,15 +361,11 @@ fun App() {
                         // Liens publics du portail citoyen mibeko.fr/textes/{slug}
                         // (et /article-{numero}). Le slug n'est pas un id interne :
                         // l'écran-relais le résout puis redirige vers Reader/Document.
-                        // L'ordre compte : le motif « article » (plus spécifique)
-                        // est déclaré avant le motif document seul.
+                        // Motifs et ordre : PublicLinks.TEXTE_DEEP_LINK_PATTERNS.
                         composable<Screen.TexteResolver>(
-                            deepLinks = listOf(
-                                navDeepLink { uriPattern = "https://mibeko.fr/textes/{docSlug}/article-{articleNumber}" },
-                                navDeepLink { uriPattern = "https://mibeko.fr/textes/{docSlug}" },
-                                navDeepLink { uriPattern = "mibeko://textes/{docSlug}/article-{articleNumber}" },
-                                navDeepLink { uriPattern = "mibeko://textes/{docSlug}" }
-                            )
+                            deepLinks = PublicLinks.TEXTE_DEEP_LINK_PATTERNS.map { pattern ->
+                                navDeepLink { uriPattern = pattern }
+                            }
                         ) { backStackEntry ->
                             val route = backStackEntry.toRoute<Screen.TexteResolver>()
                             TexteResolverScreen(docSlug = route.docSlug, articleNumber = route.articleNumber)
