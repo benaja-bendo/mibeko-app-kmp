@@ -152,6 +152,19 @@ Le script `iosApp/ci_scripts/ci_post_clone.sh` est prêt pour Xcode Cloud (insta
 
 📎 TestFlight : https://developer.apple.com/testflight/
 
+### 7 bis. À chaque mise à jour : la soumission n'est jamais automatique
+
+`distribute-ios.yml` s'arrête à TestFlight : rien ne soumet la version à Apple. C'est
+ce qui a laissé l'app iOS publique en 1.0 de juillet à août 2026 (mibeko-app-kmp#28),
+chaque version suivante restant « Prête à soumettre ». Après chaque build, cocher
+dans l'ordre :
+
+- [ ] `distribute-ios.yml` réussi, build visible dans TestFlight
+- [ ] Version X.Y.Z créée dans App Store Connect, build rattaché, « Nouveautés » collées
+- [ ] **« Ajouter pour vérification » cliqué** : le statut doit passer à « En attente de vérification » (« Prêt à soumettre » ne suffit pas)
+- [ ] Après approbation, le lookup iTunes (`https://itunes.apple.com/lookup?id=6768865781&country=fr`) renvoie X.Y.Z
+- [ ] Une fois les deux stores à 100 % : lancer `announce-mobile-version.yml` avec X.Y.Z (secret partagé et dépannage : `docs/infra/production.md`, section « Annonce d'une version mobile », dépôt `mibeko-docs`)
+
 ---
 
 ## 8. Confidentialité (App Privacy) — questionnaire App Store Connect
