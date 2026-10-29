@@ -27,7 +27,7 @@ val MibekoOnForestFixedVariant = Color(0xFF2C4D3F)  // on-primary-fixed-variant
 
 // Secondary — Sober Terracotta
 val MibekoTerracotta = Color(0xFF8F4C31)            // secondary
-val MibekoTerracottaContainer = Color(0xFFFDA685)   // secondary-container
+val MibekoSecondaryTint = Color(0xFFF7E9E2)         // secondary-tint (charte) : remplace l'ancien secondary-container #FDA685
 val MibekoOnTerracottaContainer = Color(0xFF773A20) // on-secondary-container
 val MibekoTerracottaFixed = Color(0xFFFFDBCE)       // secondary-fixed
 val MibekoTerracottaFixedDim = Color(0xFFFFB59A)    // secondary-fixed-dim
@@ -51,6 +51,11 @@ val MibekoSurfaceContainerLow = Color(0xFFF6F3F2)
 val MibekoSurfaceContainer = Color(0xFFF0EDED)
 val MibekoSurfaceContainerHigh = Color(0xFFEAE7E7)
 val MibekoSurfaceContainerHighest = Color(0xFFE4E2E1)
+
+// Thèmes de lecture de l'article (ReaderScreen). « Papier » n'existe pas dans la
+// charte du site : c'est un choix de confort propre à l'app. Clair et sombre
+// reprennent les surfaces de la charte (MibekoWhite, MibekoDarkSurface...).
+val ReaderPaper = Color(0xFFF4ECD8)
 
 // Contenu & contours
 val MibekoOnSurface = Color(0xFF1B1C1C)

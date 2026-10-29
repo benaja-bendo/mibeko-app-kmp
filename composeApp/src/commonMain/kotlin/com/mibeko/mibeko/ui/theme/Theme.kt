@@ -178,7 +178,7 @@ private val LightColorScheme = lightColorScheme(
 
     secondary = MibekoTerracotta,
     onSecondary = OnSecondary,
-    secondaryContainer = MibekoTerracottaFixed,
+    secondaryContainer = MibekoSecondaryTint,
     onSecondaryContainer = MibekoOnTerracottaContainer,
 
     tertiary = MibekoTertiary,
