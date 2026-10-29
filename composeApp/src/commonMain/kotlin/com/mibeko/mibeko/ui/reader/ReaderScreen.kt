@@ -44,6 +44,12 @@ import com.mibeko.mibeko.ui.components.BreadcrumbSegment
 import com.mibeko.mibeko.ui.components.ShareOptionsSheet
 import com.mibeko.mibeko.ui.components.ReportErrorDialog
 import com.mibeko.mibeko.ui.components.OfficialSourcesSheet
+import com.mibeko.mibeko.ui.theme.MibekoDarkOnSurface
+import com.mibeko.mibeko.ui.theme.MibekoDarkSurface
+import com.mibeko.mibeko.ui.theme.MibekoDarkSurfaceContainerHigh
+import com.mibeko.mibeko.ui.theme.MibekoOnSurface
+import com.mibeko.mibeko.ui.theme.MibekoWhite
+import com.mibeko.mibeko.ui.theme.ReaderPaper
 import com.mibeko.mibeko.util.ContentSegment
 import com.mibeko.mibeko.util.articleLeafLabel
 import com.mibeko.mibeko.util.articleSegments
@@ -102,14 +108,14 @@ fun ReaderScreen(articleId: String) {
 
         // Apply colors based on reader theme
         val backgroundColor = when(readerTheme) {
-            "paper" -> Color(0xFFF4ECD8)
-            "dark" -> Color(0xFF121212)
-            else -> Color.White
+            "paper" -> ReaderPaper
+            "dark" -> MibekoDarkSurface
+            else -> MibekoWhite
         }
         
         val textColor = when(readerTheme) {
-            "dark" -> Color(0xFFE0E0E0)
-            else -> Color(0xFF1A1A1A)
+            "dark" -> MibekoDarkOnSurface
+            else -> MibekoOnSurface
         }
 
         // Apply text size multiplier
@@ -258,7 +264,7 @@ fun ReaderScreen(articleId: String) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
                             color = when(readerTheme) {
-                                "dark" -> Color(0xFF2D2D2D)
+                                "dark" -> MibekoDarkSurfaceContainerHigh
                                 else -> textColor.copy(alpha = 0.08f)
                             }
                         ) {
@@ -762,7 +768,7 @@ fun ReaderSettingsSheet(
              ) {
                  ThemeOption(
                      name = "Papier",
-                     color = Color(0xFFF4ECD8),
+                     color = ReaderPaper,
                      isSelected = currentTheme == "paper",
                      onClick = { onThemeChange("paper") }
                  )
@@ -774,7 +780,7 @@ fun ReaderSettingsSheet(
                  )
                  ThemeOption(
                      name = "Sombre",
-                     color = Color(0xFF121212),
+                     color = MibekoDarkSurface,
                      selectionColor = Color.White,
                      isSelected = currentTheme == "dark",
                      onClick = { onThemeChange("dark") }
